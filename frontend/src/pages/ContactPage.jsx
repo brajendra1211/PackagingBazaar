@@ -24,7 +24,7 @@ export default function ContactPage() {
               with a custom quote.
             </p>
             <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <input
                   placeholder="Your Name"
                   className="border border-black/10 rounded-xl px-4 py-3 text-sm bg-surface focus:outline-none focus:border-accent w-full"

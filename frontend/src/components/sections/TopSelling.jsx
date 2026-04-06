@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { fetchTopSelling } from "../../services/api"; // API method import karo
+import { fetchTopSelling } from "../../services/productServices"; 
 import { TrendingUp, Loader2 } from "lucide-react";
 
 const catColors = {
@@ -19,7 +19,8 @@ export default function TopSelling() {
     const loadTopSellingData = async () => {
       try {
         const res = await fetchTopSelling();
-        setTopItems(res.data); // Backend array yahan set hoga
+        // ✅ Safe handling: agar res.data hai toh wo use karein, nahi toh direct res
+        setTopItems(res.data || res || []); 
       } catch (err) {
         console.error("Top selling data load nahi hua:", err);
       } finally {
@@ -58,42 +59,46 @@ export default function TopSelling() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {topItems.map((p, i) => (
-            <div
-              key={p.id}
-              onClick={() => navigate(`/products/${p.id}`)}
-              className="bg-surface rounded-2xl border border-black/[0.07] p-4 flex items-center gap-4 cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all"
-            >
-              <span className="font-syne font-black text-3xl text-accent/20 min-w-[2rem]">
-                0{i + 1}
-              </span>
-              <div className="w-12 h-12 rounded-xl flex-shrink-0 overflow-hidden bg-white border border-black/[0.05]">
-                <img
-                  src={p.image_url} // Backend se image_url aa raha hai
-                  alt={p.name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="min-w-0">
-                <div className="font-bold text-sm text-ink truncate">
-                  {p.name}
+          {topItems.length > 0 ? (
+            topItems.map((p, i) => (
+              <div
+                key={p.id}
+                onClick={() => navigate(`/products/${p.id}`)}
+                className="bg-surface rounded-2xl border border-black/[0.07] p-4 flex items-center gap-4 cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all"
+              >
+                <span className="font-syne font-black text-3xl text-accent/20 min-w-[2rem]">
+                  0{i + 1}
+                </span>
+                <div className="w-12 h-12 rounded-xl flex-shrink-0 overflow-hidden bg-white border border-black/[0.05]">
+                  <img
+                    src={p.image_url}
+                    alt={p.name}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span
-                    className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                      catColors[p.category_name] || "bg-gray-100 text-gray-600"
-                    }`}
-                  >
-                    {p.category_name}
-                  </span>
-                  <span className="text-[11px] text-ink3 flex items-center gap-0.5 font-medium">
-                    <TrendingUp size={10} className="text-green-500" />
-                    {p.review_count} reviews
-                  </span>
+                <div className="min-w-0">
+                  <div className="font-bold text-sm text-ink truncate">
+                    {p.name}
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span
+                      className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                        catColors[p.category_name] || "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      {p.category_name || "General"}
+                    </span>
+                    <span className="text-[11px] text-ink3 flex items-center gap-0.5 font-medium">
+                      <TrendingUp size={10} className="text-green-500" />
+                      {p.review_count || 0} reviews
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p className="col-span-full text-center text-ink3 text-sm">No top selling products found.</p>
+          )}
         </div>
       </div>
     </section>

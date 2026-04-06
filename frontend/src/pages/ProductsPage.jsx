@@ -1,12 +1,10 @@
 import { useState, useEffect } from "react";
-import { fetchProducts } from "../services/api"; // Tumhari API service
+import { fetchProducts } from "../services/productServices"; 
 import ProductCard from "../components/ui/ProductCard";
 import TrendingProducts from "../components/sections/TrendingProducts";
 import TopSelling from "../components/sections/TopSelling";
 import ReviewSection from "../components/sections/ReviewSection";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
-
-
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
@@ -17,7 +15,7 @@ export default function ProductsPage() {
   const [totalPages, setTotalPages] = useState(1);
 
   // Single State Object for all filters
-const categories = ["All", "BOPP", "PET", "CPP", "LAMINATED"];
+  const categories = ["All", "BOPP", "PET", "CPP", "LAMINATED"];
 
   const [filters, setFilters] = useState({
     page: 1,
@@ -36,11 +34,12 @@ const categories = ["All", "BOPP", "PET", "CPP", "LAMINATED"];
       setLoading(true);
       try {
         const res = await fetchProducts(filters);
-        setProducts(res.data);
-        setTotalProducts(res.totalProducts);
-        setTotalPages(res.totalPages);
+        // Backend response structure ke hisaab se data set karein
+        setProducts(res.data || []);
+        setTotalProducts(res.totalProducts || 0);
+        setTotalPages(res.totalPages || 1);
       } catch (err) {
-        console.error("Failed to load products");
+        console.error("Failed to load products", err);
       } finally {
         setLoading(false);
       }
@@ -49,11 +48,11 @@ const categories = ["All", "BOPP", "PET", "CPP", "LAMINATED"];
     loadData();
   }, [filters]);
 
-  // 2. Debounce Search Effect (Jab user type karna band karega tab API call hogi)
+  // 2. Debounce Search Effect
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       setFilters((prev) => ({ ...prev, search: searchInput, page: 1 }));
-    }, 500); // 500ms delay
+    }, 500);
 
     return () => clearTimeout(timeoutId);
   }, [searchInput]);
@@ -69,7 +68,7 @@ const categories = ["All", "BOPP", "PET", "CPP", "LAMINATED"];
 
   const handlePageChange = (newPage) => {
     setFilters((prev) => ({ ...prev, page: newPage }));
-    window.scrollTo({ top: 0, behavior: "smooth" }); // Page badalne pe upar scroll karo
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
@@ -196,6 +195,7 @@ const categories = ["All", "BOPP", "PET", "CPP", "LAMINATED"];
         </div>
       </section>
 
+      {/* Additional Sections */}
       <TrendingProducts />
       <TopSelling />
       <ReviewSection />

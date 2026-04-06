@@ -391,7 +391,7 @@ export default function AddProduct() {
                       />
                     </Field>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <Field label="Category" required>
                         <select
                           className={inputCls}
@@ -451,7 +451,7 @@ export default function AddProduct() {
                       </h3>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <Field label="Thickness" required hint="e.g. 20 micron">
                         <input
                           className={inputCls}
@@ -470,7 +470,7 @@ export default function AddProduct() {
                       </Field>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <Field label="Price" required hint="per unit">
                         <input
                           className={inputCls}
@@ -705,8 +705,8 @@ export default function AddProduct() {
               </div>
             </div>
 
-            {/* ── Live Preview (right 1/3) ───────────────────────────────── */}
-            <div className="hidden lg:block">
+            {/* ── Live Preview (Now responsive on all devices) ───────────────────────────────── */}
+            <div className="lg:col-span-1 mt-8 lg:mt-0">
               <div className="sticky top-6">
                 <p className="text-xs font-semibold text-ink3 uppercase tracking-wider mb-3">
                   Live Preview

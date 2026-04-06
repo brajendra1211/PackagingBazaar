@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { fetchProducts } from "../../services/api"; // Tumhari Axios service
+import { fetchProducts } from "../../services/productServices"; 
 import ProductCard from "../ui/ProductCard";
 
 export default function TrendingProducts() {
@@ -10,13 +10,18 @@ export default function TrendingProducts() {
   useEffect(() => {
     const getTrendingData = async () => {
       try {
-        // Hum backend ko bhej rahe hain: tag='trending' aur limit=3 (Section ke liye)
+        // Backend ko tag='trending' bhej rahe hain
         const response = await fetchProducts({ 
           tag: "trending", 
           limit: 8,
           page: 1 
         });
-        setTrendingItems(response.data);
+
+        // ✅ Safe Data Setting: agar response.data hai toh wo, warna direct response
+        // Aksar axios mein response.data array hota hai, ya fir pura response hi array hota hai
+        const data = response.data || response;
+        setTrendingItems(Array.isArray(data) ? data : []);
+
       } catch (error) {
         console.error("Trending products load nahi ho paye:", error);
       } finally {
@@ -28,7 +33,12 @@ export default function TrendingProducts() {
   }, []);
 
   if (loading) {
-    return <div className="py-20 text-center text-ink3">Loading Trends...</div>;
+    return (
+      <div className="py-20 text-center text-ink3 flex flex-col items-center gap-2">
+        <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
+        <span>Loading Trends...</span>
+      </div>
+    );
   }
 
   return (
@@ -47,6 +57,7 @@ export default function TrendingProducts() {
             to="/products"
             className="text-sm font-medium text-accent hover:underline flex items-center gap-1"
           >
+            View all →
           </Link>
         </div>
 

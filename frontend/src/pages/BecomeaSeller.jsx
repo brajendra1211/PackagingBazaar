@@ -1,26 +1,18 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { registerSellerAPI } from "../services/api";
+import { registerSellerAPI } from "../services/authServices.js"; 
 import {
   CheckCircle, Package, TrendingUp, Users, ShieldCheck, ArrowRight,
   Building2, Phone, Lock, Eye, EyeOff, ChevronRight, Layers, FileText
 } from "lucide-react";
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
-// 🔥 Yahan humne IDs add kar di hain taaki DB mein numbers save hon
 const FILM_TYPES = [
   { id: 1, name: "BOPP" },
   { id: 2, name: "PET" },
   { id: 3, name: "CPP" },
   { id: 4, name: "LAMINATED" },
   { id: 5, name: "Others" }
-];
-
-const BENEFITS = [
-  { icon: TrendingUp, title: "Grow Your Sales", desc: "Reach 10,000+ verified buyers across India looking for packaging films." },
-  { icon: Users, title: "Verified Buyer Network", desc: "Connect with pre-vetted manufacturers, FMCG brands, and distributors." },
-  { icon: ShieldCheck, title: "Secure Transactions", desc: "Payment protection and trade assurance on every order." },
-  { icon: Package, title: "Easy Catalog Management", desc: "List unlimited SKUs with specs, pricing, and MOQ in minutes." },
 ];
 
 const BUSINESS_TYPES = ["Manufacturer", "Distributor", "Trader", "Converter"];
@@ -88,7 +80,7 @@ export default function BecomeaSeller() {
     city: "",
     state: "",
     address: "",
-    filmTypes: [], // Yahan ab IDs save hongi [1, 2]
+    filmTypes: [], 
     monthlyCapacity: "",
     priceRange: "",
     description: "",
@@ -96,7 +88,6 @@ export default function BecomeaSeller() {
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
 
-  // 🔥 Updated Toggle: Ab ye film.id check karega
   const toggleFilm = (filmId) =>
     set("filmTypes", form.filmTypes.includes(filmId) 
       ? form.filmTypes.filter((id) => id !== filmId) 
@@ -104,16 +95,24 @@ export default function BecomeaSeller() {
     );
 
   const handleSubmit = async () => {
+    // Basic validation check before submit
+    if (!form.email || !form.password || !form.gstNumber) {
+      setErrorMsg("Please fill all required fields.");
+      return;
+    }
+
     setLoading(true);
     setErrorMsg("");
     try {
-      // Backend ko seedha array bhej rahe hain, controller join(", ") kar lega
+      // Backend call
       const response = await registerSellerAPI(form);
-      if (response.success) {
+      // Agar backend success return karta hai
+      if (response) {
         setSubmitted(true);
       }
     } catch (err) {
-      setErrorMsg(err.message || "Registration failed. Check your GST or Email.");
+      // Error handling from modular API
+      setErrorMsg(err.message || err || "Registration failed. Check your GST or Email.");
     } finally {
       setLoading(false);
     }
@@ -150,7 +149,7 @@ export default function BecomeaSeller() {
           <StepIndicator current={step} />
 
           {errorMsg && (
-            <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded-xl text-center">
+            <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-600 text-[11px] font-bold uppercase rounded-xl text-center animate-shake">
               {errorMsg}
             </div>
           )}
@@ -170,7 +169,7 @@ export default function BecomeaSeller() {
                   {BUSINESS_TYPES.map(t => <option key={t}>{t}</option>)}
                 </select>
               </Field>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field label="GST Number" required>
                   <input className={inputCls} placeholder="22AAAAA0000A1Z5" value={form.gstNumber} onChange={(e) => set("gstNumber", e.target.value.toUpperCase())} maxLength={15} />
                 </Field>
@@ -190,7 +189,7 @@ export default function BecomeaSeller() {
               <Field label="Owner Name" required>
                 <input className={inputCls} placeholder="Full name" value={form.ownerName} onChange={(e) => set("ownerName", e.target.value)} />
               </Field>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field label="Email Address" required>
                   <input className={inputCls} type="email" placeholder="you@company.com" value={form.email} onChange={(e) => set("email", e.target.value)} />
                 </Field>
@@ -207,7 +206,7 @@ export default function BecomeaSeller() {
                   </button>
                 </div>
               </Field>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field label="City" required><input className={inputCls} value={form.city} onChange={(e) => set("city", e.target.value)} /></Field>
                 <Field label="State" required>
                   <select className={inputCls} value={form.state} onChange={(e) => set("state", e.target.value)}>
@@ -232,14 +231,14 @@ export default function BecomeaSeller() {
                       key={film.id} 
                       type="button" 
                       onClick={() => toggleFilm(film.id)} 
-                      className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all ${form.filmTypes.includes(film.id) ? "bg-accent text-white border-accent" : "bg-surface text-ink2 border-black/[0.08]"}`}
+                      className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all ${form.filmTypes.includes(film.id) ? "bg-accent text-white border-accent shadow-md shadow-accent/20" : "bg-surface text-ink2 border-black/[0.08] hover:border-accent"}`}
                     >
                       {film.name}
                     </button>
                   ))}
                 </div>
               </Field>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field label="Monthly Capacity (MT)" required><input className={inputCls} type="number" value={form.monthlyCapacity} onChange={(e) => set("monthlyCapacity", e.target.value)} /></Field>
                 <Field label="Price Range (₹/kg)"><input className={inputCls} value={form.priceRange} onChange={(e) => set("priceRange", e.target.value)} /></Field>
               </div>
@@ -253,13 +252,12 @@ export default function BecomeaSeller() {
               <div className="flex items-center gap-2 mb-1">
                 <FileText size={18} className="text-accent" /><h3 className="font-syne font-bold text-lg text-ink">Review Application</h3>
               </div>
-              <div className="bg-surface rounded-2xl p-5 space-y-2 text-sm">
-                <p><strong>Company:</strong> {form.businessName}</p>
-                <p><strong>GST:</strong> {form.gstNumber}</p>
-                <p><strong>Owner:</strong> {form.ownerName}</p>
-                {/* 🔥 Yahan hum IDs ko name mein convert karke dikha rahe hain */}
-                <p><strong>Films:</strong> {FILM_TYPES.filter(f => form.filmTypes.includes(f.id)).map(f => f.name).join(", ")}</p>
-                <p><strong>Location:</strong> {form.city}, {form.state}</p>
+              <div className="bg-surface border border-black/[0.05] rounded-2xl p-6 space-y-3 text-sm">
+                <div className="flex justify-between border-b border-black/[0.05] pb-2"><strong>Company:</strong> <span className="text-ink2">{form.businessName}</span></div>
+                <div className="flex justify-between border-b border-black/[0.05] pb-2"><strong>GST:</strong> <span className="text-ink2">{form.gstNumber}</span></div>
+                <div className="flex justify-between border-b border-black/[0.05] pb-2"><strong>Owner:</strong> <span className="text-ink2">{form.ownerName}</span></div>
+                <div className="flex justify-between border-b border-black/[0.05] pb-2"><strong>Films:</strong> <span className="text-accent font-bold">{FILM_TYPES.filter(f => form.filmTypes.includes(f.id)).map(f => f.name).join(", ")}</span></div>
+                <div className="flex justify-between"><strong>Location:</strong> <span className="text-ink2">{form.city}, {form.state}</span></div>
               </div>
             </div>
           )}
@@ -267,13 +265,13 @@ export default function BecomeaSeller() {
           {/* Navigation */}
           <div className="flex justify-between mt-8 pt-6 border-t border-black/[0.06]">
             {step > 0 ? (
-              <button disabled={loading} onClick={() => setStep(s => s - 1)} className="px-5 py-3 rounded-xl border border-black/15 text-sm font-medium text-ink hover:bg-surface">← Back</button>
+              <button disabled={loading} onClick={() => setStep(s => s - 1)} className="px-5 py-3 rounded-xl border border-black/15 text-sm font-medium text-ink hover:bg-surface transition-colors font-syne uppercase tracking-tighter">← Back</button>
             ) : <div />}
             
             {step < 3 ? (
-              <button onClick={() => setStep(s => s + 1)} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-accent text-white text-sm font-semibold hover:bg-orange-700">Next <ChevronRight size={16} /></button>
+              <button onClick={() => setStep(s => s + 1)} className="flex items-center gap-2 px-8 py-3 rounded-xl bg-accent text-white text-sm font-bold hover:bg-orange-700 shadow-lg shadow-accent/20 transition-all font-syne uppercase tracking-tighter">Next <ChevronRight size={16} /></button>
             ) : (
-              <button onClick={handleSubmit} disabled={loading} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-accent text-white text-sm font-semibold hover:bg-orange-700 disabled:bg-orange-300">
+              <button onClick={handleSubmit} disabled={loading} className="flex items-center gap-2 px-8 py-3 rounded-xl bg-accent text-white text-sm font-bold hover:bg-orange-700 disabled:bg-orange-300 shadow-lg shadow-accent/20 transition-all font-syne uppercase tracking-tighter">
                 {loading ? "Registering..." : "Submit Application"} <ArrowRight size={16} />
               </button>
             )}

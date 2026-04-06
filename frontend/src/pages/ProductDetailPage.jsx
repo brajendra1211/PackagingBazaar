@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { fetchProductById, fetchProducts } from "../services/api"; // API methods
+// ✅ FIX: Import path badal kar productservices kiya gaya hai
+import { fetchProductById, fetchProducts } from "../services/productServices"; 
 import { useCart } from "../context/CartContext";
 import Badge from "../components/ui/Badge";
 import StarRating from "../components/ui/StarRating";
@@ -31,17 +32,23 @@ export default function ProductDetailPage() {
       try {
         // 1. Fetch main product details
         const res = await fetchProductById(id);
-        const productData = res.data;
+        // Safe data handling
+        const productData = res.data || res; 
         setProduct(productData);
 
-        // 2. Fetch related products (Same category, but limit to 4)
-        if (productData) {
+        // 2. Fetch related products (Same category, limit 4)
+        if (productData && productData.category_name) {
           const relatedRes = await fetchProducts({ 
             category: productData.category_name, 
-            limit: 4 
+            limit: 5 // 5 mangwa rahe hain taaki current filter karke 4 bachein
           });
-          // Filter out current product from related items
-          setRelated(relatedRes.data.filter(p => p.id !== Number(id)));
+          
+          const relatedData = relatedRes.data || relatedRes;
+          
+          if (Array.isArray(relatedData)) {
+            // Current product ko list se hatao
+            setRelated(relatedData.filter(p => p.id !== Number(id)).slice(0, 4));
+          }
         }
       } catch (err) {
         console.error("Error loading product details:", err);
@@ -51,20 +58,22 @@ export default function ProductDetailPage() {
     };
 
     getDetails();
-    window.scrollTo(0, 0); // Detail page open hote hi upar scroll karo
+    window.scrollTo(0, 0); 
   }, [id]);
 
   const handleAdd = () => {
-    addToCart(product);
-    setAdded(true);
-    setTimeout(() => setAdded(false), 2000);
+    if (product) {
+      addToCart(product);
+      setAdded(true);
+      setTimeout(() => setAdded(false), 2000);
+    }
   };
 
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
         <Loader2 className="animate-spin text-accent" size={40} />
-        <p className="text-ink3 animate-pulse">Fetching details...</p>
+        <p className="text-ink3 animate-pulse font-medium">Fetching details...</p>
       </div>
     );
   }
@@ -74,7 +83,7 @@ export default function ProductDetailPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h2 className="font-syne font-black text-2xl text-ink mb-3">Product Not Found</h2>
-          <button onClick={() => navigate("/products")} className="text-accent underline">
+          <button onClick={() => navigate("/products")} className="text-accent underline font-medium">
             ← Back to Products
           </button>
         </div>
@@ -89,14 +98,14 @@ export default function ProductDetailPage() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-sm text-ink3 hover:text-accent mb-6 transition-colors"
+          className="flex items-center gap-2 text-sm text-ink3 hover:text-accent mb-6 transition-colors font-medium"
         >
           <ArrowLeft size={16} /> Back
         </button>
 
         <div className="grid md:grid-cols-2 gap-10 mb-16">
           {/* Image Section */}
-          <div className={`bg-gradient-to-br ${grad} rounded-3xl h-80 md:h-full min-h-[400px] flex items-center justify-center relative overflow-hidden`}>
+          <div className={`bg-gradient-to-br ${grad} rounded-3xl h-80 md:h-full min-h-[400px] flex items-center justify-center relative overflow-hidden border border-black/[0.03]`}>
             <img
               src={product.image_url} 
               alt={product.name}
@@ -111,10 +120,9 @@ export default function ProductDetailPage() {
           <div className="flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-xs font-semibold text-accent uppercase tracking-wider">
-                  {product.category_name} · {product.subcategory_name}
+                <span className="text-xs font-bold text-accent uppercase tracking-wider">
+                  {product.category_name} {product.subcategory_name && `· ${product.subcategory_name}`}
                 </span>
-                <Badge tag={product.tag_name} />
               </div>
               <h1 className="font-syne font-black text-3xl md:text-4xl text-ink mb-3">
                 {product.name}
@@ -131,32 +139,34 @@ export default function ProductDetailPage() {
 
               <div className="grid grid-cols-2 gap-3 mb-6">
                 {[
-                  ["Thickness", product.thickness],
-                  ["Width", product.width],
-                  ["Min. Order", `${product.min_order} ${product.unit}`],
-                  ["In Stock", `${product.stock} ${product.unit}`],
+                  ["Thickness", product.thickness || "N/A"],
+                  ["Width", product.width || "N/A"],
+                  ["Min. Order", `${product.min_order || 0} ${product.unit || 'units'}`],
+                  ["In Stock", `${product.stock || 0} ${product.unit || 'units'}`],
                 ].map(([l, v]) => (
                   <div key={l} className="bg-surface rounded-xl px-4 py-3 border border-black/[0.03]">
-                    <div className="text-xs text-ink3 mb-0.5">{l}</div>
-                    <div className="font-semibold text-sm text-ink">{v}</div>
+                    <div className="text-xs text-ink3 mb-0.5 font-medium">{l}</div>
+                    <div className="font-bold text-sm text-ink">{v}</div>
                   </div>
                 ))}
               </div>
 
               {/* Applications Chips */}
-              <div className="mb-5">
-                <div className="text-xs text-ink3 mb-2 font-medium">Applications</div>
-                <div className="flex flex-wrap gap-2">
-                  {product.applications?.map((a) => (
-                    <span
-                      key={a}
-                      className="text-[11px] bg-accent/5 text-accent px-3 py-1 rounded-full border border-accent/10 font-medium"
-                    >
-                      {a}
-                    </span>
-                  ))}
+              {product.applications && (
+                <div className="mb-5">
+                  <div className="text-xs text-ink3 mb-2 font-bold uppercase tracking-tighter">Applications</div>
+                  <div className="flex flex-wrap gap-2">
+                    {(Array.isArray(product.applications) ? product.applications : product.applications.split(',')).map((a) => (
+                      <span
+                        key={a}
+                        className="text-[10px] bg-accent/5 text-accent px-3 py-1 rounded-full border border-accent/10 font-bold uppercase"
+                      >
+                        {String(a).trim()}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <div className="border-t border-black/[0.07] pt-5">
@@ -164,15 +174,17 @@ export default function ProductDetailPage() {
                 <span className="font-syne font-black text-4xl text-accent">
                   ₹{product.price}
                 </span>
-                <span className="text-ink3 text-sm">
+                <span className="text-ink3 text-sm font-medium">
                   / {product.unit} (Min {product.min_order} {product.unit})
                 </span>
               </div>
               <div className="flex gap-3">
                 <button
                   onClick={handleAdd}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold text-sm transition-all shadow-lg shadow-accent/20 ${
-                    added ? "bg-green-600 text-white" : "bg-accent text-white hover:bg-orange-700 active:scale-[0.98]"
+                  className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm transition-all shadow-lg ${
+                    added 
+                    ? "bg-green-600 text-white shadow-green-200" 
+                    : "bg-accent text-white hover:bg-orange-700 active:scale-[0.98] shadow-accent/20"
                   }`}
                 >
                   {added ? (
@@ -183,7 +195,7 @@ export default function ProductDetailPage() {
                 </button>
                 <button
                   onClick={() => navigate("/contact")}
-                  className="px-5 py-3.5 rounded-xl border border-black/15 text-sm font-medium text-ink hover:bg-surface transition-colors"
+                  className="px-6 py-4 rounded-xl border-2 border-black/5 text-sm font-bold text-ink hover:bg-surface transition-colors"
                 >
                   Get Quote
                 </button>
@@ -195,9 +207,10 @@ export default function ProductDetailPage() {
         {/* Related Products Section */}
         {related.length > 0 && (
           <div className="mt-20">
-            <h2 className="font-syne font-black text-2xl text-ink mb-6">
-              Related Products
-            </h2>
+            <div className="flex items-center gap-3 mb-8">
+               <h2 className="font-syne font-black text-2xl text-ink">Related Products</h2>
+               <div className="h-[2px] flex-1 bg-black/[0.05]"></div>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {related.map((p) => (
                 <ProductCard key={p.id} product={p} />
