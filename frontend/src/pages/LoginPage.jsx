@@ -1,6 +1,9 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 // ✅ FIX: Import path badal kar auth.js kiya gaya hai
 import { signIn, signUp } from "../services/authServices.js"; 
+import { useNotification } from "../context/NotificationContext";
+import { motion } from "framer-motion";
 
 // ─── SMALL ICON COMPONENTS ──────────────────────────────────────────────────
 const MailIcon = () => ( <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></svg> );
@@ -26,15 +29,30 @@ function InputField({ label, type, value, onChange, placeholder, icon, rightElem
 
 function Alert({ message, type }) {
   if (!message) return null;
+
+  const styles = {
+    success: "bg-green-50 text-green-700 border border-green-200",
+    error: "bg-red-50 text-red-600 border border-red-200",
+    pending: "bg-amber-50 text-amber-700 border border-amber-200",
+  };
+
+  const icons = {
+    success: "✅",
+    error: "❌",
+    pending: "⏳",
+  };
+
   return (
-    <div className={`text-xs px-3 py-2.5 rounded-lg font-medium ${type === "success" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-600 border border-red-200"}`}>
-      {message}
+    <div className={`text-xs px-4 py-3 rounded-xl font-medium flex items-start gap-2 ${styles[type] || styles.error}`}>
+      <span className="mt-0.5 shrink-0">{icons[type] || icons.error}</span>
+      <span>{message}</span>
     </div>
   );
 }
 
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 export default function LoginPage() {
+  const navigate = useNavigate();
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -44,30 +62,26 @@ export default function LoginPage() {
   const [regPassword, setRegPassword] = useState("");
   const [showRegPw, setShowRegPw] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState({ text: "", type: "" });
+  const { notifySuccess, notifyError, notifyWarning } = useNotification();
 
   const switchMode = (m) => {
     setMode(m);
-    setMsg({ text: "", type: "" });
     setEmail(""); setPassword(""); setRegName(""); setRegEmail(""); setRegPassword("");
   };
 
   // ── SIGN IN (LOGIN) ──
   const handleLogin = async (e) => {
     e.preventDefault();
-    setMsg({ text: "", type: "" });
-    if (!email || !password) return setMsg({ text: "Please fill in all fields.", type: "error" });
+    if (!email || !password) return notifyError("Please fill in all fields.");
     
     setLoading(true);
     try {
       const data = await signIn({ email, password }); 
 
-      // Token, Role aur Name store karo
+      // Sirf Token store karo (role aur userName token me hi decoded hain)
       localStorage.setItem("token", data.token);
-      localStorage.setItem("role", data.role);
-      localStorage.setItem("userName", data.userName);
 
-      setMsg({ text: `Welcome! Redirecting as ${data.role}...`, type: "success" });
+      notifySuccess(`Welcome! Redirecting as ${data.role}...`);
 
       // Role Based Redirection
       setTimeout(() => {
@@ -76,8 +90,20 @@ export default function LoginPage() {
         else window.location.href = "/";
       }, 1000);
     } catch (err) {
-      // ✅ Modular error handling
-      setMsg({ text: err.message || err || "Invalid credentials.", type: "error" });
+      // Backend error message extract karo
+      const backendMsg = err?.response?.data?.message || err.message || "Invalid credentials.";
+
+      // Pending verification seller ke liye special amber message
+      const isPending =
+        backendMsg.toLowerCase().includes("pending") ||
+        backendMsg.toLowerCase().includes("verify") ||
+        backendMsg.toLowerCase().includes("approval");
+
+      if (isPending) {
+        notifyWarning("Your account has not been verified yet. You can log in after admin approval. Please wait for 24 hours.");
+      } else {
+        notifyError(backendMsg);
+      }
     } finally {
       setLoading(false);
     }
@@ -86,16 +112,15 @@ export default function LoginPage() {
   // ── SIGN UP (REGISTER) ──
   const handleRegister = async (e) => {
     e.preventDefault();
-    setMsg({ text: "", type: "" });
-    if (!regName || !regEmail || !regPassword) return setMsg({ text: "Please fill in all fields.", type: "error" });
+    if (!regName || !regEmail || !regPassword) return notifyError("Please fill in all fields.");
     
     setLoading(true);
     try {
       await signUp({ name: regName, email: regEmail, password: regPassword });
-      setMsg({ text: "Account created! Please sign in.", type: "success" });
+      notifySuccess("Account created! Please sign in.");
       setTimeout(() => switchMode("login"), 1500);
     } catch (err) {
-      setMsg({ text: err.message || err || "Registration failed.", type: "error" });
+      notifyError(err.message || err || "Registration failed.");
     } finally {
       setLoading(false);
     }
@@ -104,7 +129,12 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-[#f5f3ef] flex flex-col">
       <div className="flex flex-1 items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md">
+        <motion.div
+          initial={{ opacity: 0, y: 30, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ type: "spring", stiffness: 260, damping: 24 }}
+          className="w-full max-w-md"
+        >
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
             <div className="h-1.5 bg-gradient-to-r from-[#e8511a] via-[#f07840] to-[#e8511a]" />
             <div className="p-8">
@@ -127,7 +157,6 @@ export default function LoginPage() {
                     <InputField label="Password" type={showPw ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter password" icon={<LockIcon />} rightElement={<button type="button" onClick={() => setShowPw(!showPw)} className="text-gray-400 hover:text-[#e8511a]">{showPw ? <EyeOffIcon /> : <EyeIcon />}</button>} />
                     <div className="flex justify-end mt-1.5"><a href="#" className="text-xs text-[#e8511a] font-medium hover:underline">Forgot password?</a></div>
                   </div>
-                  <Alert message={msg.text} type={msg.type} />
                   <div className="bg-[#fff7f3] border border-[#fdd5c0] rounded-xl px-3 py-2.5 flex items-start gap-2">
                     <svg viewBox="0 0 24 24" fill="none" stroke="#e8511a" strokeWidth={2} className="w-4 h-4 mt-0.5 shrink-0"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
                     <p className="text-[10px] leading-tight text-[#c44010] font-medium uppercase">Your role is verified automatically based on your account credentials.</p>
@@ -141,7 +170,6 @@ export default function LoginPage() {
                   <InputField label="Full Name" type="text" value={regName} onChange={(e) => setRegName(e.target.value)} placeholder="e.g. Rahul Sharma" icon={<UserIcon />} />
                   <InputField label="Email Address" type="email" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} placeholder="e.g. rahul@example.com" icon={<MailIcon />} />
                   <InputField label="Password" type={showRegPw ? "text" : "password"} value={regPassword} onChange={(e) => setRegPassword(e.target.value)} placeholder="Min. 6 characters" icon={<LockIcon />} rightElement={<button type="button" onClick={() => setShowRegPw(!showRegPw)} className="text-gray-400 hover:text-[#e8511a]">{showRegPw ? <EyeOffIcon /> : <EyeIcon />}</button>} />
-                  <Alert message={msg.text} type={msg.type} />
                   <button type="submit" disabled={loading} className="w-full bg-[#e8511a] hover:bg-[#d4460f] text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 text-sm shadow-lg shadow-orange-200 active:scale-[0.98]">
                     {loading ? <><SpinIcon /> Creating...</> : "Create Account →"}
                   </button>
@@ -156,9 +184,21 @@ export default function LoginPage() {
                 {mode === "login" ? "New to PackagingBazaar? " : "Already have an account? "}
                 <button onClick={() => switchMode(mode === "login" ? "register" : "login")} className="text-[#e8511a] font-bold hover:underline bg-transparent transition-colors">{mode === "login" ? "Create Account" : "Sign In"}</button>
               </p>
+
+              {/* Seller Registration Link */}
+              <div className="mt-4 pt-4 border-t border-gray-100 text-center">
+                <p className="text-xs text-gray-400">Want to sell on PackagingBazaar?</p>
+                <button
+                  onClick={() => navigate("/become-a-seller")}
+                  className="mt-1.5 text-sm font-bold text-gray-700 hover:text-[#e8511a] transition-colors flex items-center gap-1 mx-auto"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /></svg>
+                  Register as a Seller →
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

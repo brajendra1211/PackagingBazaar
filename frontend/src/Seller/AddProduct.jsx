@@ -11,7 +11,8 @@ import {
   Plus,
   X,
 } from "lucide-react";
-
+import {createSellerProduct, updateSellerProduct} from "../services/sellerServices"
+import { useNotification } from "../context/NotificationContext";
 // ─── Constants ────────────────────────────────────────────────────────────────
 const CATEGORIES = ["BOPP", "PET", "CPP", "LAMINATED"];
 
@@ -172,6 +173,7 @@ export default function AddProduct() {
   const [step, setStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [appInput, setAppInput] = useState("");
+  const { notifySuccess, notifyError } = useNotification();
 
   const [form, setForm] = useState({
     name: editProduct?.name || "",
@@ -207,11 +209,44 @@ export default function AddProduct() {
       form.applications.filter((a) => a !== app),
     );
 
-  const handleSubmit = () => {
-    // Dummy submit — replace with API call
-    setSubmitted(true);
-  };
+const handleSubmit = async () => {
+  try {
+    const isVerified = localStorage.getItem("is_verified");
+    if (isVerified === "0") {
+      notifyError("Your account is pending admin verification. You can add products once your account is verified.");
+      return;
+    }
+    const productData = {
+      name: form.name,
+      category: form.category,
+      subcategory: form.subcategory,
+      tag: form.tag,
+      thickness: form.thickness,
+      width: form.width,
+      price: parseFloat(form.price),
+      unit: form.unit,
+      minOrder: parseInt(form.minOrder),
+      stock: parseInt(form.stock),
+      description: form.description,
+      applications: form.applications,
+      img: form.img,
+    };
 
+    if (isEdit) {
+      // Update existing product
+      await updateSellerProduct(editProduct.id, productData);
+    } else {
+      // Create new product
+      await createSellerProduct(productData);
+    }
+
+    notifySuccess(isEdit ? "Product updated successfully!" : "Product listed successfully!");
+    setSubmitted(true);
+  } catch (error) {
+    console.error("Error saving product:", error);
+    notifyError("Failed to save product. Please try again.");
+  }
+};
   // ── Success Screen ─────────────────────────────────────────────────────────
   if (submitted) {
     return (

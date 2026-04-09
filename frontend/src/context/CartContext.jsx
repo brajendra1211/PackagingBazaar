@@ -1,29 +1,174 @@
-import { createContext, useContext, useReducer } from "react";
+import { createContext, useContext, useReducer, useEffect } from "react";
+import { useNotification } from "./NotificationContext";
+import { fetchCartAPI, addToCartAPI, removeFromCartAPI, syncCartAPI, clearCartAPI } from "../services/cartServices";
 
 const CartContext = createContext();
 
 const reducer = (state, action) => {
   switch (action.type) {
     case "ADD": {
-      const exists = state.find((i) => i.id === action.product.id);
-      if (exists) return state.map((i) => i.id === action.product.id ? { ...i, qty: i.qty + 1 } : i);
+      // Create a unique key for guest/local state
+      const attrKey = `${action.product.id}-${action.product.selected_thickness || ""}-${action.product.selected_width || ""}-${action.product.selected_brand || ""}`;
+      
+      const exists = state.find((i) => {
+        const iKey = `${i.id}-${i.selected_thickness || ""}-${i.selected_width || ""}-${i.selected_brand || ""}`;
+        return iKey === attrKey;
+      });
+
+      if (exists) {
+        return state.map((i) => {
+          const iKey = `${i.id}-${i.selected_thickness || ""}-${i.selected_width || ""}-${i.selected_brand || ""}`;
+          return iKey === attrKey ? { ...i, qty: i.qty + 1 } : i;
+        });
+      }
       return [...state, { ...action.product, qty: 1 }];
     }
-    case "REMOVE": return state.filter((i) => i.id !== action.id);
-    case "UPDATE_QTY": return state.map((i) => i.id === action.id ? { ...i, qty: action.qty } : i).filter((i) => i.qty > 0);
+    case "REMOVE": {
+      // In local state, we remove by the temporary unique composite key OR cart_id
+      return state.filter((i) => i.cart_id !== action.cart_id && i.local_id !== action.local_id);
+    }
+    case "UPDATE_QTY": {
+       return state.map((i) => (i.cart_id === action.cart_id || i.local_id === action.local_id) ? { ...i, qty: action.qty } : i).filter((i) => i.qty > 0);
+    }
     case "CLEAR": return [];
+    case "SET_CART": return action.cart;
     default: return state;
   }
 };
 
 export const CartProvider = ({ children }) => {
-  const [cart, dispatch] = useReducer(reducer, []);
-  const addToCart   = (p) => dispatch({ type: "ADD", product: p });
-  const removeFromCart = (id) => dispatch({ type: "REMOVE", id });
-  const updateQty   = (id, qty) => dispatch({ type: "UPDATE_QTY", id, qty });
-  const clearCart   = () => dispatch({ type: "CLEAR" });
-  const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const [cart, dispatch] = useReducer(reducer, JSON.parse(localStorage.getItem("cart")) || []);
+  const token = localStorage.getItem("token");
+  const { notifySuccess, notifyError } = useNotification();
+
+  // Persist guest cart to localStorage
+  useEffect(() => {
+    if (!token) {
+      localStorage.setItem("cart", JSON.stringify(cart));
+    }
+  }, [cart, token]);
+
+  // Sync / Fetch cart on mount or login
+  useEffect(() => {
+    if (token) {
+      const loadAndSync = async () => {
+        try {
+          const localItems = JSON.parse(localStorage.getItem("cart")) || [];
+          if (localItems.length > 0) {
+            await syncCartAPI(localItems.map(i => ({ 
+              id: i.id, 
+              qty: i.qty,
+              thickness: i.selected_thickness,
+              width: i.selected_width,
+              brand: i.selected_brand
+            })));
+            localStorage.removeItem("cart"); // Clear after sync
+          }
+          const res = await fetchCartAPI();
+          if (res.success) {
+            // Transform backend products to context format
+            const transformed = res.cart.map(i => ({
+              cart_id: i.cart_id, // Important for removal
+              id: i.product_id,
+              name: i.name,
+              price: i.price,
+              qty: i.quantity,
+              image: i.image,
+              thickness: i.thickness, // Original product thickness (base)
+              width: i.width,         // Original product width (base)
+              selected_thickness: i.selected_thickness,
+              selected_width: i.selected_width,
+              selected_brand: i.selected_brand,
+              unit: i.unit
+            }));
+            dispatch({ type: "SET_CART", cart: transformed });
+          }
+        } catch (err) {
+          console.error("Cart sync failed:", err);
+        }
+      };
+      loadAndSync();
+    }
+  }, [token]);
+
+  const addToCart = async (p) => {
+    // Generate a local_id for guest identification
+    const itemToAdd = { 
+      ...p, 
+      local_id: `${p.id}-${p.selected_thickness || ""}-${p.selected_width || ""}-${p.selected_brand || ""}` 
+    };
+    
+    dispatch({ type: "ADD", product: itemToAdd });
+    notifySuccess("Added to cart!");
+    
+    if (token) {
+      try {
+        const existing = cart.find(i => 
+          i.id === p.id && 
+          i.selected_thickness === p.selected_thickness && 
+          i.selected_width === p.selected_width && 
+          i.selected_brand === p.selected_brand
+        );
+        const newQty = existing ? existing.qty + 1 : 1;
+        await addToCartAPI(p.id, newQty, {
+          thickness: p.selected_thickness,
+          width: p.selected_width,
+          brand: p.selected_brand
+        });
+        // Refresh cart to get real cart_ids from backend
+        const res = await fetchCartAPI();
+        if (res.success) {
+           const transformed = res.cart.map(i => ({
+              cart_id: i.cart_id,
+              id: i.product_id,
+              name: i.name,
+              price: i.price,
+              qty: i.quantity,
+              image: i.image,
+              selected_thickness: i.selected_thickness,
+              selected_width: i.selected_width,
+              selected_brand: i.selected_brand,
+              unit: i.unit
+            }));
+            dispatch({ type: "SET_CART", cart: transformed });
+        }
+      } catch (err) { console.error(err); }
+    }
+  };
+
+  const removeFromCart = async (item) => {
+    dispatch({ type: "REMOVE", cart_id: item.cart_id, local_id: item.local_id });
+    if (token && item.cart_id) {
+      try { await removeFromCartAPI(item.cart_id); } catch (err) { console.error(err); }
+    }
+  };
+
+  const updateQty = async (item, qty) => {
+    dispatch({ type: "UPDATE_QTY", cart_id: item.cart_id, local_id: item.local_id, qty });
+    if (token && item.id) {
+      try { 
+        await addToCartAPI(item.id, qty, {
+          thickness: item.selected_thickness,
+          width: item.selected_width,
+          brand: item.selected_brand
+        }); 
+      } catch (err) { 
+        notifyError("Update failed");
+        console.error(err); 
+      }
+    }
+  };
+
+  const clearCart = async () => {
+    dispatch({ type: "CLEAR" });
+    if (token) {
+      try { await clearCartAPI(); } catch (err) { console.error(err); }
+    }
+  };
+
+  const total = cart.reduce((s, i) => s + (Number(i.price) || 0) * i.qty, 0);
   const count = cart.reduce((s, i) => s + i.qty, 0);
+
   return (
     <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQty, clearCart, total, count }}>
       {children}

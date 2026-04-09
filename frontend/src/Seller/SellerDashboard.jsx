@@ -1,4 +1,9 @@
+import { useState, useEffect } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
+import { updateSellerProfileAPI, fetchSellerProducts, fetchSellerOrders } from "../services/sellerServices";
+import Pagination from "../components/ui/Pagination";
+import { motion } from "framer-motion";
+import { TableSkeleton } from "../components/ui/SkeletonLoader";
 
 export function SellerDashboard() {
   const { seller, PRODUCTS, ORDERS, icons, Icon, Badge, StatCard } = useOutletContext();
@@ -63,134 +68,206 @@ export function SellerDashboard() {
 }
 
 export function SellerProducts() {
-  const { PRODUCTS, icons, Icon, Badge } = useOutletContext();
+  const { icons, Icon, Badge } = useOutletContext();
   const navigate = useNavigate();
+  const [products, setProducts] = useState([]);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadProducts();
+  }, [page]);
+
+  const loadProducts = async () => {
+    setLoading(true);
+    try {
+      const res = await fetchSellerProducts(page, 5); // Limit 5 for better UX
+      if (res.success) {
+        setProducts(res.data);
+        setTotalProducts(res.totalCount);
+        setTotalPages(res.totalPages);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-black text-gray-900">My Products</h2>
-          <p className="text-sm text-gray-500 mt-0.5">{PRODUCTS.length} products listed</p>
+          <p className="text-sm text-gray-500 mt-0.5">{totalProducts} products listed</p>
         </div>
       </div>
 
-      <div className="space-y-3">
-        {PRODUCTS.map(p => (
-          <div key={p.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:border-orange-200 transition-colors">
-            <div className="flex items-start gap-3">
-              <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center shrink-0">
-                <Icon d={icons.layers} size={22} stroke="#e8511a" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <span className="font-bold text-sm text-gray-900">{p.name}</span>
-                  <Badge color={p.status === "active" ? "green" : "gray"}>{p.status}</Badge>
-                  {p.badge && <Badge color={p.badge === "bestseller" ? "orange" : "blue"}>{p.badge}</Badge>}
-                </div>
-                <div className="text-xs text-gray-400 mb-1.5">{p.type} · {p.variant} · {p.micron} · {p.width}</div>
-                <div className="flex items-center gap-3 text-xs">
-                  <span className="font-bold text-gray-900">₹{p.price}/kg</span>
-                  <span className="text-gray-500">MOQ: {p.moq}</span>
-                  <span className="text-gray-500 hidden sm:block">Stock: {p.stock}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <div className="hidden md:flex items-center gap-4 text-center">
-                  <div><div className="text-sm font-bold text-gray-800">{p.views}</div><div className="text-[10px] text-gray-400">Views</div></div>
-                  <div><div className="text-sm font-bold text-gray-800">{p.orders}</div><div className="text-[10px] text-gray-400">Orders</div></div>
-                  <div>
-                    <div className="text-sm font-bold text-gray-800 flex items-center gap-0.5">
-                      <Icon d={icons.star} size={11} stroke="#f59e0b" fill="#f59e0b" />{p.rating}
+      {loading ? (
+        <TableSkeleton rows={5} cols={4} />
+      ) : (
+        <>
+          <div className="space-y-3">
+            {products.map((p, idx) => (
+              <motion.div
+                key={p.id}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: idx * 0.05 }}
+                className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:border-orange-200 transition-colors"
+              >
+                {/* ... existing card content ... */}
+                <div className="flex items-start gap-3">
+                  <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center shrink-0">
+                    <Icon d={icons.layers} size={22} stroke="#e8511a" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="font-bold text-sm text-gray-900">{p.name}</span>
+                      <Badge color={p.status === "active" ? "green" : "gray"}>{p.status}</Badge>
                     </div>
-                    <div className="text-[10px] text-gray-400">Rating</div>
+                    <div className="text-xs text-gray-400 mb-1.5">{p.type} · {p.variant} · {p.micron} · {p.width}</div>
+                    <div className="flex items-center gap-3 text-xs">
+                      <span className="font-bold text-gray-900">₹{p.price}/kg</span>
+                      <span className="text-gray-500">Stock: {p.stock}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <button onClick={() => navigate("/seller/add-product", { state: { product: p } })} className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:border-[#e8511a] hover:text-[#e8511a] transition-colors">
+                      <Icon d={icons.edit} size={13} />
+                    </button>
                   </div>
                 </div>
-                <div className="flex gap-1.5">
-                  <button
-                    onClick={() => navigate("/seller/add-product", { state: { product: p } })}
-                    className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:border-[#e8511a] hover:text-[#e8511a] transition-colors"
-                  >
-                    <Icon d={icons.edit} size={13} />
-                  </button>
-                  <button className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:border-red-400 hover:text-red-500 transition-colors">
-                    <Icon d={icons.trash} size={13} />
-                  </button>
-                </div>
-              </div>
-            </div>
+              </motion.div>
+            ))}
           </div>
-        ))}
-      </div>
+          <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+        </>
+      )}
     </div>
   );
 }
 
 export function SellerOrders() {
-  const { ORDERS, Badge } = useOutletContext();
+  const { Badge } = useOutletContext();
+  const [orders, setOrders] = useState([]);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadOrders();
+  }, [page]);
+
+  const loadOrders = async () => {
+    setLoading(true);
+    try {
+      const res = await fetchSellerOrders(page, 10);
+      if (res.success) {
+        setOrders(res.data);
+        setTotalOrders(res.totalCount);
+        setTotalPages(res.totalPages);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
       <div>
         <h2 className="text-xl font-black text-gray-900">Recent Orders</h2>
-        <p className="text-sm text-gray-500 mt-0.5">{ORDERS.length} orders</p>
+        <p className="text-sm text-gray-500 mt-0.5">{totalOrders} orders</p>
       </div>
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        {/* Mobile: cards */}
-        <div className="md:hidden divide-y divide-gray-50">
-          {ORDERS.map(o => (
-            <div key={o.id} className="p-4">
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <div className="font-bold text-sm text-gray-900">{o.buyer}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{o.product}</div>
+
+      {loading ? (
+        <TableSkeleton rows={6} cols={5} />
+      ) : (
+        <>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            {/* Mobile: cards */}
+            <div className="md:hidden divide-y divide-gray-50">
+              {orders.map(o => (
+                <div key={o.id} className="p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <div className="font-bold text-sm text-gray-900">{o.customer_name}</div>
+                      <div className="text-xs text-gray-400 mt-0.5">Order #{o.id}</div>
+                    </div>
+                    <Badge color={o.status === "Delivered" ? "green" : o.status === "Cancelled" ? "red" : "blue"}>{o.status}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <span>{new Date(o.order_date).toLocaleDateString()}</span>
+                    <span className="font-bold text-gray-900">₹{o.total_price}</span>
+                  </div>
                 </div>
-                <Badge color={o.status === "delivered" ? "green" : o.status === "shipped" ? "blue" : "orange"}>{o.status}</Badge>
-              </div>
-              <div className="flex items-center justify-between text-xs text-gray-500">
-                <span>{o.qty} · {o.date}</span>
-                <span className="font-bold text-gray-900">{o.amount}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-        {/* Desktop: table */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                {["Order ID", "Buyer", "Product", "Qty", "Amount", "Date", "Status"].map(h => (
-                  <th key={h} className="text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider px-5 py-3">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {ORDERS.map(o => (
-                <tr key={o.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors last:border-0">
-                  <td className="px-5 py-3.5 font-mono text-xs text-gray-400">{o.id}</td>
-                  <td className="px-5 py-3.5 font-semibold text-gray-800">{o.buyer}</td>
-                  <td className="px-5 py-3.5 text-gray-500 text-xs">{o.product}</td>
-                  <td className="px-5 py-3.5 text-gray-500">{o.qty}</td>
-                  <td className="px-5 py-3.5 font-bold text-gray-900">{o.amount}</td>
-                  <td className="px-5 py-3.5 text-gray-400 text-xs">{o.date}</td>
-                  <td className="px-5 py-3.5">
-                    <Badge color={o.status === "delivered" ? "green" : o.status === "shipped" ? "blue" : "orange"}>{o.status}</Badge>
-                  </td>
-                </tr>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            </div>
+            {/* Desktop: table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-100">
+                    {["Order ID", "Customer", "Amount", "Date", "Status"].map(h => (
+                      <th key={h} className="text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider px-5 py-3">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders.map(o => (
+                    <tr key={o.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors last:border-0">
+                      <td className="px-5 py-3.5 font-mono text-xs text-gray-400">#{o.id}</td>
+                      <td className="px-5 py-3.5 font-semibold text-gray-800">{o.customer_name}</td>
+                      <td className="px-5 py-3.5 font-bold text-gray-900">₹{o.total_price}</td>
+                      <td className="px-5 py-3.5 text-gray-400 text-xs">{new Date(o.order_date).toLocaleDateString()}</td>
+                      <td className="px-5 py-3.5">
+                        <Badge color={o.status === "Delivered" ? "green" : o.status === "Cancelled" ? "red" : "blue"}>{o.status}</Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+        </>
+      )}
     </div>
   );
 }
 
 export function SellerProfile() {
-  const { seller, setSeller, icons, Icon, EditableField, FilmTypesEditor } = useOutletContext();
-  const update = (key) => (val) => setSeller(s => ({ ...s, [key]: val }));
+  const { seller, setSeller, icons, Icon, EditableField, FilmTypesEditor, BusinessTypesEditor } = useOutletContext();
+
+  // Field save hone par: local state + backend dono update karo
+  const update = (key) => async (val) => {
+    const updatedSeller = { ...seller, [key]: val };
+    setSeller(updatedSeller); // Optimistic UI update
+    try {
+      await updateSellerProfileAPI({
+        businessName: updatedSeller.businessName,
+        businessType: updatedSeller.businessType,
+        gstNumber: updatedSeller.gstNumber,
+        yearEstablished: updatedSeller.yearEstablished,
+        city: updatedSeller.city,
+        state: updatedSeller.state,
+        address: updatedSeller.address,
+        filmTypes: updatedSeller.filmTypes,
+        monthlyCapacity: updatedSeller.monthlyCapacity,
+        priceRange: updatedSeller.priceRange,
+        description: updatedSeller.description,
+        phone: updatedSeller.phone,
+      });
+    } catch (err) {
+      console.error("Profile update failed:", err);
+    }
+  };
   const STATES = ["Gujarat", "Maharashtra", "Rajasthan", "Delhi", "Karnataka", "Tamil Nadu", "Uttar Pradesh", "West Bengal", "Telangana", "Other"];
-  const BUSINESS_TYPES = ["Manufacturer", "Distributor", "Trader", "Converter"];
 
   return (
     <div className="space-y-5">
@@ -204,7 +281,14 @@ export function SellerProfile() {
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle at 20% 50%, #e8511a 0%, transparent 60%)" }} />
         <div className="w-14 h-14 bg-[#e8511a] rounded-2xl flex items-center justify-center text-xl font-black shrink-0 z-10">{seller.avatar}</div>
         <div className="z-10 min-w-0">
-          <div className="text-lg font-black truncate">{seller.businessName}</div>
+          <div className="flex items-center gap-2 mb-0.5">
+            <div className="text-lg font-black truncate">{seller.businessName}</div>
+            {seller.uid && (
+              <span className="text-[10px] bg-white/20 text-white px-2 py-0.5 rounded-full font-black border border-white/10">
+                ID: {seller.uid}
+              </span>
+            )}
+          </div>
           <div className="text-white/60 text-sm mt-0.5">{seller.city}, {seller.state}</div>
           <div className="flex items-center gap-2 mt-2 flex-wrap">
             <span className="flex items-center gap-1.5 text-xs bg-green-500/20 text-green-400 border border-green-500/30 px-2.5 py-1 rounded-full font-semibold">
@@ -220,13 +304,13 @@ export function SellerProfile() {
         <div className="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 bg-gray-50/50">
           <Icon d={icons.building} size={15} stroke="#e8511a" />
           <h3 className="font-bold text-gray-800 text-sm">Business Information</h3>
-          <span className="text-[10px] text-orange-500 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 ml-auto">Hover to edit</span>
+          <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full border border-gray-200 ml-auto">Read Only</span>
         </div>
         <div className="px-5">
-          <EditableField label="Business / Company Name" value={seller.businessName} onSave={update("businessName")} />
-          <EditableField label="Business Type" value={seller.businessType} onSave={update("businessType")} options={BUSINESS_TYPES} />
-          <EditableField label="GST Number" value={seller.gstNumber} onSave={update("gstNumber")} />
-          <EditableField label="Year Established" value={seller.yearEstablished} onSave={update("yearEstablished")} type="number" />
+          <EditableField label="Business / Company Name" value={seller.businessName} onSave={update("businessName")} readOnly={true} />
+          <BusinessTypesEditor value={seller.businessType} onSave={update("businessType")} />
+          <EditableField label="GST Number" value={seller.gstNumber} onSave={update("gstNumber")} readOnly={true} />
+          <EditableField label="Year Established" value={seller.yearEstablished} onSave={update("yearEstablished")} type="number" readOnly={true} />
         </div>
       </div>
 

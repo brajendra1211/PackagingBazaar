@@ -1,25 +1,57 @@
 import { useState } from "react";
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
-import { Store, Calendar, Phone, Menu, X, Package, LogOut, ShieldCheck } from "lucide-react";
+import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { Store, Calendar, Phone, Menu, X, Package, LogOut, ShieldCheck, ChevronDown, Users, LayoutDashboard, Settings, UserPlus, ClipboardList, CheckCircle, ShoppingBag } from "lucide-react";
 import { Toaster } from 'react-hot-toast';
+import { AnimatePresence, motion } from "framer-motion";
 
 export default function AdminLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [openMenus, setOpenMenus] = useState({ users: true, sellers: true });
   const navigate = useNavigate();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const activeTab = searchParams.get("tab") || "overview";
 
   const handleLogout = () => {
     localStorage.removeItem("token");
-    navigate("/");
+    window.location.href = "/";
   };
 
-  const navLinks = [
-    { to: "/admin/dashboard", icon: <Phone size={18} />, label: "Seller Requests" },
-    { to: "/admin/sellers", icon: <Store size={18} />, label: "Manage Sellers" },
-    { to: "/admin/settings", icon: <Calendar size={18} />, label: "Settings" },
+  const toggleMenu = (menu) => {
+    setOpenMenus(prev => ({ ...prev, [menu]: !prev[menu] }));
+  };
+
+  const navGroups = [
+    {
+      id: "general",
+      links: [
+        { to: "/admin/dashboard?tab=overview", icon: <LayoutDashboard size={18} />, label: "Overview", tab: "overview" },
+      ]
+    },
+    {
+      id: "users",
+      label: "User Control",
+      icon: <Users size={18} />,
+      links: [
+        { to: "/admin/dashboard?tab=users", icon: <Users size={16} />, label: "All Users", tab: "users" },
+        { to: "/admin/dashboard?tab=orders", icon: <ShoppingBag size={16} />, label: "All Orders", tab: "orders" },
+        { to: "/admin/dashboard?tab=products", icon: <Package size={16} />, label: "All Products", tab: "products" },
+      ]
+    },
+    {
+      id: "sellers",
+      label: "Seller Hub",
+      icon: <Store size={18} />,
+      links: [
+        { to: "/admin/dashboard?tab=sellers", icon: <CheckCircle size={16} />, label: "Active Businesses", tab: "sellers" },
+        { to: "/admin/dashboard?tab=pending", icon: <ClipboardList size={16} />, label: "Pending Sellers", tab: "pending" },
+        { to: "/admin/dashboard?tab=sellerorders", icon: <ShoppingBag size={16} />, label: "Seller Orders", tab: "sellerorders" },
+      ]
+    }
   ];
 
   return (
-    <div className="bg-surface flex h-screen overflow-hidden">
+    <div className="bg-[#f0f4f8] flex h-screen overflow-hidden">
       <Toaster position="top-right" />
       
       {/* ── Mobile Overlay ── */}
@@ -52,22 +84,50 @@ export default function AdminLayout() {
            </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto p-4 space-y-1.5">
-          {navLinks.map((link) => (
-            <NavLink 
-              key={link.to}
-              to={link.to}
-              end={link.to === "/admin/dashboard"}
-              onClick={() => setMobileOpen(false)}
-              className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
-                isActive 
-                  ? 'bg-red-50 text-red-600 shadow-sm border border-red-100' 
-                  : 'text-ink2 hover:bg-surface hover:text-ink border border-transparent'
-              }`}
-            >
-               {link.icon}
-               <span>{link.label}</span>
-            </NavLink>
+        <nav className="flex-1 overflow-y-auto p-4 space-y-4">
+          {navGroups.map((group) => (
+            <div key={group.id} className="space-y-1">
+              {group.label ? (
+                <div className="space-y-1">
+                  <button 
+                    onClick={() => toggleMenu(group.id)}
+                    className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${openMenus[group.id] ? "text-red-600 bg-red-50/50" : "text-gray-400 hover:text-gray-600"}`}
+                  >
+                    <div className="flex items-center gap-2">
+                       {group.icon}
+                       {group.label}
+                    </div>
+                    <ChevronDown size={14} className={`transition-transform duration-300 ${openMenus[group.id] ? "rotate-180" : ""}`} />
+                  </button>
+                  
+                  {openMenus[group.id] && (
+                    <div className="pl-4 space-y-1 mt-1 animate-fadeIn">
+                       {group.links.map(link => (
+                         <NavLink 
+                           key={link.tab}
+                           to={link.to}
+                           className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === link.tab ? "bg-gray-900 text-white shadow-lg" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"}`}
+                         >
+                           {link.icon}
+                           {link.label}
+                         </NavLink>
+                       ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                group.links.map(link => (
+                  <NavLink 
+                    key={link.tab}
+                    to={link.to}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === link.tab ? "bg-gradient-to-r from-[#e8511a] to-[#ff7a45] text-white shadow-[0_8px_16px_rgba(232,81,26,0.25)]" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"}`}
+                  >
+                    {link.icon}
+                    {link.label}
+                  </NavLink>
+                ))
+              )}
+            </div>
           ))}
         </nav>
 
@@ -107,7 +167,17 @@ export default function AdminLayout() {
         {/* ── Page Content (Scrollable Container) ── */}
         <main className="flex-1 overflow-y-auto">
           <div className="py-6 px-4 sm:px-6 md:py-8 lg:px-10 max-w-6xl mx-auto pb-20">
-             <Outlet />
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ type: "tween", ease: "easeOut", duration: 0.25 }}
+              >
+                <Outlet />
+              </motion.div>
+            </AnimatePresence>
           </div>
         </main>
       </div>

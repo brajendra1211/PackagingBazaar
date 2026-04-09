@@ -1,6 +1,20 @@
 import { Mail, Phone, MapPin, Send } from "lucide-react";
 import WhyChooseUs from "../components/sections/WhyChooseUs";
+import { useNotification } from "../context/NotificationContext";
+import { useState } from "react";
 export default function ContactPage() {
+  const { notifySuccess } = useNotification();
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setTimeout(() => {
+      notifySuccess("Message sent! We will contact you soon.");
+      setSubmitting(false);
+      e.target.reset(); // Correctly reset the form
+    }, 1000);
+  };
   return (
     <>
       <div className="bg-ink py-14 px-4">
@@ -23,7 +37,7 @@ export default function ContactPage() {
               Fill out the form and our team will get back to you within 2 hours
               with a custom quote.
             </p>
-            <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+            <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <input
                   placeholder="Your Name"
@@ -57,9 +71,10 @@ export default function ContactPage() {
               />
               <button
                 type="submit"
-                className="bg-accent text-white px-6 py-3 rounded-xl font-semibold text-sm flex items-center gap-2 hover:bg-orange-700 transition-colors"
+                disabled={submitting}
+                className="bg-accent text-white px-6 py-3 rounded-xl font-semibold text-sm flex items-center gap-2 hover:bg-orange-700 transition-colors disabled:opacity-50"
               >
-                <Send size={15} /> Send Message
+                <Send size={15} /> {submitting ? "Sending..." : "Send Message"}
               </button>
             </form>
           </div>

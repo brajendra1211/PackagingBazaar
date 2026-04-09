@@ -5,6 +5,9 @@ import TrendingProducts from "../components/sections/TrendingProducts";
 import TopSelling from "../components/sections/TopSelling";
 import ReviewSection from "../components/sections/ReviewSection";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import Pagination from "../components/ui/Pagination";
+import { motion } from "framer-motion";
+import { ProductCardSkeleton } from "../components/ui/SkeletonLoader";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
@@ -107,42 +110,46 @@ export default function ProductsPage() {
               />
             </div>
             
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide flex-nowrap sm:flex-wrap">
               {categories.map((c) => (
                 <button
                   key={c}
                   onClick={() => handleCategoryChange(c)}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
                     filters.category === c
                       ? "bg-accent text-white"
-                      : "bg-surface text-ink2 hover:bg-surface border border-black/[0.08]"
+                      : "bg-surface text-ink2 hover:bg-white border border-black/[0.08]"
                   }`}
                 >
                   {c}
                 </button>
               ))}
               
-              <select
-                value={filters.sort}
-                onChange={handleSortChange}
-                className="px-3 py-2 rounded-xl text-sm border border-black/[0.1] bg-surface text-ink2 focus:outline-none"
-              >
-                <option value="default">Sort: Default</option>
-                <option value="price_low">Price: Low to High</option>
-                <option value="price_high">Price: High to Low</option>
-                <option value="highest_rated">Highest Rated</option>
-              </select>
+              <div className="ml-auto sm:ml-0">
+                <select
+                  value={filters.sort}
+                  onChange={handleSortChange}
+                  className="px-3 py-2 rounded-xl text-sm border border-black/[0.1] bg-surface text-ink2 focus:outline-none whitespace-nowrap min-w-[140px]"
+                >
+                  <option value="default">Sort: Default</option>
+                  <option value="price_low">Price: Low to High</option>
+                  <option value="price_high">Price: High to Low</option>
+                  <option value="highest_rated">Highest Rated</option>
+                </select>
+              </div>
             </div>
           </div>
 
           <p className="text-sm text-ink3 mb-5">
-            Showing {products.length} of {totalProducts} products
+            Showing {products.length > 0 ? `${(filters.page - 1) * filters.limit + 1}-${(filters.page - 1) * filters.limit + products.length}` : '0'} of {totalProducts} products
           </p>
 
           {/* Product Grid */}
           {loading ? (
-            <div className="flex justify-center items-center py-20">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <ProductCardSkeleton key={i} />
+              ))}
             </div>
           ) : products.length === 0 ? (
             <div className="text-center py-20 text-ink3">
@@ -150,46 +157,25 @@ export default function ProductsPage() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                {products.map((p) => (
-                  <ProductCard key={p.id} product={p} />
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
+                {products.map((p, idx) => (
+                  <motion.div
+                    key={p.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: idx * 0.05 }}
+                  >
+                    <ProductCard product={p} />
+                  </motion.div>
                 ))}
               </div>
 
-              {/* Pagination UI */}
-              {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-2 mt-12">
-                  <button
-                    onClick={() => handlePageChange(Math.max(filters.page - 1, 1))}
-                    disabled={filters.page === 1}
-                    className="p-2 rounded-xl border border-black/[0.1] hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                  >
-                    <ChevronLeft size={20} />
-                  </button>
-
-                  {[...Array(totalPages)].map((_, index) => (
-                    <button
-                      key={index + 1}
-                      onClick={() => handlePageChange(index + 1)}
-                      className={`w-10 h-10 rounded-xl text-sm font-medium transition-all ${
-                        filters.page === index + 1
-                          ? "bg-accent text-white"
-                          : "bg-surface text-ink2 border border-black/[0.08] hover:border-accent"
-                      }`}
-                    >
-                      {index + 1}
-                    </button>
-                  ))}
-
-                  <button
-                    onClick={() => handlePageChange(Math.min(filters.page + 1, totalPages))}
-                    disabled={filters.page === totalPages}
-                    className="p-2 rounded-xl border border-black/[0.1] hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                  >
-                    <ChevronRight size={20} />
-                  </button>
-                </div>
-              )}
+              {/* Reusable Pagination Component */}
+              <Pagination 
+                currentPage={filters.page} 
+                totalPages={totalPages} 
+                onPageChange={handlePageChange} 
+              />
             </>
           )}
         </div>

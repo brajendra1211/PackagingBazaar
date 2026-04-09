@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ShoppingCart, Menu, X, Package, User, LogOut,
-  LayoutDashboard, ShieldCheck, Store, ChevronDown,
+  LayoutDashboard, ShieldCheck, Store, ChevronDown, Users
 } from "lucide-react";
 import { useCart } from "../../context/CartContext";
 // ✅ Axios ki jagah modular service import ki
@@ -58,11 +58,17 @@ function ProfileMenu({ user, onLogout }) {
             <p className="text-xs text-ink2 truncate">{user.email || "No email"}</p>
           </div>
           <div className="py-1.5">
-            {user.role !== "user" && (
+            {(user.role === "admin" || user.role === "seller") && (
               <button onClick={() => { navigate(dashboardLink); setOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink2 hover:bg-surface hover:text-accent transition-colors">
                 <LayoutDashboard size={15} /> Dashboard
               </button>
             )}
+            <button onClick={() => { navigate("/cart"); setOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink2 hover:bg-surface hover:text-accent transition-colors">
+              <ShoppingCart size={15} /> My Cart
+            </button>
+            <button onClick={() => { navigate("/profile?tab=orders"); setOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink2 hover:bg-surface hover:text-accent transition-colors">
+              <Package size={15} /> My Orders
+            </button>
             {user.role === "seller" && (
               <button onClick={() => { navigate("/seller/products"); setOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink2 hover:bg-surface hover:text-accent transition-colors">
                 <Store size={15} /> My Products
@@ -70,12 +76,12 @@ function ProfileMenu({ user, onLogout }) {
             )}
             {user.role === "admin" && (
               <>
-                <button onClick={() => { navigate("/admin/users"); setOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink2 hover:bg-surface hover:text-accent transition-colors">
-                  <User size={15} /> Manage Users
-                </button>
-                <button onClick={() => { navigate("/admin/sellers"); setOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink2 hover:bg-surface hover:text-accent transition-colors">
-                  <Store size={15} /> Manage Sellers
-                </button>
+                <button onClick={() => { navigate("/admin/dashboard?tab=users"); setOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink2 hover:bg-surface hover:text-accent transition-colors">
+              <Users size={15} /> Manage Users
+            </button>
+            <button onClick={() => { navigate("/admin/dashboard?tab=pending"); setOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink2 hover:bg-surface hover:text-accent transition-colors">
+              <Store size={15} /> Manage Sellers
+            </button>
               </>
             )}
           </div>
@@ -125,6 +131,8 @@ export default function Navbar() {
   const links = [
     { to: "/", label: "Home" },
     { to: "/products", label: "Products" },
+    { to: "/seller", label: "Seller" },
+    { to: "/buyer", label: "Buyer" },
     { to: "/about", label: "About Us" },
     { to: "/contact", label: "Contact" },
   ];
@@ -132,7 +140,7 @@ export default function Navbar() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     setUser(null);
-    navigate("/");
+    window.location.href = "/";
   };
 
   return (
@@ -182,39 +190,63 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Menu remains as it is... */}
+      {/* Mobile Menu */}
       {open && (
-        <div className="md:hidden bg-white border-t border-black/[0.07] animate-fadeIn">
-          <div className="px-4 py-4 space-y-3">
-            {links.map((l) => (
-              <Link key={l.to} to={l.to} onClick={() => setOpen(false)} className="block text-sm font-medium text-ink2 hover:text-accent py-2 transition-colors">{l.label}</Link>
-            ))}
-            <div className="border-t border-black/[0.06] pt-3 space-y-2">
+        <div className="md:hidden fixed inset-0 top-16 bg-white z-[60] overflow-y-auto animate-slideDown">
+          <div className="px-6 py-8 space-y-6">
+            <div className="space-y-4">
+              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[3px] mb-2 pl-1">Menu</h3>
+              {links.map((l) => (
+                <Link 
+                  key={l.to} to={l.to} 
+                  onClick={() => setOpen(false)} 
+                  className="block text-xl font-syne font-black text-ink hover:text-accent transition-colors py-1"
+                >
+                  {l.label}
+                </Link>
+              ))}
+            </div>
+
+            <div className="border-t border-black/[0.06] pt-8 space-y-4">
               {!loading && (
                 <>
                   {user ? (
-                    <>
+                    <div className="space-y-6">
                       <div 
                         onClick={() => { navigate(user.role === "admin" ? "/admin/profile" : user.role === "seller" ? "/seller/profile" : "/profile"); setOpen(false); }}
-                        className="pb-2 border-b border-black/[0.06] cursor-pointer hover:bg-surface rounded-lg px-2 -mx-2 transition-colors"
+                        className="bg-surface p-5 rounded-2xl cursor-pointer hover:bg-gray-100 transition-colors border border-black/[0.03]"
                       >
-                        <p className="text-sm font-semibold text-ink">{user.name}</p>
-                        <p className="text-xs text-ink2">{user.email}</p>
+                        <div className="flex items-center gap-4">
+                           <div className="w-12 h-12 bg-accent rounded-xl flex items-center justify-center text-white text-lg font-black">
+                              {user.name ? user.name[0].toUpperCase() : "U"}
+                           </div>
+                           <div className="min-w-0">
+                              <p className="text-base font-black text-ink truncate">{user.name}</p>
+                              <p className="text-xs text-ink3 truncate">{user.email}</p>
+                           </div>
+                        </div>
                       </div>
-                      {user.role !== "user" && (
-                        <button onClick={() => { navigate(user.role === "admin" ? "/admin/dashboard" : user.role === "seller" ? "/seller/dashboard" : "/account"); setOpen(false); }} className="w-full flex items-center gap-2 text-sm text-ink2 hover:text-accent py-2 transition-colors">
-                          <LayoutDashboard size={16} /> Dashboard
+                      
+                      <div className="grid grid-cols-1 gap-2">
+                        {(user.role === "admin" || user.role === "seller") && (
+                          <button onClick={() => { navigate(user.role === "admin" ? "/admin/dashboard" : user.role === "seller" ? "/seller/dashboard" : "/account"); setOpen(false); }} className="w-full flex items-center gap-3 bg-white border border-black/[0.08] px-4 py-4 rounded-xl text-sm font-bold text-ink2 hover:bg-surface transition-colors">
+                            <LayoutDashboard size={18} className="text-accent" /> Dashboard Overview
+                          </button>
+                        )}
+                        <button onClick={() => { navigate("/profile?tab=orders"); setOpen(false); }} className="w-full flex items-center gap-3 bg-white border border-black/[0.08] px-4 py-4 rounded-xl text-sm font-bold text-ink2 hover:bg-surface transition-colors">
+                          <Package size={18} className="text-accent" /> My Orders
                         </button>
-                      )}
-                      <button onClick={() => { handleLogout(); setOpen(false); }} className="w-full flex items-center gap-2 text-sm text-red-500 hover:text-red-700 py-2 transition-colors border-t border-black/[0.06] pt-3 mt-2">
-                        <LogOut size={16} /> Logout
+                      </div>
+
+                      <button onClick={() => { handleLogout(); setOpen(false); }} className="w-full flex items-center justify-center gap-2 text-sm font-black text-red-500 py-4 rounded-xl bg-red-50 hover:bg-red-100 transition-all uppercase tracking-widest">
+                        <LogOut size={16} /> Logout Securely
                       </button>
-                    </>
+                    </div>
                   ) : (
-                    <>
-                      <Link to="/login" onClick={() => setOpen(false)} className="block w-full text-center border border-accent text-accent text-sm font-medium px-4 py-2 rounded-lg hover:bg-orange-50 transition-colors">Login</Link>
-                      <Link to="/become-a-seller" onClick={() => setOpen(false)} className="block w-full text-center bg-accent text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-orange-50 transition-colors">Become a Seller</Link>
-                    </>
+                    <div className="space-y-4">
+                      <Link to="/login" onClick={() => setOpen(false)} className="block w-full text-center border-2 border-black/5 text-ink text-sm font-bold py-4 rounded-xl hover:bg-surface transition-all">Login</Link>
+                      <Link to="/become-a-seller" onClick={() => setOpen(false)} className="block w-full text-center bg-accent text-white text-sm font-bold py-4 rounded-xl hover:shadow-xl hover:shadow-orange-500/20 transition-all">Become a Seller</Link>
+                    </div>
                   )}
                 </>
               )}

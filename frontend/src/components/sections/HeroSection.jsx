@@ -9,13 +9,13 @@ export default function HeroSection() {
             <span className="w-1.5 h-1.5 bg-accent rounded-full" />
             Premium Packaging Films
           </div>
-          <h1 className="font-syne font-black text-4xl md:text-5xl lg:text-6xl text-ink leading-[1.05] tracking-tight mb-6">
+          <h1 className="font-syne font-black text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-ink leading-[1.05] tracking-tight mb-6">
             BOPP, PET &<br />
             <span className="text-accent">CPP Laminates</span>
             <br />
             for Every Industry
           </h1>
-          <p className="text-base text-ink3 leading-relaxed mb-8 max-w-lg">
+          <p className="text-sm md:text-base text-ink3 leading-relaxed mb-8 max-w-lg">
             High-quality flexible packaging solutions. Buy direct or list your
             products on our marketplace — trusted by 500+ manufacturers across
             India.
@@ -23,34 +23,34 @@ export default function HeroSection() {
           <div className="flex flex-wrap gap-3">
             <Link
               to="/products"
-              className="bg-accent text-white font-medium px-6 py-3 rounded-xl flex items-center gap-2 hover:bg-orange-700 transition-colors"
+              className="bg-accent text-white font-medium px-6 py-3 rounded-xl flex items-center gap-2 hover:bg-orange-700 transition-colors text-sm md:text-base"
             >
               Explore Products <ArrowRight size={16} />
             </Link>
             <Link
               to="/contact"
-              className="border border-black/15 text-ink font-medium px-6 py-3 rounded-xl hover:bg-surface transition-colors"
+              className="border border-black/15 text-ink font-medium px-6 py-3 rounded-xl hover:bg-surface transition-colors text-sm md:text-base"
             >
               Become a Seller
             </Link>
           </div>
-          <div className="flex gap-8 mt-10 pt-8 border-t border-black/[0.06]">
+          <div className="flex flex-wrap gap-6 sm:gap-8 mt-10 pt-8 border-t border-black/[0.06]">
             {[
               [500, "Businesses"],
               [50, "Product Types"],
               ["12+", "Years Exp."],
             ].map(([n, l]) => (
-              <div key={l}>
-                <div className="font-syne font-black text-2xl text-ink">
+              <div key={l} className="flex-1 min-w-[100px] sm:flex-none">
+                <div className="font-syne font-black text-xl md:text-2xl text-ink">
                   {n}+
                 </div>
-                <div className="text-xs text-ink3 mt-0.5">{l}</div>
+                <div className="text-[10px] sm:text-xs text-ink3 mt-0.5 uppercase tracking-wider font-bold">{l}</div>
               </div>
             ))}
           </div>
         </div>
         {/* Visual */}
-        <div className="relative hidden md:flex items-center justify-center">
+        <div className="relative flex items-center justify-center mt-12 md:mt-0">
           <div className="absolute w-80 h-80 bg-accent/5 rounded-full" />
           <div className="relative grid grid-cols-2 gap-4">
             {[

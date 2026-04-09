@@ -12,13 +12,15 @@ export const signIn = async (credentials) => {
   return response.data;
 };
 
-// 3. Register Seller
+// 3. Register Seller (Legacy - single step)
 export const registerSellerAPI = async (formData) => {
   const response = await API.post("/auth/register-seller", formData);
   return response.data;
 };
 
-// 4. Get Current User Data (Token se user info nikalne ke liye)
+
+
+// 6. Get Current User Data (Token se user info nikalne ke liye)
 export const fetchUserData = async () => {
   const response = await API.get("/auth/me");
   return response.data;

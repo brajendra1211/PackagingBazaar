@@ -1,28 +1,81 @@
-import api from "./api"; // Ensure `api.js` is properly exporting an Axios instance with interceptors
+import API from "./api";
 
-export const fetchPendingSellers = async () => {
-  try {
-    const response = await api.get("/admin/sellers/pending");
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
+// --- Dashboard Summary ---
+export const fetchDashboardStats = async () => {
+  const response = await API.get("/admin/stats");
+  return response.data;
 };
 
-export const approveSellerAccount = async (userId) => {
-  try {
-    const response = await api.put(`/admin/sellers/${userId}/approve`);
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
+// --- User Management ---
+export const fetchAllUsers = async (page = 1, limit = 10) => {
+  const response = await API.get(`/admin/users?page=${page}&limit=${limit}`);
+  return response.data;
 };
 
-export const rejectSellerAccount = async (userId) => {
-  try {
-    const response = await api.delete(`/admin/sellers/${userId}/reject`);
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
+export const updateUserAccount = async (id, userData) => {
+  const response = await API.put(`/admin/users/${id}`, userData);
+  return response.data;
+};
+
+export const deleteUserAccount = async (id) => {
+  const response = await API.delete(`/admin/users/${id}`);
+  return response.data;
+};
+
+// --- Seller Management ---
+export const fetchAllSellers = async (page = 1, limit = 10) => {
+  const response = await API.get(`/admin/sellers/all?page=${page}&limit=${limit}`);
+  return response.data;
+};
+
+export const fetchPendingSellers = async (page = 1, limit = 10) => {
+  const response = await API.get(`/admin/sellers/pending?page=${page}&limit=${limit}`);
+  return response.data;
+};
+
+export const approveSellerAccount = async (id) => {
+  const response = await API.put(`/admin/sellers/${id}/approve`);
+  return response.data;
+};
+
+export const rejectSellerAccount = async (id) => {
+  const response = await API.delete(`/admin/sellers/${id}/reject`);
+  return response.data;
+};
+
+// --- Product Management ---
+export const fetchAllProductsAdmin = async (page = 1, limit = 10) => {
+  const response = await API.get(`/admin/products/all?page=${page}&limit=${limit}`);
+  return response.data;
+};
+
+export const deleteProductAdmin = async (id) => {
+  const response = await API.delete(`/admin/products/${id}`);
+  return response.data;
+};
+
+// --- Sales Management ---
+export const fetchAllOrdersAdmin = async (page = 1, limit = 10) => {
+  const response = await API.get(`/admin/orders?page=${page}&limit=${limit}`);
+  return response.data;
+};
+
+export const fetchUserOrdersAdmin = async (userId) => {
+  const response = await API.get(`/admin/orders/user/${userId}`);
+  return response.data;
+};
+
+export const fetchSellerOrdersAdmin = async (sellerId, page = 1, limit = 10) => {
+  const response = await API.get(`/admin/orders/seller/${sellerId}?page=${page}&limit=${limit}`);
+  return response.data;
+};
+
+export const fetchSellerProductsAdmin = async (sellerId, page = 1, limit = 10) => {
+  const response = await API.get(`/admin/products/seller/${sellerId}?page=${page}&limit=${limit}`);
+  return response.data;
+};
+
+export const fetchSellersWithOrdersAdmin = async (page = 1, limit = 10) => {
+  const response = await API.get(`/admin/sellers/with-orders?page=${page}&limit=${limit}`);
+  return response.data;
 };

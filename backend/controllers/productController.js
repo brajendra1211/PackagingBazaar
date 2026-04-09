@@ -37,7 +37,7 @@ export const getAllProducts = async (req, res) => {
     // Main Data Query
     let dataQuery = `
       SELECT p.*, t.tag_name, sc.name as subcategory_name, c.name as category_name,
-             ps.quantity as stock, ps.min_order,
+             ps.quantity as stock, ps.min_order, s.seller_uid,
              (SELECT AVG(rating) FROM product_reviews WHERE product_id = p.id) as avg_rating,
              (SELECT COUNT(*) FROM product_reviews WHERE product_id = p.id) as review_count
       FROM products p
@@ -45,6 +45,7 @@ export const getAllProducts = async (req, res) => {
       LEFT JOIN sub_categories sc ON p.sub_category_id = sc.id
       LEFT JOIN categories c ON sc.category_id = c.id
       LEFT JOIN product_stocks ps ON p.id = ps.product_id
+      LEFT JOIN sellers s ON p.seller_id = s.id
       ${whereClause}
     `;
 
@@ -97,7 +98,7 @@ export const getProductById = async (req, res) => {
     // controllers/productController.js me sirf query wali string badal lo
     const query = `
   SELECT p.*, t.tag_name, sc.name as subcategory_name, c.name as category_name,
-         ps.quantity as stock, ps.min_order,
+         ps.quantity as stock, ps.min_order, s.seller_uid,
          (SELECT AVG(rating) FROM product_reviews WHERE product_id = p.id) as avg_rating,
          (SELECT COUNT(*) FROM product_reviews WHERE product_id = p.id) as review_count,
          COALESCE(GROUP_CONCAT(a.app_name), '') as applications  -- Safe check
@@ -108,6 +109,7 @@ export const getProductById = async (req, res) => {
   LEFT JOIN product_stocks ps ON p.id = ps.product_id
   LEFT JOIN product_application_mapping pam ON p.id = pam.product_id
   LEFT JOIN applications a ON pam.app_id = a.id
+  LEFT JOIN sellers s ON p.seller_id = s.id
   WHERE p.id = ?
   GROUP BY p.id
 `;
@@ -132,17 +134,44 @@ export const getProductById = async (req, res) => {
   }
 };
 
+// 2. Fetch Sibling Variants (Used in Product Detail Page)
+export const getProductVariants = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Get subcategory of current product
+    const [[current]] = await pool.query("SELECT sub_category_id FROM products WHERE id = ?", [id]);
+    
+    if (!current) return res.status(404).json({ success: false, message: "Product not found" });
+
+    // Fetch other products in same subcategory
+    const [variants] = await pool.query(
+      `SELECT id, name, thickness, width, price, image_url 
+       FROM products 
+       WHERE sub_category_id = ? AND id != ?
+       LIMIT 10`,
+      [current.sub_category_id, id]
+    );
+
+    res.status(200).json({ success: true, variants });
+  } catch (error) {
+    console.error("Error in getProductVariants:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
 // Get Top Selling Products (Sorted by Review Count)
 export const getTopSellingProducts = async (req, res) => {
   try {
     const query = `
-      SELECT p.*, t.tag_name, c.name as category_name,
+      SELECT p.*, t.tag_name, c.name as category_name, s.seller_uid,
              (SELECT AVG(rating) FROM product_reviews WHERE product_id = p.id) as avg_rating,
              (SELECT COUNT(*) FROM product_reviews WHERE product_id = p.id) as review_count
       FROM products p
       LEFT JOIN tags t ON p.tag_id = t.id
       LEFT JOIN sub_categories sc ON p.sub_category_id = sc.id
       LEFT JOIN categories c ON sc.category_id = c.id
+      LEFT JOIN sellers s ON p.seller_id = s.id
       GROUP BY p.id
       ORDER BY review_count DESC
       LIMIT 8

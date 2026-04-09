@@ -12,7 +12,7 @@ export default function Footer() {
                 <Package size={16} className="text-white" />
               </div>
               <span className="font-syne font-black text-lg text-white">
-                Pack<span className="text-accent">Vista</span>
+                Packaging<span className="text-accent">Bazaar</span>
               </span>
             </div>
             <p className="text-sm leading-relaxed mb-4">

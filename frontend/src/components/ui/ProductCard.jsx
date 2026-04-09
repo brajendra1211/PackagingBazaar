@@ -98,7 +98,7 @@ export default function ProductCard({ product }) {
             </span>
           </div>
           <button
-            onClick={() => addToCart(product)}
+            onClick={() => navigate(`/products/${product.id}`)}
             className="w-9 h-9 bg-accent text-white rounded-xl flex items-center justify-center hover:bg-orange-700 active:scale-95 transition-all"
           >
             <ShoppingCart size={16} />

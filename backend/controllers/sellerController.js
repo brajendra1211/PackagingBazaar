@@ -1,0 +1,442 @@
+import pool from "../config/db.js";
+
+// Get current logged in seller's profile
+export const getSellerProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const query = `
+      SELECT s.*, u.name as ownerName, u.email, u.is_verified, 
+      DATE_FORMAT(s.created_at, '%Y-%m-%d') as joinedDate
+      FROM sellers s
+      JOIN users u ON s.user_id = u.id
+      WHERE u.id = ?
+    `;
+
+    const [rows] = await pool.query(query, [userId]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Seller profile not found." });
+    }
+
+    const seller = rows[0];
+
+    // Format output to match frontend structure expectations
+    const frontendSellerInfo = {
+      id: seller.id,
+      user_id: seller.user_id,
+      uid: seller.seller_uid || "PB-S-PENDING",
+      businessName: seller.company_name || "",
+      businessType: seller.business_type ? seller.business_type.split(',').map(s => s.trim()) : [],
+      gstNumber: seller.gst_number || "",
+      yearEstablished: seller.year_established || "",
+      ownerName: seller.ownerName || "",
+      email: seller.email || "",
+      phone: seller.phone || "", // If your table doesn't have phone, it will be blank
+      city: seller.city || "",
+      state: seller.state || "",
+      address: seller.business_address || "",
+      filmTypes: seller.products_offered ? seller.products_offered.split(',').map(s => s.trim()) : [],
+      monthlyCapacity: seller.monthly_capacity || "",
+      priceRange: seller.price_range || "",
+      description: seller.description || "",
+      status: seller.is_verified ? "active" : "pending",
+      joinedDate: seller.joinedDate,
+      avatar: seller.company_name ? seller.company_name.substring(0, 2).toUpperCase() : "SL",
+    };
+
+    res.status(200).json({ success: true, data: frontendSellerInfo });
+  } catch (error) {
+    console.error("Error in getSellerProfile:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+// Get current logged in seller's products
+export const getSellerProducts = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    // First fetch sellers.id
+    const [sellerRows] = await pool.query(
+      "SELECT id FROM sellers WHERE user_id = ?", [userId]
+    );
+
+    if (sellerRows.length === 0) {
+      return res.status(200).json({ success: true, data: [], totalCount: 0, totalPages: 0 });
+    }
+
+    const sellerId = sellerRows[0].id;
+
+    const query = `
+      SELECT p.*, t.tag_name, sc.name as subcategory_name, c.name as category_name,
+             ps.quantity as stock, ps.min_order
+      FROM products p
+      LEFT JOIN tags t ON p.tag_id = t.id
+      LEFT JOIN sub_categories sc ON p.sub_category_id = sc.id
+      LEFT JOIN categories c ON sc.category_id = c.id
+      LEFT JOIN product_stocks ps ON p.id = ps.product_id
+      WHERE p.seller_id = ?
+      ORDER BY p.id DESC
+      LIMIT ? OFFSET ?
+    `;
+
+    const [rows] = await pool.query(query, [sellerId, limit, offset]);
+    
+    // Total count for pagination
+    const [[{ total }]] = await pool.query("SELECT COUNT(*) as total FROM products WHERE seller_id = ?", [sellerId]);
+
+    res.status(200).json({ 
+      success: true, 
+      data: rows,
+      totalCount: total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page
+    });
+  } catch (error) {
+    console.error("Error in getSellerProducts:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+// Get current logged in seller's orders
+export const getSellerOrders = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    // Get seller_id
+    const [sellerRows] = await pool.query(
+      "SELECT id FROM sellers WHERE user_id = ?", [userId]
+    );
+
+    if (sellerRows.length === 0) {
+      return res.status(200).json({ success: true, data: [], totalCount: 0, totalPages: 0 });
+    }
+
+    const sellerId = sellerRows[0].id;
+
+    const query = `
+      SELECT o.id, o.user_id, o.total_price, o.status, o.order_date, 
+             u.name as customer_name, u.email as customer_email,
+             (SELECT JSON_ARRAYAGG(
+                JSON_OBJECT(
+                  'name', p.name, 
+                  'qty', oi.quantity, 
+                  'price', oi.price_at_time,
+                  'thickness', oi.thickness,
+                  'width', oi.width,
+                  'brand', oi.brand
+                )
+              ) 
+              FROM order_items oi 
+              JOIN products p ON oi.product_id = p.id 
+              WHERE oi.order_id = o.id AND p.seller_id = s.id) as items
+      FROM orders o
+      JOIN order_items oi ON o.id = oi.order_id
+      JOIN products p ON oi.product_id = p.id
+      JOIN sellers s ON p.seller_id = s.id
+      JOIN users u ON o.user_id = u.id
+      WHERE s.user_id = ?
+      GROUP BY o.id, s.id, u.name, u.email
+      ORDER BY o.order_date DESC
+      LIMIT ? OFFSET ?
+    `;
+
+    const [rows] = await pool.query(query, [userId, limit, offset]);
+
+    const [[{ total }]] = await pool.query(`
+      SELECT COUNT(DISTINCT o.id) as total 
+      FROM orders o
+      JOIN order_items oi ON o.id = oi.order_id
+      JOIN products p ON oi.product_id = p.id
+      JOIN sellers s ON p.seller_id = s.id
+      WHERE s.user_id = ?
+    `, [userId]);
+
+    res.status(200).json({ 
+      success: true, 
+      data: rows,
+      totalCount: total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page
+    });
+  } catch (error) {
+    console.error("Error in getSellerOrders:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+// Create a new product
+export const createProduct = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // First get seller_id from user_id
+    const [sellerRows] = await pool.query(
+      "SELECT id FROM sellers WHERE user_id = ?",
+      [userId]
+    );
+    
+    if (sellerRows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Seller profile not found" 
+      });
+    }
+    
+    const sellerId = sellerRows[0].id;
+    
+    const {
+      name,
+      category,
+      subcategory,
+      tag,
+      thickness,
+      width,
+      price,
+      unit,
+      minOrder,
+      stock,
+      description,
+      applications,
+      img,
+    } = req.body;
+
+    // Get sub_category_id from subcategory name
+    const [subCatRows] = await pool.query(
+      `SELECT sc.id FROM sub_categories sc 
+       JOIN categories c ON sc.category_id = c.id 
+       WHERE sc.name = ? AND c.name = ?`,
+      [subcategory, category]
+    );
+    
+    if (subCatRows.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid category/subcategory combination" 
+      });
+    }
+    
+    const subCategoryId = subCatRows[0].id;
+    
+    // Get tag_id if tag exists
+    let tagId = null;
+    if (tag && tag !== "") {
+      const [tagRows] = await pool.query(
+        "SELECT id FROM tags WHERE tag_name = ?",
+        [tag]
+      );
+      if (tagRows.length > 0) {
+        tagId = tagRows[0].id;
+      }
+    }
+
+    // Insert product
+    const [productResult] = await pool.query(
+      `INSERT INTO products 
+       (seller_id, sub_category_id, tag_id, name, thickness, width, 
+        price, unit, description, image_url) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        sellerId,
+        subCategoryId,
+        tagId,
+        name,
+        thickness,
+        width,
+        price,
+        unit,
+        description,
+        img
+      ]
+    );
+
+    const productId = productResult.insertId;
+
+    // Insert stock information
+    await pool.query(
+      `INSERT INTO product_stocks (product_id, quantity, min_order) 
+       VALUES (?, ?, ?)`,
+      [productId, stock, minOrder]
+    );
+
+    // Insert applications if you have an applications table
+    // If not, you might want to store them as JSON or comma-separated
+    if (applications && applications.length > 0) {
+      // Option 1: Store as JSON in products table (add a column)
+      await pool.query(
+        "UPDATE products SET applications = ? WHERE id = ?",
+        [JSON.stringify(applications), productId]
+      );
+    }
+
+    res.status(201).json({ 
+      success: true, 
+      message: "Product created successfully",
+      productId: productId
+    });
+
+  } catch (error) {
+    console.error("Error in createProduct:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Server Error",
+      error: error.message 
+    });
+  }
+};
+
+// Update existing product
+export const updateProduct = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const productId = req.params.id;
+    
+    // Verify product belongs to this seller
+    const [checkRows] = await pool.query(
+      `SELECT p.id FROM products p
+       JOIN sellers s ON p.seller_id = s.id
+       WHERE p.id = ? AND s.user_id = ?`,
+      [productId, userId]
+    );
+    
+    if (checkRows.length === 0) {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Unauthorized or product not found" 
+      });
+    }
+
+    const {
+      name,
+      category,
+      subcategory,
+      tag,
+      thickness,
+      width,
+      price,
+      unit,
+      minOrder,
+      stock,
+      description,
+      applications,
+      img,
+    } = req.body;
+
+    // Get sub_category_id
+    const [subCatRows] = await pool.query(
+      `SELECT sc.id FROM sub_categories sc 
+       JOIN categories c ON sc.category_id = c.id 
+       WHERE sc.name = ? AND c.name = ?`,
+      [subcategory, category]
+    );
+    
+    const subCategoryId = subCatRows[0]?.id;
+    
+    // Get tag_id
+    let tagId = null;
+    if (tag && tag !== "") {
+      const [tagRows] = await pool.query(
+        "SELECT id FROM tags WHERE tag_name = ?",
+        [tag]
+      );
+      tagId = tagRows[0]?.id || null;
+    }
+
+    // Update product
+    await pool.query(
+      `UPDATE products 
+       SET sub_category_id = ?, tag_id = ?, name = ?, thickness = ?, 
+           width = ?, price = ?, unit = ?, description = ?, image_url = ?
+       WHERE id = ?`,
+      [subCategoryId, tagId, name, thickness, width, price, unit, 
+       description, img, productId]
+    );
+
+    // Update stock
+    await pool.query(
+      `UPDATE product_stocks 
+       SET quantity = ?, min_order = ? 
+       WHERE product_id = ?`,
+      [stock, minOrder, productId]
+    );
+
+    // Update applications
+    if (applications && applications.length > 0) {
+      await pool.query(
+        "UPDATE products SET applications = ? WHERE id = ?",
+        [JSON.stringify(applications), productId]
+      );
+    }
+
+    res.status(200).json({ 
+      success: true, 
+      message: "Product updated successfully" 
+    });
+
+  } catch (error) {
+    console.error("Error in updateProduct:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Server Error",
+      error: error.message 
+    });
+  }
+};
+
+// Update seller profile
+export const updateSellerProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const {
+      businessName, businessType, gstNumber, yearEstablished,
+      city, state, address, filmTypes, monthlyCapacity, 
+      priceRange, description, phone
+    } = req.body;
+
+    const businessTypeString = Array.isArray(businessType) ? businessType.join(", ") : businessType;
+    const productIdsString = filmTypes?.length > 0 ? filmTypes.join(", ") : null;
+
+    // Check if seller profile exists
+    const [existing] = await pool.query(
+      "SELECT id FROM sellers WHERE user_id = ?", [userId]
+    );
+
+    if (existing.length === 0) {
+      // First time profile creation
+      await pool.query(
+        `INSERT INTO sellers 
+        (user_id, company_name, business_type, gst_number, year_established, 
+         city, state, business_address, monthly_capacity, price_range, 
+         description, products_offered) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [userId, businessName, businessTypeString, gstNumber, yearEstablished || null,
+         city, state, address, monthlyCapacity, priceRange, description, productIdsString]
+      );
+    } else {
+      // Updating profile
+      await pool.query(
+        `UPDATE sellers SET 
+         company_name=?, business_type=?, gst_number=?, year_established=?,
+         city=?, state=?, business_address=?, monthly_capacity=?, 
+         price_range=?, description=?, products_offered=?
+         WHERE user_id=?`,
+        [businessName, businessTypeString, gstNumber, yearEstablished || null,
+         city, state, address, monthlyCapacity, priceRange, 
+         description, productIdsString, userId]
+      );
+    }
+
+    res.status(200).json({ success: true, message: "Profile updated successfully" });
+  } catch (error) {
+    console.error("Error in updateSellerProfile:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};

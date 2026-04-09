@@ -1,6 +1,9 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import pool from "../config/db.js";
+import crypto from "crypto";
+
+const generateSellerUID = () => `PB-S-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 
 // 1. SIGN UP (Normal User)
 export const register = async (req, res) => {
@@ -8,7 +11,7 @@ export const register = async (req, res) => {
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 🔥 FIX: 'is_verified' explicitly 1 set kiya (Normal user auto-verified)
+    // FIX: 'is_verified' explicitly set to 1 (Normal user auto-verified)
     const query =
       'INSERT INTO users (name, email, password, role, is_verified) VALUES (?, ?, ?, "user", 1)';
     await pool.query(query, [name, email, hashedPassword]);
@@ -31,12 +34,12 @@ export const login = async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found!" });
     }
 
-    // 🔥 FIX: Seller Verification Check
-    // Agar user seller hai aur verified nahi hai (0 hai), toh login roko
+    // FIX: Seller Verification Check
+    // If the user is a seller and not verified (is_verified is 0), prevent login
     if (user.role === "seller" && user.is_verified === 0) {
       return res.status(403).json({ 
         success: false, 
-        message: "Aapka account pending hai. Admin approval ke baad login karein." 
+        message: "Your account is pending. Please login after admin approval." 
       });
     }
 
@@ -46,7 +49,7 @@ export const login = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, role: user.role },
+      { id: user.id, role: user.role, userName: user.name, is_verified: user.is_verified },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -56,6 +59,7 @@ export const login = async (req, res) => {
       token,
       role: user.role,
       userName: user.name,
+      is_verified: user.is_verified,
     });
   } catch (err) {
     console.error(err);
@@ -63,14 +67,14 @@ export const login = async (req, res) => {
   }
 };
 
-// 3. SELLER REGISTRATION
+// 3. SELLER REGISTRATION (Legacy - kept for backward compat)
 export const registerSeller = async (req, res) => {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
 
     const {
-      ownerName, email, phone, password, businessName, businessType,
+      ownerName, email, password, businessName, businessType,
       gstNumber, yearEstablished, city, state, address, filmTypes,
       monthlyCapacity, priceRange, description,
     } = req.body;
@@ -84,7 +88,6 @@ export const registerSeller = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 🔥 FIX: Seller ke liye 'is_verified' 0 set kiya (Admin approve karega)
     const [userResult] = await connection.query(
       "INSERT INTO users (name, email, password, role, is_verified) VALUES (?, ?, ?, 'seller', 0)",
       [ownerName, email, hashedPassword]
@@ -92,13 +95,15 @@ export const registerSeller = async (req, res) => {
     const userId = userResult.insertId;
 
     const productIdsString = filmTypes && filmTypes.length > 0 ? filmTypes.join(", ") : null;
+    const businessTypeString = Array.isArray(businessType) ? businessType.join(", ") : businessType;
 
-    // Sellers table entry
+    const sellerUID = generateSellerUID();
+
     await connection.query(
       `INSERT INTO sellers 
-      (user_id, company_name, business_type, gst_number, year_established, city, state, business_address, monthly_capacity, price_range, description, products_offered) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [userId, businessName, businessType, gstNumber, yearEstablished || null, city, state, address, monthlyCapacity, priceRange, description, productIdsString]
+      (user_id, seller_uid, company_name, business_type, gst_number, year_established, city, state, business_address, monthly_capacity, price_range, description, products_offered) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [userId, sellerUID, businessName, businessTypeString, gstNumber, yearEstablished || null, city, state, address, monthlyCapacity, priceRange, description, productIdsString]
     );
 
     await connection.commit();
@@ -115,11 +120,12 @@ export const registerSeller = async (req, res) => {
   }
 };
 
+
 // 4. GET CURRENT USER
 export const getCurrentUser = async (req, res) => {
   try {
     const userId = req.user.id;
-    // 🔥 FIX: Select mein 'is_verified' bhi mangwa lo taaki frontend ko pata rahe status
+    // FIX: Include 'is_verified' to inform the frontend of the status
     const [rows] = await pool.query("SELECT id, name, email, role, is_verified FROM users WHERE id = ?", [userId]);
     
     if (rows.length === 0) {

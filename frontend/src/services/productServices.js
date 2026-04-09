@@ -10,6 +10,11 @@ export const fetchProductById = async (id) => {
   return response.data;
 };
 
+export const fetchProductVariants = async (id) => {
+  const response = await API.get(`/products/${id}/variants`);
+  return response.data;
+};
+
 export const fetchTopSelling = async () => {
   const response = await API.get('/products/top-selling');
   return response.data;

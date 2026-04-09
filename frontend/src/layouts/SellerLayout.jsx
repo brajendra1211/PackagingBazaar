@@ -1,39 +1,8 @@
-import { useState } from "react";
-import { useNavigate, Outlet, NavLink, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Outlet, NavLink, useLocation, Navigate } from "react-router-dom";
+import { fetchSellerProfile, fetchSellerProducts } from "../services/sellerServices";
+import { AnimatePresence, motion } from "framer-motion";
 
-// ─── MOCK DATA ────────────────────────────────────────────────────────────────
-const INITIAL_SELLER = {
-  businessName: "Kumar Packaging Pvt. Ltd.",
-  businessType: "Manufacturer",
-  gstNumber: "24AABCK1234A1Z5",
-  yearEstablished: "2010",
-  ownerName: "Rajesh Kumar",
-  email: "rajesh@kumarpackaging.com",
-  phone: "+91 98765 43210",
-  city: "Ahmedabad",
-  state: "Gujarat",
-  address: "Plot 45, GIDC Estate, Vatva, Ahmedabad - 382445",
-  filmTypes: ["BOPP", "CPP"],
-  monthlyCapacity: "50",
-  priceRange: "180 – 350",
-  description:
-    "We manufacture high-quality BOPP and CPP films for food packaging, pharma, and FMCG industries. ISO 9001 certified with 12+ years of experience.",
-  status: "active",
-  joinedDate: "2024-03-15",
-  avatar: "RK",
-};
-
-const PRODUCTS = [
-  { id: 1, name: "BOPP Transparent Film", type: "BOPP", variant: "Transparent", micron: "20 micron", width: "1000 mm", price: 180, moq: "50 kg", stock: "2400 kg", status: "active", badge: "bestseller", views: 342, orders: 28, rating: 4.8 },
-  { id: 2, name: "BOPP Pearl Film", type: "BOPP", variant: "Pearl", micron: "25 micron", width: "1000 mm", price: 210, moq: "50 kg", stock: "1800 kg", status: "active", badge: "trending", views: 219, orders: 14, rating: 4.7 },
-  { id: 3, name: "CPP Heat Sealable Film", type: "CPP", variant: "Heat Sealable", micron: "30 micron", width: "800 mm", price: 195, moq: "100 kg", stock: "900 kg", status: "inactive", badge: null, views: 98, orders: 6, rating: 4.2 },
-];
-
-const ORDERS = [
-  { id: "ORD-001", buyer: "Amul Foods Ltd.", product: "BOPP Transparent Film", qty: "200 kg", amount: "₹36,000", date: "2024-06-10", status: "delivered" },
-  { id: "ORD-002", buyer: "Patanjali Ayurved", product: "BOPP Pearl Film", qty: "150 kg", amount: "₹31,500", date: "2024-06-08", status: "processing" },
-  { id: "ORD-003", buyer: "ITC Limited", product: "CPP Heat Sealable Film", qty: "300 kg", amount: "₹58,500", date: "2024-06-05", status: "shipped" },
-];
 
 // ─── ICON HELPER ──────────────────────────────────────────────────────────────
 const Icon = ({ d, size = 18, stroke = "currentColor", fill = "none", sw = 2 }) => (
@@ -96,7 +65,7 @@ const StatCard = ({ icon, value, label, sub, color }) => {
 };
 
 // ─── EDITABLE FIELD ───────────────────────────────────────────────────────────
-function EditableField({ label, value, onSave, type = "text", options = null, multiline = false }) {
+function EditableField({ label, value, onSave, type = "text", options = null, multiline = false, readOnly = false }) {
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(value);
 
@@ -129,7 +98,7 @@ function EditableField({ label, value, onSave, type = "text", options = null, mu
           <div className="text-sm font-medium text-gray-800">{value || <span className="text-gray-400 italic text-xs">Not provided — click Edit to add</span>}</div>
         )}
       </div>
-      {!editing && (
+      {!editing && !readOnly && (
         <button onClick={() => setEditing(true)} className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs text-[#e8511a] font-semibold shrink-0 mt-1 hover:text-[#d4460f]">
           <Icon d={icons.edit} size={12} /> Edit
         </button>
@@ -185,11 +154,51 @@ function FilmTypesEditor({ value, onSave }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// VIEWS
-// ═══════════════════════════════════════════════════════════════════════════════
+const BUSINESS_TYPES = ["Manufacturer", "Trader", "Stockist", "Distributor", "Converter"];
+function BusinessTypesEditor({ value, onSave, readOnly = false }) {
+  const [editing, setEditing] = useState(false);
+  const [selected, setSelected] = useState(value || []);
 
-// Views are extracted to individual routes
+  const toggle = (f) => setSelected(s => s.includes(f) ? s.filter(x => x !== f) : [...s, f]);
+  const save = () => { onSave(selected); setEditing(false); };
+
+  return (
+    <div className="group flex items-start justify-between py-3.5 border-b border-gray-100">
+      <div className="flex-1 mr-3">
+        <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Business Type</div>
+        {editing ? (
+          <div>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {BUSINESS_TYPES.map(f => (
+                <button key={f} onClick={() => toggle(f)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${selected.includes(f) ? "bg-[#e8511a] text-white border-[#e8511a]" : "bg-gray-100 text-gray-600 border-gray-200 hover:border-[#e8511a]"}`}>
+                  {f}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <button onClick={save} className="flex items-center gap-1.5 text-xs bg-[#e8511a] text-white px-3 py-1.5 rounded-lg font-semibold hover:bg-[#d4460f]">
+                <Icon d={icons.save} size={11} stroke="white" /> Save
+              </button>
+              <button onClick={() => { setSelected(value || []); setEditing(false); }} className="text-xs border border-gray-200 text-gray-500 px-3 py-1.5 rounded-lg hover:bg-gray-50">Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {value.length > 0 ? value.map(f => (
+              <span key={f} className="text-xs bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full border border-blue-200 font-semibold">{f}</span>
+            )) : <span className="text-gray-400 italic text-xs">Not provided — click Edit to add</span>}
+          </div>
+        )}
+      </div>
+      {!editing && !readOnly && (
+        <button onClick={() => setEditing(true)} className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs text-[#e8511a] font-semibold shrink-0 mt-1">
+          <Icon d={icons.edit} size={12} /> Edit
+        </button>
+      )}
+    </div>
+  );
+}
 
 // ─── NAV ITEMS ────────────────────────────────────────────────────────────────
 const NAV_ITEMS = [
@@ -205,9 +214,13 @@ function Sidebar({ seller, collapsed, setCollapsed, mobileOpen, setMobileOpen, n
     setMobileOpen(false);
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    window.location.href = "/";
+  };
+
   return (
     <>
-      {/* Mobile overlay */}
       {mobileOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-30 lg:hidden"
@@ -223,19 +236,19 @@ function Sidebar({ seller, collapsed, setCollapsed, mobileOpen, setMobileOpen, n
         ${collapsed ? "lg:w-16" : "lg:w-60"}
         ${mobileOpen ? "w-64 translate-x-0" : "-translate-x-full lg:translate-x-0"}
       `}>
-
-        {/* Seller card */}
-        <div className={`mx-3 mt-3 mb-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 shrink-0 ${collapsed ? "lg:hidden" : ""}`}>
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-[#e8511a] rounded-xl flex items-center justify-center font-black text-xs shrink-0">{seller.avatar}</div>
-            <div className="min-w-0">
-              <div className="text-xs font-bold text-white truncate">{seller.businessName}</div>
-              <div className="text-[10px] text-green-400 font-semibold mt-0.5">✓ Verified Seller</div>
+        {seller && (
+          <div className={`mx-3 mt-3 mb-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 shrink-0 ${collapsed ? "lg:hidden" : ""}`}>
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 bg-[#e8511a] rounded-xl flex items-center justify-center font-black text-xs shrink-0">{seller.avatar}</div>
+              <div className="min-w-0">
+                <div className="text-[10px] font-black text-orange-400 uppercase tracking-tighter mb-0.5">ID: {seller.uid}</div>
+                <div className="text-xs font-bold text-white truncate">{seller.businessName || seller.ownerName}</div>
+                <div className="text-[10px] text-green-400 font-semibold mt-0.5 whitespace-nowrap">✓ Verified Seller</div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
           {NAV_ITEMS.map(item => (
             <NavLink
@@ -254,16 +267,14 @@ function Sidebar({ seller, collapsed, setCollapsed, mobileOpen, setMobileOpen, n
           ))}
         </nav>
 
-        {/* Footer */}
         <div className="border-t border-white/10 p-2 shrink-0 space-y-0.5">
           <button
-            onClick={() => navigate("/")}
+            onClick={handleLogout}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-white/50 hover:text-red-400 hover:bg-red-500/10 transition-all ${collapsed ? "lg:justify-center" : ""}`}
           >
             <Icon d={icons.logout} size={17} />
             <span className={collapsed ? "lg:hidden" : ""}>Logout</span>
           </button>
-          {/* Collapse toggle — desktop only */}
           <button
             onClick={() => setCollapsed(c => !c)}
             className={`hidden lg:flex w-full items-center gap-3 px-3 py-2 rounded-xl text-xs text-white/25 hover:text-white/50 hover:bg-white/5 transition-all ${collapsed ? "justify-center" : ""}`}
@@ -280,17 +291,104 @@ function Sidebar({ seller, collapsed, setCollapsed, mobileOpen, setMobileOpen, n
 // ─── MAIN LAYOUT ──────────────────────────────────────────────────────────────
 export default function SellerLayout() {
   const navigate = useNavigate();
-  const [seller, setSeller] = useState(INITIAL_SELLER);
+  const [seller, setSeller] = useState(null);
+  const [PRODUCTS, setProducts] = useState([]);
+  const [ORDERS, setOrders] = useState([]); // Removed mock order data
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-// renderContent extracted to React Router Outlet
+  // Fetch data on load
+  useEffect(() => {
+    const loadSellerData = async () => {
+      try {
+        const [profileRes, productsRes] = await Promise.all([
+          fetchSellerProfile(),
+          fetchSellerProducts()
+        ]);
+        
+        if(profileRes.success) {
+          setSeller(profileRes.data);
+        }
+        if(productsRes.success) {
+          setProducts(productsRes.data);
+        }
+
+        // Empty orders for now since Backend has no orders logic
+        setOrders([]);
+      } catch (error) {
+        console.error("Failed to fetch seller data:", error);
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+          // Only redirect if it's an authorization issue
+          localStorage.removeItem("token");
+          navigate("/login");
+        } else {
+          setError(error.message || "Something went wrong. Please check your backend connection.");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSellerData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex h-screen bg-gray-50">
+        {/* Skeleton Sidebar */}
+        <div className="hidden lg:flex flex-col w-60 bg-gray-900 p-4 space-y-4">
+          <div className="h-16 bg-white/5 rounded-xl animate-pulse" />
+          <div className="space-y-2 flex-1">
+            {[1,2,3,4].map(i => (
+              <div key={i} className="h-10 bg-white/5 rounded-xl animate-pulse" />
+            ))}
+          </div>
+        </div>
+        {/* Skeleton Content */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <div className="h-16 bg-white border-b border-gray-100 flex items-center px-6 gap-4">
+            <div className="h-5 w-24 bg-gray-200 rounded-lg animate-pulse" />
+            <div className="h-8 w-40 bg-gray-200 rounded-lg animate-pulse" />
+            <div className="ml-auto h-10 w-28 bg-gray-200 rounded-xl animate-pulse" />
+          </div>
+          <div className="flex-1 p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              {[1,2,3,4].map(i => (
+                <div key={i} className="h-24 bg-white rounded-2xl border border-gray-100 animate-pulse" />
+              ))}
+            </div>
+            <div className="h-64 bg-white rounded-2xl border border-gray-100 animate-pulse" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center bg-gray-50 p-6 text-center">
+        <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+          <Icon d={icons.close} size={30} stroke="red" />
+        </div>
+        <h2 className="text-xl font-black text-gray-900 mb-2">Sync Error</h2>
+        <p className="text-sm text-gray-500 max-w-xs mb-6">{error}</p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="bg-gray-900 text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:shadow-lg transition-all"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
+  // Fallback if seller is null
+  if (!seller) return <Navigate to="/login" replace />;
 
   return (
-    // ✅ FIX: `overflow-hidden` on root — sirf andar scroll hoga, bahar nahi
     <div className="flex h-screen overflow-hidden bg-gray-50">
-
-      {/* Sidebar */}
       <Sidebar
         seller={seller}
         collapsed={collapsed} setCollapsed={setCollapsed}
@@ -298,13 +396,9 @@ export default function SellerLayout() {
         navigate={navigate}
       />
 
-      {/* Right column — fills remaining width */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-
-        {/* Top bar — fixed height, no scroll */}
         <header className="bg-white border-b border-gray-100 px-4 sm:px-6 py-3.5 flex items-center justify-between shrink-0 shadow-sm z-10">
           <div className="flex items-center gap-3">
-            {/* Hamburger — mobile only */}
             <button
               onClick={() => setMobileOpen(true)}
               className="lg:hidden text-gray-600 hover:text-gray-900 p-1"
@@ -312,16 +406,24 @@ export default function SellerLayout() {
               <Icon d={icons.menu} size={22} />
             </button>
             <div>
-              <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest hidden sm:block">Seller Panel</div>
-              <div className="text-base sm:text-lg font-black text-gray-900 leading-tight truncate max-w-[200px] sm:max-w-none">{seller.businessName}</div>
+              <div className="flex items-center gap-2">
+                <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest hidden sm:block">Seller Panel</div>
+                {seller.uid && (
+                  <span className="text-[9px] bg-orange-50 text-orange-600 px-2 py-0.5 rounded font-black border border-orange-100 hidden sm:block">
+                    {seller.uid}
+                  </span>
+                )}
+              </div>
+              <div className="text-base sm:text-lg font-black text-gray-900 leading-tight truncate max-w-[200px] sm:max-w-none">
+                {seller.businessName || seller.ownerName}
+              </div>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <div className="hidden sm:flex items-center gap-1.5 text-xs text-green-600 bg-green-50 border border-green-200 px-3 py-1.5 rounded-full font-semibold">
-              <Icon d={icons.shield} size={11} stroke="#16a34a" /> Verified Seller
+              <Icon d={icons.shield} size={11} stroke="#16a34a" /> {seller.status === "active" ? "Verified" : "Pending"}
             </div>
-            {/* ✅ Add Product navigates to /seller/add-product */}
             <button
               onClick={() => navigate("/seller/add-product")}
               className="flex items-center gap-1.5 bg-[#e8511a] text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-sm font-bold hover:bg-[#d4460f] transition-colors shadow-sm"
@@ -332,10 +434,19 @@ export default function SellerLayout() {
           </div>
         </header>
 
-        {/* ✅ Main content routes rendering here */}
         <main className="flex-1 overflow-y-auto">
           <div className="px-4 sm:px-6 py-5 max-w-5xl mx-auto">
-            <Outlet context={{ seller, setSeller, PRODUCTS, ORDERS, icons, Icon, Badge, StatCard, EditableField, FilmTypesEditor, ALL_FILMS }} />
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ type: "tween", ease: "easeOut", duration: 0.25 }}
+              >
+                <Outlet context={{ seller, setSeller, PRODUCTS, ORDERS, icons, Icon, Badge, StatCard, EditableField, FilmTypesEditor, ALL_FILMS, BusinessTypesEditor, BUSINESS_TYPES }} />
+              </motion.div>
+            </AnimatePresence>
             <div className="h-10" />
           </div>
         </main>
