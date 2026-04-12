@@ -40,13 +40,13 @@ const items = [
 ];
 export default function WhyChooseUs() {
   return (
-    <section className="bg-ink py-20 px-4">
+    <section className="bg-ink py-16 md:py-20 px-4">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-12">
-          <span className="text-[11px] font-semibold tracking-[3px] uppercase text-accent2">
+        <div className="mb-10 md:mb-12 text-center md:text-left">
+          <span className="text-[10px] md:text-[11px] font-semibold tracking-[3px] uppercase text-accent">
             Why PackagingBazaar
           </span>
-          <h2 className="font-syne font-black text-3xl md:text-4xl text-white mt-2">
+          <h2 className="font-syne font-black text-2xl md:text-4xl text-white mt-2 uppercase">
             Why Choose Us
           </h2>
         </div>

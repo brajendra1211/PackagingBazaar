@@ -121,23 +121,23 @@ export default function ProductCard({ product, onInquiry }) {
           </div>
 
           {/* Buttons */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {/* Mobile: icon only | Desktop: icon + text */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 if (onInquiry) onInquiry(product);
               }}
-              className="flex-1 bg-accent text-white rounded-xl flex items-center justify-center gap-1.5 hover:bg-orange-600 active:scale-[0.98] transition-all font-black uppercase shadow-lg shadow-orange-100 py-3"
+              className="flex-1 bg-accent text-white rounded-xl flex items-center justify-center gap-1.5 hover:bg-orange-600 active:scale-[0.98] transition-all font-black uppercase shadow-lg shadow-orange-100 py-3 sm:py-3.5"
             >
               <Send size={14} className="shrink-0" />
-              <span className="hidden sm:inline text-xs tracking-widest">Get Best Price</span>
+              <span className="hidden sm:inline text-[11px] tracking-widest">Get Best Price</span>
               <span className="sm:hidden text-[10px] tracking-wider">Quote</span>
             </button>
 
             <button
               onClick={handleAddToCart}
-              className="p-3 bg-gray-900 text-white rounded-xl hover:bg-black active:scale-[0.95] transition-all shadow-lg shadow-gray-200 shrink-0"
+              className="p-3 sm:p-3.5 bg-gray-900 text-white rounded-xl hover:bg-black active:scale-[0.95] transition-all shadow-lg shadow-gray-200 shrink-0"
               title="Add to Basket"
             >
               <ShoppingCart size={16} />

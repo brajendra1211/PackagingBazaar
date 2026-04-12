@@ -2,10 +2,20 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { fetchProducts } from "../../services/productServices"; 
 import ProductCard from "../ui/ProductCard";
+import InquiryModal from "../ui/InquiryModal";
 
 export default function TrendingProducts() {
   const [trendingItems, setTrendingItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Inquiry Modal State
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleInquiry = (product) => {
+    setSelectedProduct(product);
+    setIsModalOpen(true);
+  };
 
   useEffect(() => {
     const getTrendingData = async () => {
@@ -66,11 +76,21 @@ export default function TrendingProducts() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {trendingItems.map((p) => (
-              <ProductCard key={p.id} product={p} />
+              <ProductCard 
+                key={p.id} 
+                product={p} 
+                onInquiry={handleInquiry}
+              />
             ))}
           </div>
         )}
       </div>
+
+      <InquiryModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        product={selectedProduct} 
+      />
     </section>
   );
 }

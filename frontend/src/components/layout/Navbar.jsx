@@ -186,13 +186,23 @@ export default function Navbar() {
             </>
           )}
 
-          <button className="md:hidden" onClick={() => setOpen(!open)}>{open ? <X size={22} /> : <Menu size={22} />}</button>
+          <button className="md:hidden p-2 hover:bg-surface rounded-xl transition-colors" onClick={() => setOpen(!open)}>
+            {open ? <X size={24} className="text-accent" /> : <Menu size={24} className="text-ink" />}
+          </button>
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu Backdrop */}
       {open && (
-        <div className="md:hidden fixed inset-0 top-16 bg-white z-[60] overflow-y-auto animate-slideDown">
+        <div 
+          className="md:hidden fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[55] transition-opacity animate-fadeIn" 
+          onClick={() => setOpen(false)}
+        />
+      )}
+
+      {/* Mobile Menu Content */}
+      {open && (
+        <div className="md:hidden fixed inset-x-4 top-20 bottom-4 bg-white z-[60] rounded-[2.5rem] shadow-2xl overflow-y-auto animate-slideUp border border-black/[0.05] flex flex-col">
           <div className="px-6 py-8 space-y-6">
             <div className="space-y-4">
               <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[3px] mb-2 pl-1">Menu</h3>

@@ -28,6 +28,12 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [added, setAdded] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [inquiryProduct, setInquiryProduct] = useState(null);
+
+  const handleOpenInquiry = (p) => {
+    setInquiryProduct(p || product);
+    setIsModalOpen(true);
+  };
 
   // Specifications Selection State
   const [selectedThickness, setSelectedThickness] = useState("");
@@ -264,12 +270,12 @@ export default function ProductDetailPage() {
                      </span>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-3">
-                     <button
-                        onClick={() => setIsModalOpen(true)}
+                      <button
+                        onClick={() => handleOpenInquiry(product)}
                         className="flex-3 flex items-center justify-center gap-3 bg-accent text-white py-4 px-8 rounded-2xl font-black text-sm uppercase tracking-[3px] shadow-xl shadow-orange-200 hover:bg-orange-600 active:scale-[0.98] transition-all"
-                     >
-                        <Send size={18} /> Get Best Price
-                     </button>
+                      >
+                         <Send size={18} /> Get Best Price
+                      </button>
                      
                      <button
                         onClick={handleAdd}
@@ -360,7 +366,11 @@ export default function ProductDetailPage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {related.map((p) => (
-                <ProductCard key={p.id} product={p} />
+                <ProductCard 
+                  key={p.id} 
+                  product={p} 
+                  onInquiry={handleOpenInquiry} 
+                />
               ))}
             </div>
           </div>
@@ -368,8 +378,11 @@ export default function ProductDetailPage() {
         {/* Inquiry Modal Integration */}
         <InquiryModal 
           isOpen={isModalOpen} 
-          onClose={() => setIsModalOpen(false)} 
-          product={product} 
+          onClose={() => {
+            setIsModalOpen(false);
+            setInquiryProduct(null);
+          }} 
+          product={inquiryProduct} 
         />
       </div>
       <WhyChooseUs />

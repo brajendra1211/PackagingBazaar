@@ -4,14 +4,14 @@ import { Package, Mail, Phone, MapPin } from "lucide-react";
 export default function Footer() {
   return (
     <footer className="bg-ink text-white/60">
-      <div className="max-w-7xl mx-auto px-4 py-14">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
+      <div className="max-w-7xl mx-auto px-4 py-12 md:py-16">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-10 text-center sm:text-left">
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-7 h-7 bg-accent rounded-lg flex items-center justify-center">
+            <div className="flex items-center justify-center sm:justify-start gap-2 mb-4">
+              <div className="w-7 h-7 bg-accent rounded-lg flex items-center justify-center shadow-lg shadow-orange-500/20">
                 <Package size={16} className="text-white" />
               </div>
-              <span className="font-syne font-black text-lg text-white">
+              <span className="font-syne font-black text-xl text-white uppercase tracking-tighter">
                 Packaging<span className="text-accent">Bazaar</span>
               </span>
             </div>
@@ -19,15 +19,15 @@ export default function Footer() {
               India's trusted marketplace for BOPP, PET & CPP laminate films.
               Buy direct or sell on our platform.
             </p>
-            <div className="flex flex-col gap-2 text-sm">
-              <span className="flex items-center gap-2">
-                <Mail size={13} /> Admin@packagingbazaar.co.in
+            <div className="flex flex-col items-center sm:items-start gap-3 text-xs md:text-sm">
+              <span className="flex items-center gap-2 hover:text-white transition-colors">
+                <Mail size={14} className="text-accent" /> Admin@packagingbazaar.co.in
               </span>
-              <span className="flex items-center gap-2">
-                <Phone size={13} /> +91 96674 35374
+              <span className="flex items-center gap-2 hover:text-white transition-colors">
+                <Phone size={14} className="text-accent" /> +91 96674 35374
               </span>
-              <span className="flex items-center gap-2">
-                <MapPin size={13} /> Noida, Uttar Pradesh
+              <span className="flex items-center gap-2 hover:text-white transition-colors">
+                <MapPin size={14} className="text-accent" /> Noida, Uttar Pradesh
               </span>
             </div>
           </div>

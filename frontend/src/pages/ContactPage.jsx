@@ -17,12 +17,12 @@ export default function ContactPage() {
   };
   return (
     <>
-      <div className="bg-ink py-14 px-4">
+      <div className="bg-ink py-10 md:py-14 px-4 text-center md:text-left">
         <div className="max-w-7xl mx-auto">
-          <span className="text-xs font-semibold tracking-[3px] uppercase text-accent">
+          <span className="text-[10px] md:text-xs font-semibold tracking-[3px] uppercase text-accent">
             Get In Touch
           </span>
-          <h1 className="font-syne font-black text-4xl text-white mt-2">
+          <h1 className="font-syne font-black text-3xl md:text-4xl text-white mt-2 uppercase">
             Contact Us
           </h1>
         </div>

@@ -52,26 +52,26 @@ export default function HeroSection() {
             <span className="w-1.5 h-1.5 bg-accent rounded-full" />
             Premium Packaging Films
           </div>
-          <h1 className="font-syne font-black text-xl sm:text-2xl md:text-4xl lg:text-5xl text-ink leading-tight mb-3 uppercase">
+          <h1 className="font-syne font-black text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-ink leading-[1.1] mb-4 uppercase text-center md:text-left">
             BOPP, PET &<br />
             <span className="text-accent">CPP Laminates</span>
             <br />
             for Every Industry
           </h1>
-          <p className="text-[11px] md:text-sm text-ink3 leading-relaxed mb-6 max-w-sm md:max-w-lg">
+          <p className="text-[12px] md:text-sm text-ink3 leading-relaxed mb-8 max-w-sm md:max-w-lg text-center md:text-left">
             High-quality flexible packaging solutions. Connect with verified 
             manufacturers and get the best quotes for your business needs.
           </p>
 
           {/* Flashing marketing messages */}
-          <div className="flex flex-wrap items-center gap-3 mb-4">
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 sm:gap-3 mb-6">
             <div className="flex items-center gap-1.5 bg-orange-50 text-[#e8511a] px-3 py-1.5 rounded-full border border-orange-100/50 shadow-sm animate-flashing">
               <Zap size={10} fill="#e8511a" />
-              <span className="text-[10px] font-black uppercase tracking-wider">24 Hrs dispatch</span>
+              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider">24 Hrs dispatch</span>
             </div>
             <div className="flex items-center gap-1.5 bg-blue-50 text-blue-600 px-3 py-1.5 rounded-full border border-blue-100/50 shadow-sm animate-flashing" style={{ animationDelay: "0.5s" }}>
               <Clock size={10} strokeWidth={3} />
-              <span className="text-[10px] font-black uppercase tracking-wider">45 Minutes response time</span>
+              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider">45 Min response</span>
             </div>
           </div>
 

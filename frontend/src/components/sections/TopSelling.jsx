@@ -39,14 +39,14 @@ export default function TopSelling() {
   }
 
   return (
-    <section className="py-16 px-4 bg-white">
+    <section className="py-12 md:py-16 px-4 bg-white">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-end justify-between mb-8">
-          <div>
-            <span className="text-[11px] font-semibold tracking-[3px] uppercase text-accent">
+        <div className="flex flex-col md:flex-row items-center md:items-end justify-between mb-8 text-center md:text-left">
+          <div className="mb-4 md:mb-0">
+            <span className="text-[10px] md:text-[11px] font-semibold tracking-[3px] uppercase text-accent">
               Most Popular
             </span>
-            <h2 className="font-syne font-black text-3xl text-ink mt-1">
+            <h2 className="font-syne font-black text-2xl md:text-3xl text-ink mt-1 uppercase">
               Top Selling Products
             </h2>
           </div>

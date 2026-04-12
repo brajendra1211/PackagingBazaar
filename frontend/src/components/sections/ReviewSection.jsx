@@ -72,7 +72,7 @@ export default function ReviewSection() {
   }, []);
 
   return (
-    <section className="py-24 px-4 bg-white overflow-hidden border-t border-black/[0.04]">
+    <section className="py-16 md:py-24 px-4 bg-white overflow-hidden border-t border-black/[0.04]">
       <div className="max-w-7xl mx-auto relative">
         
         {/* Section Heading Centered for Premium Look */}
@@ -96,7 +96,6 @@ export default function ReviewSection() {
                 <StarRating rating={r.rating} reviews={null} />
                 
                 <p className="text-[13px] text-ink2 leading-relaxed my-5 flex-1 italic font-medium relative z-10">"{r.text}"</p>
-                
                 <div className="flex items-center gap-3 mt-auto pt-4 border-t border-black/[0.04]">
                    <div 
                      className="w-10 h-10 rounded-[12px] flex items-center justify-center text-white text-[13px] font-medium shrink-0 shadow-inner" 

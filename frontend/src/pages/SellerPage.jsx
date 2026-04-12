@@ -67,10 +67,10 @@ export default function SellerPage() {
             <div className="inline-flex items-center gap-2 bg-accent/20 border border-accent/30 rounded-full px-4 py-1.5 text-xs font-semibold text-accent mb-6 uppercase tracking-widest">
               Manufacturer Directory
             </div>
-            <h1 className="font-syne font-black text-4xl md:text-6xl text-white mb-6 uppercase tracking-tighter leading-tight">
+            <h1 className="font-syne font-black text-3xl md:text-6xl text-white mb-6 uppercase tracking-tighter leading-[1.1]">
               Verified <span className="text-accent underline decoration-orange-500/30">Manufacturers</span> <br /> & Suppliers
             </h1>
-            <p className="text-white/60 text-base md:text-lg max-w-2xl mx-auto mb-10 leading-relaxed">
+            <p className="text-white/60 text-sm md:text-lg max-w-2xl mx-auto mb-10 leading-relaxed px-4">
               Connect directly with premium packaging film manufacturers across India. 
               Get direct factory prices and authentic business leads.
             </p>
@@ -123,22 +123,22 @@ export default function SellerPage() {
                 {/* Seller Profile Header */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm mb-8 gap-6 relative overflow-hidden group">
                   <div className="absolute top-0 left-0 w-2 h-full bg-accent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="flex items-start gap-6">
-                    <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center text-accent border border-gray-100 shrink-0">
-                      <Store size={32} />
+                  <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gray-50 rounded-2xl flex items-center justify-center text-accent border border-gray-100 shrink-0">
+                      <Store size={28} className="sm:w-8 sm:h-8" />
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <h2 className="font-syne font-black text-2xl text-ink uppercase tracking-tight">{seller.name}</h2>
-                        <ShieldCheck size={20} className="text-green-500" />
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                        <h2 className="font-syne font-black text-xl sm:text-2xl text-ink uppercase tracking-tight truncate">{seller.name}</h2>
+                        <ShieldCheck size={18} className="text-green-500 shrink-0" />
                       </div>
-                      <div className="flex flex-wrap items-center gap-4 text-gray-400 text-xs font-bold uppercase tracking-widest">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-gray-400 text-[10px] font-bold uppercase tracking-widest">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <MapPin size={14} className="text-accent shrink-0" />
+                          <MapPin size={12} className="text-accent shrink-0" />
                           <span className="truncate">
                             {(!seller.city && !seller.state) 
-                              ? "Not Address" 
-                              : `India${seller.state ? `, ${seller.state}` : ""}${seller.city ? ` (${seller.city})` : ""}`
+                              ? "Address Not Provided" 
+                              : `${seller.state || ""}${seller.city ? ` (${seller.city})` : ""}`
                             }
                           </span>
                         </div>
@@ -158,7 +158,7 @@ export default function SellerPage() {
                 </div>
 
                 {/* Seller's Products Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                   {seller.products.slice(0, 4).map((product) => (
                     <ProductCard 
                       key={product.id} 

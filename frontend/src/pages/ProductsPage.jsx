@@ -114,28 +114,27 @@ export default function ProductsPage() {
 
   return (
     <>
-      {/* Header */}
-      <div className="bg-ink py-14 px-4">
+      <div className="bg-ink py-10 md:py-14 px-4">
         <div className="max-w-7xl mx-auto">
-          <span className="text-xs font-semibold tracking-[3px] uppercase text-accent">
+          <span className="text-[10px] md:text-xs font-semibold tracking-[3px] uppercase text-accent">
             Our Catalogue
           </span>
-          <h1 className="font-syne font-black text-4xl text-white mt-2 mb-1">
+          <h1 className="font-syne font-black text-3xl md:text-4xl text-white mt-2 mb-1 uppercase">
             All Products
           </h1>
-          <p className="text-white/50 text-sm">
+          <p className="text-white/50 text-[12px] md:text-sm">
             60 premium packaging films across BOPP, PET, CPP & LAMINATED
           </p>
         </div>
       </div>
 
       {/* Main Section */}
-      <section className="py-16 px-4 bg-white">
+      <section className="py-10 md:py-16 px-4 bg-white">
         <div className="max-w-7xl mx-auto">
           
           {/* Controls: Search, Categories, Sort */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-8">
-            <div className="relative flex-1">
+          <div className="flex flex-col lg:flex-row gap-4 mb-10">
+            <div className="relative w-full lg:max-w-md">
               <Search
                 size={16}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-ink3"
@@ -148,26 +147,26 @@ export default function ProductsPage() {
               />
             </div>
             
-            <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide flex-nowrap sm:flex-wrap">
+            <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 lg:mx-0 lg:px-0 scrollbar-hide flex-nowrap items-center">
               {categories.map((c) => (
                 <button
                   key={c}
                   onClick={() => handleCategoryChange(c)}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
+                  className={`px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all whitespace-nowrap shadow-sm border ${
                     filters.category === c
-                      ? "bg-accent text-white"
-                      : "bg-surface text-ink2 hover:bg-white border border-black/[0.08]"
+                      ? "bg-accent border-accent text-white shadow-orange-100"
+                      : "bg-surface text-ink2 border-black/[0.05] hover:border-accent/20"
                   }`}
                 >
                   {c}
                 </button>
               ))}
               
-              <div className="ml-auto sm:ml-0">
+              <div className="ml-auto min-w-[160px]">
                 <select
                   value={filters.sort}
                   onChange={handleSortChange}
-                  className="px-3 py-2 rounded-xl text-sm border border-black/[0.1] bg-surface text-ink2 focus:outline-none whitespace-nowrap min-w-[140px]"
+                  className="w-full px-4 py-2.5 rounded-xl text-[12px] font-bold border border-black/[0.05] bg-surface text-ink2 focus:outline-none shadow-sm"
                 >
                   <option value="default">Sort: Default</option>
                   <option value="price_low">Price: Low to High</option>

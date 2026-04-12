@@ -48,18 +48,18 @@ export default function HotDealsPage() {
   return (
     <>
       {/* Header - Mirroring ProductsPage but themed for Hot Deals */}
-      <div className="bg-ink py-14 px-4 overflow-hidden relative">
+      <div className="bg-ink py-10 md:py-14 px-4 overflow-hidden relative text-center md:text-left">
         <div className="max-w-7xl mx-auto relative z-10">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
              <Flame size={14} className="text-orange-500 animate-pulse" fill="currentColor" />
-             <span className="text-xs font-semibold tracking-[3px] uppercase text-accent">
+             <span className="text-[10px] md:text-xs font-semibold tracking-[3px] uppercase text-accent">
                Flash Sales
              </span>
           </div>
-          <h1 className="font-syne font-black text-4xl text-white mt-2 mb-1">
+          <h1 className="font-syne font-black text-3xl md:text-4xl text-white mt-2 mb-1 uppercase">
             Factory <span className="text-orange-500">Hot Deals</span>
           </h1>
-          <p className="text-white/50 text-sm">
+          <p className="text-white/50 text-[12px] md:text-sm">
             Exclusive factory-direct clearance items and bulk offer deals.
           </p>
         </div>
@@ -73,8 +73,8 @@ export default function HotDealsPage() {
         <div className="max-w-7xl mx-auto">
           
           {/* Search Bar - Visual Consistency with ProductsPage */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-8">
-            <div className="relative flex-1">
+          <div className="flex flex-col lg:flex-row gap-4 mb-10">
+            <div className="relative w-full lg:max-w-md">
               <Search
                 size={16}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-ink3"
@@ -86,7 +86,7 @@ export default function HotDealsPage() {
                 className="w-full pl-9 pr-4 py-2.5 text-sm border border-black/[0.1] rounded-xl bg-surface focus:outline-none focus:border-accent"
               />
             </div>
-            <div className="hidden sm:flex items-center px-4 bg-orange-50 rounded-xl border border-orange-100">
+            <div className="flex items-center px-4 py-2.5 bg-orange-50 rounded-xl border border-orange-100 max-w-fit">
                <span className="text-[10px] font-black uppercase text-orange-600 tracking-widest flex items-center gap-2">
                  <Zap size={12} fill="currentColor" /> Live Deals: {filteredProducts.length}
                </span>

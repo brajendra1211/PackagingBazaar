@@ -1,11 +1,21 @@
 import { useState, useEffect } from "react"; 
 import { fetchProducts } from "../../services/productServices"; 
 import ProductCard from "../ui/ProductCard";
+import InquiryModal from "../ui/InquiryModal";
 import { Loader2 } from "lucide-react";
 
 export default function FeaturedProducts() {
   const [featuredItems, setFeaturedItems] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Inquiry Modal State
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleInquiry = (product) => {
+    setSelectedProduct(product);
+    setIsModalOpen(true);
+  };
 
   useEffect(() => {
     const getFeaturedData = async () => {
@@ -46,11 +56,21 @@ export default function FeaturedProducts() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {featuredItems.map((p) => (
-              <ProductCard key={p.id} product={p} />
+              <ProductCard 
+                key={p.id} 
+                product={p} 
+                onInquiry={handleInquiry}
+              />
             ))}
           </div>
         )}
       </div>
+
+      <InquiryModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        product={selectedProduct} 
+      />
     </section>
   );
 }

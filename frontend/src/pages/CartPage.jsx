@@ -64,11 +64,11 @@ export default function CartPage() {
   };
 
   return (
-    <div className="bg-surface/50 min-h-screen pt-24 pb-16">
+    <div className="bg-surface/50 min-h-screen pt-20 pb-16">
       <div className="max-w-6xl mx-auto px-4">
-        <div className="flex items-end gap-4 mb-10">
-          <h1 className="font-syne font-black text-4xl text-gray-900 leading-none uppercase tracking-tighter">Inquiry Basket</h1>
-          <span className="text-accent font-black text-lg pb-1">({count} items)</span>
+        <div className="flex flex-col sm:flex-row items-baseline gap-2 sm:gap-4 mb-8 sm:mb-12">
+          <h1 className="font-syne font-black text-2xl sm:text-4xl text-gray-900 uppercase tracking-tighter">Inquiry Basket</h1>
+          <span className="text-accent font-black text-sm sm:text-lg">({count} items)</span>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-10">
@@ -81,9 +81,9 @@ export default function CartPage() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3, delay: idx * 0.06 }}
               >
-              <div className="bg-white rounded-[2rem] border border-black/[0.03] p-4 sm:p-5 flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center shadow-sm group hover:border-accent/10 transition-all">
+              <div className="bg-white rounded-[2rem] border border-black/[0.03] p-4 flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center shadow-sm group hover:border-accent/10 transition-all">
                 <div 
-                  className="w-full sm:w-24 h-40 sm:h-24 rounded-2xl flex-shrink-0 flex items-center justify-center border border-gray-50 overflow-hidden bg-gray-50/50"
+                  className="w-full sm:w-24 h-48 sm:h-24 rounded-2xl flex-shrink-0 flex items-center justify-center border border-gray-50 overflow-hidden bg-gray-50/50"
                 >
                   <img src={item.image || item.image_url} alt={item.name} className="w-full h-full object-cover" />
                 </div>
@@ -91,21 +91,21 @@ export default function CartPage() {
                 <div className="flex-1 min-w-0 w-full">
                   <div className="flex justify-between items-start">
                     <div className="min-w-0 flex-1">
-                      <h4 className="font-bold text-gray-900 pr-4 text-base sm:text-lg">{item.name}</h4>
-                      <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mt-1">{item.category_name || "Factory Direct"}</p>
+                      <h4 className="font-bold text-gray-900 pr-4 text-[15px] sm:text-lg leading-tight">{item.name}</h4>
+                      <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest mt-1">{item.category_name || "Factory Direct"}</p>
                     </div>
                     <button 
                       onClick={() => removeFromCart(item)} 
                       className="text-gray-300 hover:text-red-500 transition-colors p-1 flex-shrink-0"
                     >
-                      <Trash2 size={18}/>
+                      <Trash2 size={16}/>
                     </button>
                   </div>
 
-                  <div className="flex items-center justify-between mt-4">
-                    <div className="text-accent font-black text-xl">₹{item.price} / {item.unit}</div>
+                  <div className="flex items-center justify-between mt-4 sm:mt-2">
+                    <div className="text-accent font-black text-lg sm:text-xl">₹{item.price}<span className="text-[10px] text-gray-400 font-bold ml-1">/{item.unit}</span></div>
                     
-                    <div className="flex items-center bg-gray-50/50 rounded-xl p-1 border border-gray-100">
+                    <div className="flex items-center bg-gray-50/30 rounded-xl p-1 border border-gray-100 scale-90 sm:scale-100 transform origin-right">
                       <button 
                         onClick={() => updateQty(item, item.qty - 1)} 
                         className="w-8 h-8 rounded-lg bg-white flex items-center justify-center hover:text-accent shadow-sm border border-gray-100 transition-all active:scale-90"
