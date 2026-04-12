@@ -1,33 +1,73 @@
+import { useState } from "react";
 import { useCart } from "../context/CartContext";
 import { useNavigate } from "react-router-dom";
-import { Trash2, Plus, Minus, ShoppingBag, ShieldCheck } from "lucide-react";
+import { Trash2, Plus, Minus, ShoppingBag, Send, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
+import InquiryModal from "../components/ui/InquiryModal";
+import { submitInquiryAPI } from "../services/inquiryServices";
+import { useNotification } from "../context/NotificationContext";
+
 export default function CartPage() {
   const { cart, removeFromCart, updateQty, total, clearCart, count } = useCart();
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
+  const { notifySuccess, notifyError } = useNotification();
+
+  // Multi-item Inquiry State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   if (cart.length === 0) return (
     <div className="min-h-[70vh] flex flex-col items-center justify-center text-center px-4 animate-fadeIn">
       <div className="w-24 h-24 bg-surface rounded-[2rem] flex items-center justify-center mb-6 shadow-sm border border-gray-100">
         <ShoppingBag size={48} className="text-gray-300"/>
       </div>
-      <h2 className="font-syne font-black text-3xl text-gray-900 mb-3">Your cart is empty</h2>
-      <p className="text-gray-400 font-medium mb-8 max-w-xs">Looks like you haven't added anything to your cart yet.</p>
+      <h2 className="font-syne font-black text-3xl text-gray-900 mb-3 uppercase tracking-tighter">Basket is Empty</h2>
+      <p className="text-gray-400 font-medium mb-8 max-w-xs uppercase text-[10px] tracking-widest">No products selected for quotation</p>
       <button 
         onClick={() => navigate("/products")} 
-        className="bg-accent text-white px-8 py-4 rounded-2xl font-bold hover:shadow-2xl hover:shadow-orange-500/20 hover:-translate-y-1 transition-all"
+        className="bg-accent text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:shadow-2xl hover:shadow-orange-500/20 hover:-translate-y-1 transition-all"
       >
-        START SHOPPING
+        BROWSE FILMS
       </button>
     </div>
   );
+
+  const handleBulkInquirySubmit = async (formData) => {
+    setLoading(true);
+    try {
+      const promises = cart.map(item => 
+        submitInquiryAPI({
+          product_id: item.id,
+          message: `Bulk Inquiry: ${formData.message}`,
+          quantity: `${item.qty} ${item.unit || 'kg'}`,
+          thickness: formData.thickness,
+          width: formData.width,
+          phone: formData.phone,
+          pincode: formData.pincode,
+          address: formData.address,
+          buyer_name: formData.buyer_name,
+          buyer_email: formData.buyer_email
+        })
+      );
+
+      await Promise.all(promises);
+      notifySuccess("Bulk inquiry sent! Manufacturers will contact you with factory-best prices.");
+      clearCart();
+      setIsModalOpen(false);
+      if (token) navigate("/profile"); 
+    } catch (err) {
+      notifyError("Failed to send some inquiries. Please check your connection.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="bg-surface/50 min-h-screen pt-24 pb-16">
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex items-end gap-4 mb-10">
-          <h1 className="font-syne font-black text-4xl text-gray-900 leading-none">Your Cart</h1>
+          <h1 className="font-syne font-black text-4xl text-gray-900 leading-none uppercase tracking-tighter">Inquiry Basket</h1>
           <span className="text-accent font-black text-lg pb-1">({count} items)</span>
         </div>
 
@@ -36,7 +76,7 @@ export default function CartPage() {
           <div className="lg:col-span-2 space-y-4">
             {cart.map((item, idx) => (
               <motion.div
-                key={item.id}
+                key={`${item.id}-${idx}`}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3, delay: idx * 0.06 }}
@@ -45,23 +85,14 @@ export default function CartPage() {
                 <div 
                   className="w-full sm:w-24 h-40 sm:h-24 rounded-2xl flex-shrink-0 flex items-center justify-center border border-gray-50 overflow-hidden bg-gray-50/50"
                 >
-                  {item.image ? (
-                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <ShoppingBag size={32} className="text-gray-200" />
-                  )}
+                  <img src={item.image || item.image_url} alt={item.name} className="w-full h-full object-cover" />
                 </div>
 
                 <div className="flex-1 min-w-0 w-full">
                   <div className="flex justify-between items-start">
                     <div className="min-w-0 flex-1">
-                      <h4 className="font-bold text-gray-900 truncate pr-4 text-base sm:text-lg">{item.name}</h4>
-                      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
-                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{item.category || "General"}</p>
-                        {item.selected_thickness && <p className="text-[10px] text-orange-600 font-black uppercase tracking-widest">Selected: {item.selected_thickness}</p>}
-                        {item.selected_width && <p className="text-[10px] text-orange-600 font-black uppercase tracking-widest">Width: {item.selected_width}</p>}
-                        {item.selected_brand && <p className="text-[10px] text-orange-600 font-black uppercase tracking-widest">Brand: {item.selected_brand}</p>}
-                      </div>
+                      <h4 className="font-bold text-gray-900 pr-4 text-base sm:text-lg">{item.name}</h4>
+                      <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mt-1">{item.category_name || "Factory Direct"}</p>
                     </div>
                     <button 
                       onClick={() => removeFromCart(item)} 
@@ -72,7 +103,7 @@ export default function CartPage() {
                   </div>
 
                   <div className="flex items-center justify-between mt-4">
-                    <div className="text-accent font-black text-xl">₹{item.price}</div>
+                    <div className="text-accent font-black text-xl">₹{item.price} / {item.unit}</div>
                     
                     <div className="flex items-center bg-gray-50/50 rounded-xl p-1 border border-gray-100">
                       <button 
@@ -100,59 +131,59 @@ export default function CartPage() {
               className="text-gray-400 hover:text-gray-600 text-xs font-black uppercase tracking-widest flex items-center gap-2 mt-4 ml-2 transition-colors"
             >
               <Trash2 size={14} />
-              Clear entire cart
+              Clear basket
             </button>
           </div>
 
           {/* Summary Card */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-[2.5rem] border border-black/[0.03] p-8 shadow-sm h-fit sticky top-24">
-              <h3 className="font-syne font-black text-2xl text-gray-900 mb-6 font-syne">Checkout List</h3>
+              <h3 className="font-syne font-black text-2xl text-gray-900 mb-6 font-syne uppercase tracking-tighter">Basket Summary</h3>
               
-              <div className="space-y-3 mb-6">
+              <div className="space-y-4 mb-8">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500 font-bold">Subtotal</span>
-                  <span className="text-gray-900 font-bold">₹{total}</span>
+                  <span className="text-gray-500 font-bold uppercase tracking-widest text-[10px]">Total Products</span>
+                  <span className="text-gray-900 font-black">{count}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500 font-bold">Shipping</span>
-                  <span className="text-green-500 font-black uppercase text-[10px] tracking-widest mt-1">Free</span>
+                  <span className="text-gray-500 font-bold uppercase tracking-widest text-[10px]">Total Est. Value</span>
+                  <span className="text-gray-900 font-black text-lg">₹{total.toLocaleString()}</span>
                 </div>
-                <div className="h-px bg-gray-50 my-4" />
-                <div className="flex justify-between items-center pt-2">
-                  <span className="font-syne font-black text-xl text-gray-900">Total</span>
-                  <span className="font-syne font-black text-2xl text-accent">₹{total}</span>
-                </div>
+                <div className="h-px bg-gray-50" />
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-relaxed">
+                   Requesting quotes for these items as a single requirement.
+                </p>
               </div>
 
-              {token ? (
-                <button 
-                  onClick={() => navigate("/checkout")} 
-                  className="w-full bg-accent text-white py-5 rounded-[1.5rem] font-bold text-sm hover:shadow-2xl hover:shadow-orange-500/20 hover:-translate-y-1 transition-all flex items-center justify-center gap-2 group shadow-xl shadow-orange-500/10"
-                >
-                  PROCEED TO CHECKOUT
-                  <Plus size={18} className="rotate-45 group-hover:rotate-0 transition-transform" />
-                </button>
-              ) : (
-                <div className="space-y-4">
-                  <button 
-                    onClick={() => navigate("/login")} 
-                    className="w-full bg-gray-900 text-white py-5 rounded-[1.5rem] font-bold text-sm hover:shadow-2xl transition-all"
-                  >
-                    LOGIN TO CHECKOUT
-                  </button>
-                  <p className="text-[10px] text-center text-gray-400 font-bold uppercase tracking-widest">Login required to place orders</p>
-                </div>
-              )}
+              <button 
+                onClick={() => setIsModalOpen(true)} 
+                className="w-full bg-accent text-white py-5 rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:shadow-2xl hover:shadow-orange-500/20 hover:-translate-y-1 transition-all flex items-center justify-center gap-2 group shadow-xl shadow-orange-500/10"
+              >
+                REQUEST QUOTATION FOR ALL
+                <Send size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+              </button>
 
-              <div className="mt-8 flex flex-wrap items-center justify-center gap-4 opacity-30 grayscale">
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-4 opacity-40 grayscale">
                 <ShieldCheck size={24} />
-                <span className="text-[10px] font-black uppercase tracking-widest">100% Secure Transaction</span>
+                <span className="text-[10px] font-black uppercase tracking-widest">Verified B2B Lead</span>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      <InquiryModal 
+         isOpen={isModalOpen} 
+         onClose={() => setIsModalOpen(false)} 
+         product={{ 
+           id: "BULK", 
+           name: `${count} Items in Basket`, 
+           image_url: cart[0]?.image || cart[0]?.image_url,
+           category_name: "Multiple Categories",
+           seller_name: "Various Manufacturers"
+         }}
+         customSubmit={handleBulkInquirySubmit}
+      />
     </div>
   );
 }

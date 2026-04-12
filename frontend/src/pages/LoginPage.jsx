@@ -59,6 +59,7 @@ export default function LoginPage() {
   const [showPw, setShowPw] = useState(false);
   const [regName, setRegName] = useState("");
   const [regEmail, setRegEmail] = useState("");
+  const [regMobile, setRegMobile] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [showRegPw, setShowRegPw] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -112,11 +113,12 @@ export default function LoginPage() {
   // ── SIGN UP (REGISTER) ──
   const handleRegister = async (e) => {
     e.preventDefault();
-    if (!regName || !regEmail || !regPassword) return notifyError("Please fill in all fields.");
+    if (!regName || !regEmail || !regMobile || !regPassword) return notifyError("Please fill in all fields.");
+    if (regMobile.length !== 10) return notifyError("Mobile number must be 10 digits.");
     
     setLoading(true);
     try {
-      await signUp({ name: regName, email: regEmail, password: regPassword });
+      await signUp({ name: regName, email: regEmail, mobile: regMobile, password: regPassword });
       notifySuccess("Account created! Please sign in.");
       setTimeout(() => switchMode("login"), 1500);
     } catch (err) {
@@ -169,6 +171,14 @@ export default function LoginPage() {
                 <form onSubmit={handleRegister} className="space-y-4">
                   <InputField label="Full Name" type="text" value={regName} onChange={(e) => setRegName(e.target.value)} placeholder="e.g. Rahul Sharma" icon={<UserIcon />} />
                   <InputField label="Email Address" type="email" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} placeholder="e.g. rahul@example.com" icon={<MailIcon />} />
+                  <InputField 
+                    label="Mobile Number" 
+                    type="tel" 
+                    value={regMobile} 
+                    onChange={(e) => setRegMobile(e.target.value.replace(/\D/g, "").slice(0, 10))} 
+                    placeholder="10-digit mobile" 
+                    icon={<span className="text-[10px] font-bold">+91</span>} 
+                  />
                   <InputField label="Password" type={showRegPw ? "text" : "password"} value={regPassword} onChange={(e) => setRegPassword(e.target.value)} placeholder="Min. 6 characters" icon={<LockIcon />} rightElement={<button type="button" onClick={() => setShowRegPw(!showRegPw)} className="text-gray-400 hover:text-[#e8511a]">{showRegPw ? <EyeOffIcon /> : <EyeIcon />}</button>} />
                   <button type="submit" disabled={loading} className="w-full bg-[#e8511a] hover:bg-[#d4460f] text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 text-sm shadow-lg shadow-orange-200 active:scale-[0.98]">
                     {loading ? <><SpinIcon /> Creating...</> : "Create Account →"}

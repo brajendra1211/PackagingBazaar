@@ -55,6 +55,7 @@ export const CartProvider = ({ children }) => {
         try {
           const localItems = JSON.parse(localStorage.getItem("cart")) || [];
           if (localItems.length > 0) {
+            localStorage.removeItem("cart"); // Clear BEFORE sync to prevent React Strict Mode duplicate calls
             await syncCartAPI(localItems.map(i => ({ 
               id: i.id, 
               qty: i.qty,
@@ -62,7 +63,6 @@ export const CartProvider = ({ children }) => {
               width: i.selected_width,
               brand: i.selected_brand
             })));
-            localStorage.removeItem("cart"); // Clear after sync
           }
           const res = await fetchCartAPI();
           if (res.success) {

@@ -25,6 +25,22 @@ export const verifyToken = (req, res, next) => {
   }
 };
 
+// New: Optional Verfication for Guest Support
+export const verifyTokenOptional = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return next();
+  }
+  const token = authHeader.split(" ")[1];
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    next(); // Continue as guest if token is invalid
+  }
+};
+
 // 2. Is Admin? (Sirf Admin access ke liye)
 export const isAdmin = (req, res, next) => {
   if (req.user && req.user.role === "admin") {

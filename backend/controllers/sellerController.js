@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import { validateMobile, validateGST } from "../utils/validation.js";
 
 // Get current logged in seller's profile
 export const getSellerProfile = async (req, res) => {
@@ -6,7 +7,7 @@ export const getSellerProfile = async (req, res) => {
     const userId = req.user.id;
 
     const query = `
-      SELECT s.*, u.name as ownerName, u.email, u.is_verified, 
+      SELECT s.*, u.name as ownerName, u.email, u.mobile, u.is_verified, 
       DATE_FORMAT(s.created_at, '%Y-%m-%d') as joinedDate
       FROM sellers s
       JOIN users u ON s.user_id = u.id
@@ -32,7 +33,7 @@ export const getSellerProfile = async (req, res) => {
       yearEstablished: seller.year_established || "",
       ownerName: seller.ownerName || "",
       email: seller.email || "",
-      phone: seller.phone || "", // If your table doesn't have phone, it will be blank
+      phone: seller.mobile || "", // Mobile from users table
       city: seller.city || "",
       state: seller.state || "",
       address: seller.business_address || "",
@@ -398,8 +399,15 @@ export const updateSellerProfile = async (req, res) => {
     const {
       businessName, businessType, gstNumber, yearEstablished,
       city, state, address, filmTypes, monthlyCapacity, 
-      priceRange, description, phone
+      priceRange, description, phone // phone here is the mobile number
     } = req.body;
+
+    if (gstNumber && !validateGST(gstNumber)) {
+      return res.status(400).json({ success: false, message: "Invalid GST number format (15 characters required)." });
+    }
+    if (phone && !validateMobile(phone)) {
+      return res.status(400).json({ success: false, message: "Invalid mobile number (10 digits required)." });
+    }
 
     const businessTypeString = Array.isArray(businessType) ? businessType.join(", ") : businessType;
     const productIdsString = filmTypes?.length > 0 ? filmTypes.join(", ") : null;
@@ -432,11 +440,60 @@ export const updateSellerProfile = async (req, res) => {
          city, state, address, monthlyCapacity, priceRange, 
          description, productIdsString, userId]
       );
+
+      // Also update mobile in users table
+      if (phone) {
+        await pool.query("UPDATE users SET mobile = ? WHERE id = ?", [phone, userId]);
+      }
     }
 
     res.status(200).json({ success: true, message: "Profile updated successfully" });
   } catch (error) {
     console.error("Error in updateSellerProfile:", error);
     res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+// Delete product
+export const deleteProduct = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    // Verify product belongs to this seller
+    const [checkRows] = await connection.query(
+      `SELECT p.id FROM products p
+       JOIN sellers s ON p.seller_id = s.id
+       WHERE p.id = ? AND s.user_id = ?`,
+      [id, userId]
+    );
+
+    if (checkRows.length === 0) {
+      await connection.rollback();
+      return res.status(403).json({ success: false, message: "Unauthorized or product not found" });
+    }
+
+    // Delete associated stock
+    await connection.query("DELETE FROM product_stocks WHERE product_id = ?", [id]);
+    
+    // Delete product
+    const [result] = await connection.query("DELETE FROM products WHERE id = ?", [id]);
+
+    if (result.affectedRows === 0) {
+      await connection.rollback();
+      return res.status(404).json({ success: false, message: "Product not found." });
+    }
+
+    await connection.commit();
+    res.status(200).json({ success: true, message: "Product deleted successfully." });
+  } catch (error) {
+    await connection.rollback();
+    console.error("Error in deleteProduct:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  } finally {
+    connection.release();
   }
 };

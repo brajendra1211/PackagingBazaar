@@ -132,7 +132,7 @@ export default function Navbar() {
     { to: "/", label: "Home" },
     { to: "/products", label: "Products" },
     { to: "/seller", label: "Seller" },
-    { to: "/buyer", label: "Buyer" },
+    { to: "/hot-deals", label: "Hot Deals" },
     { to: "/about", label: "About Us" },
     { to: "/contact", label: "Contact" },
   ];

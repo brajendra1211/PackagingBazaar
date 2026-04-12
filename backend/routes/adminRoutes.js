@@ -4,7 +4,7 @@ import {
   getAllSellers, getAllUsers, updateUser, deleteUser,
   getAllProductsAdmin, getDashboardStats, getAllOrdersAdmin,
   getUserOrdersAdmin, getSellerOrdersAdmin, getSellerProductsAdmin,
-  getSellersWithOrdersAdmin
+  getSellersWithOrdersAdmin, getAllInquiriesAdmin, toggleHotDeal
 } from "../controllers/adminController.js";
 import { deleteProduct } from "../controllers/productController.js";
 import { verifyToken, isAdmin } from "../middlewares/authMiddleware.js";
@@ -29,11 +29,15 @@ router.delete("/sellers/:id/reject", verifyToken, isAdmin, rejectSeller);
 // --- Product Management ---
 router.get("/products/all", verifyToken, isAdmin, getAllProductsAdmin);
 router.get("/products/seller/:sellerId", verifyToken, isAdmin, getSellerProductsAdmin);
+router.patch("/products/:id/hot-deal", verifyToken, isAdmin, toggleHotDeal);
 router.delete("/products/:id", verifyToken, isAdmin, deleteProduct);
 
 // --- Sales Management ---
 router.get("/orders", verifyToken, isAdmin, getAllOrdersAdmin);
 router.get("/orders/user/:userId", verifyToken, isAdmin, getUserOrdersAdmin);
 router.get("/orders/seller/:sellerId", verifyToken, isAdmin, getSellerOrdersAdmin);
+
+// --- Inquiry Management (Leads) ---
+router.get("/inquiries", verifyToken, isAdmin, getAllInquiriesAdmin);
 
 export default router;

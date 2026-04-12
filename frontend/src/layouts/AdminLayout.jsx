@@ -1,16 +1,36 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
-import { Store, Calendar, Phone, Menu, X, Package, LogOut, ShieldCheck, ChevronDown, Users, LayoutDashboard, Settings, UserPlus, ClipboardList, CheckCircle, ShoppingBag } from "lucide-react";
+import { 
+  Store, Menu, X, Package, LogOut, ShieldCheck, 
+  ChevronDown, Users, LayoutDashboard, ClipboardList, 
+  CheckCircle, ShoppingBag, MessageSquare 
+} from "lucide-react";
 import { Toaster } from 'react-hot-toast';
 import { AnimatePresence, motion } from "framer-motion";
+import { fetchDashboardStats } from "../services/adminServices";
 
 export default function AdminLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openMenus, setOpenMenus] = useState({ users: true, sellers: true });
+  const [stats, setStats] = useState({ totalInquiries: 0, pendingSellers: 0 });
+  
   const navigate = useNavigate();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const activeTab = searchParams.get("tab") || "overview";
+
+  useEffect(() => {
+    loadStats();
+  }, [location.search]); // Reload stats when tab changes safely or on initial load
+
+  const loadStats = async () => {
+    try {
+      const res = await fetchDashboardStats();
+      if (res.success) setStats(res.stats);
+    } catch (err) {
+      console.error("Failed to load sidebar stats");
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -26,6 +46,7 @@ export default function AdminLayout() {
       id: "general",
       links: [
         { to: "/admin/dashboard?tab=overview", icon: <LayoutDashboard size={18} />, label: "Overview", tab: "overview" },
+        { to: "/admin/dashboard?tab=inquiries", icon: <MessageSquare size={18} />, label: `Leads (${stats.totalInquiries})`, tab: "inquiries" },
       ]
     },
     {
@@ -44,8 +65,8 @@ export default function AdminLayout() {
       icon: <Store size={18} />,
       links: [
         { to: "/admin/dashboard?tab=sellers", icon: <CheckCircle size={16} />, label: "Active Businesses", tab: "sellers" },
-        { to: "/admin/dashboard?tab=pending", icon: <ClipboardList size={16} />, label: "Pending Sellers", tab: "pending" },
-        { to: "/admin/dashboard?tab=sellerorders", icon: <ShoppingBag size={16} />, label: "Seller Orders", tab: "sellerorders" },
+        { to: "/admin/dashboard?tab=pending", icon: <ClipboardList size={16} />, label: `Pending Sellers (${stats.pendingSellers})`, tab: "pending" },
+        { to: "/admin/dashboard?tab=seller-hub", icon: <ShoppingBag size={16} />, label: "Seller Sales Hub", tab: "seller-hub" },
       ]
     }
   ];

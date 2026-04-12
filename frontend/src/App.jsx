@@ -21,11 +21,10 @@ import AboutPage from "./pages/AboutPage";
 import PolicyPage from "./pages/PolicyPage";
 import NotFound from "./pages/NotFound";
 import BecomeaSeller from "./pages/BecomeaSeller";
-import BecomeaBuyer from "./pages/BecomeaBuyer";
+// import BecomeaBuyer from "./pages/BecomeaBuyer";
 import LoginPage from "./pages/LoginPage";
 import UserProfile from "./pages/UserProfile";
-import CheckoutPage from "./pages/CheckoutPage";
-import BuyerPage from "./pages/BuyerPage";
+import HotDealsPage from "./pages/HotDealsPage";
 import SellerPage from "./pages/SellerPage";
 
 // Admin
@@ -58,7 +57,7 @@ export default function App() {
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/policy" element={<PolicyPage />} />
-              <Route path="/buyer" element={<BuyerPage />} />
+              <Route path="/hot-deals" element={<HotDealsPage />} />
               <Route path="/seller" element={<SellerPage />} />
               <Route path="/become-a-seller" element={<BecomeaSeller />} />
               <Route path="*" element={<NotFound />} />
@@ -67,9 +66,8 @@ export default function App() {
             {/* Protected User Routes (Must be logged in) */}
             <Route element={<ProtectedRoute />}>
               <Route element={<UserLayout />}>
-                <Route path="/become-a-buyer" element={<BecomeaBuyer />} />
+                {/* <Route path="/become-a-buyer" element={<BecomeaBuyer />} /> */}
                 <Route path="/profile" element={<UserProfile />} />
-                <Route path="/checkout" element={<CheckoutPage />} />
               </Route>
             </Route>
 

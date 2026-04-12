@@ -5,6 +5,11 @@ export const fetchProducts = async (params) => {
   return response.data;
 };
 
+export const fetchCategories = async () => {
+  const response = await API.get("/categories");
+  return response.data;
+};
+
 export const fetchProductById = async (id) => {
   const response = await API.get(`/products/${id}`);
   return response.data;
@@ -17,6 +22,16 @@ export const fetchProductVariants = async (id) => {
 
 export const fetchTopSelling = async () => {
   const response = await API.get('/products/top-selling');
+  return response.data;
+};
+
+export const fetchHotDeals = async () => {
+  const response = await API.get('/products/hot-deals');
+  return response.data;
+};
+
+export const fetchUniqueProductNames = async () => {
+  const response = await API.get('/products/names');
   return response.data;
 };
 

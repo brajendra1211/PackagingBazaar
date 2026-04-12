@@ -11,6 +11,7 @@ export default function UserProfile() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [newName, setNewName] = useState("");
+  const [newMobile, setNewMobile] = useState("");
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "profile"); 
   const navigate = useNavigate();
@@ -31,6 +32,7 @@ export default function UserProfile() {
       if (res.success) {
         setUser(res.user);
         setNewName(res.user.name);
+        setNewMobile(res.user.mobile || "");
       }
     } catch (err) {
       notifyError("Failed to load profile");
@@ -41,8 +43,11 @@ export default function UserProfile() {
 
   const handleUpdateName = async () => {
     try {
-      await updateUserProfileAPI(newName);
-      notifySuccess("Name updated successfully!");
+      if (newMobile && !/^[0-9]{10}$/.test(newMobile)) {
+        return notifyError("Mobile number must be 10 digits.");
+      }
+      await updateUserProfileAPI(newName, newMobile);
+      notifySuccess("Profile updated successfully!");
       setEditing(false);
       loadUser();
       // If we used a global user state, we'd update it here too.
@@ -157,8 +162,28 @@ export default function UserProfile() {
                         {user.is_verified ? <ShieldCheck size={14} className="text-green-500" /> : null}
                       </p>
                    </div>
+                   <div>
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Mobile Number</span>
+                      {editing ? (
+                        <div className="flex items-center gap-2 border-b border-accent py-1">
+                           <span className="text-sm font-bold text-gray-400">+91</span>
+                           <input 
+                             type="tel"
+                             className="text-sm font-bold text-gray-900 outline-none w-full bg-transparent"
+                             value={newMobile}
+                             maxLength={10}
+                             onChange={(e) => setNewMobile(e.target.value.replace(/\D/g, ""))}
+                             placeholder="10-digit mobile"
+                           />
+                        </div>
+                      ) : (
+                        <p className="text-sm font-bold text-gray-900">
+                          {user.mobile ? `+91 ${user.mobile}` : "Not provided"}
+                        </p>
+                      )}
+                   </div>
                    <p className="text-[11px] text-gray-400 bg-blue-50 border border-blue-100 p-3 rounded-xl leading-relaxed">
-                     Your email is used for login and notifications. Currently, email changes are restricted for security.
+                     Your identity and contact info are used for order confirmation and dispatch.
                    </p>
                  </div>
               </div>

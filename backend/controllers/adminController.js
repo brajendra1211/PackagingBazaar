@@ -15,6 +15,7 @@ export const getPendingSellers = async (req, res) => {
              COALESCE(s.company_name, 'Incomplete Registration') as company_name, 
              COALESCE(s.business_type, 'N/A') as business_type, 
              COALESCE(s.gst_number, 'Not Provided') as gst_number, 
+             s.gst_certificate,
              COALESCE(s.city, 'N/A') as city, 
              COALESCE(s.state, 'N/A') as state, 
              s.created_at
@@ -44,24 +45,6 @@ export const getPendingSellers = async (req, res) => {
 };
 
 // 2. Fetch all active sellers
-// export const getAllSellers = async (req, res) => {
-//   try {
-//     const query = `
-//       SELECT u.id as user_id, u.name as owner_name, u.email, u.is_verified, 
-//              s.*
-//       FROM users u
-//       JOIN sellers s ON u.id = s.user_id
-//       WHERE u.role = 'seller' AND u.is_verified = 1
-//       ORDER BY s.created_at DESC
-//     `;
-//     const [rows] = await pool.query(query);
-//     res.status(200).json({ success: true, sellers: rows });
-//   } catch (error) {
-//     console.error("Error fetching all sellers:", error);
-//     res.status(500).json({ success: false, message: "Server Error" });
-//   }
-// };
-// 2. Fetch all active sellers
 export const getAllSellers = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -71,7 +54,7 @@ export const getAllSellers = async (req, res) => {
     const query = `
       SELECT u.id as user_id, u.name as owner_name, u.email, 
              u.is_verified,                        
-             s.seller_uid, s.company_name, s.business_type, s.gst_number,
+             s.seller_uid, s.company_name, s.business_type, s.gst_number, s.gst_certificate,
              s.city, s.state, s.created_at
       FROM users u
       JOIN sellers s ON u.id = s.user_id
@@ -228,6 +211,7 @@ export const getDashboardStats = async (req, res) => {
     const [pending] = await pool.query("SELECT COUNT(*) as count FROM users WHERE role='seller' AND is_verified=0");
     const [products] = await pool.query("SELECT COUNT(*) as count FROM products");
     const [orders] = await pool.query("SELECT COUNT(*) as count FROM orders");
+    const [inquiries] = await pool.query("SELECT COUNT(*) as count FROM inquiries");
     
     res.status(200).json({
       success: true,
@@ -236,7 +220,8 @@ export const getDashboardStats = async (req, res) => {
         totalSellers: sellers[0].count,
         pendingSellers: pending[0].count,
         totalProducts: products[0].count,
-        totalOrders: orders[0].count
+        totalOrders: orders[0].count,
+        totalInquiries: inquiries[0].count
       }
     });
   } catch (error) {
@@ -445,3 +430,57 @@ export const getSellersWithOrdersAdmin = async (req, res) => {
   }
 };
 
+// --- INQUIRY MANAGEMENT (LEADS) ---
+
+// 15. Get All Inquiries for Admin
+export const getAllInquiriesAdmin = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const query = `
+      SELECT i.*, 
+             COALESCE(u.name, i.buyer_name) as buyer_display_name,
+             COALESCE(u.mobile, i.phone) as buyer_display_mobile,
+             COALESCE(u.email, i.buyer_email) as buyer_display_email,
+             p.name as product_name, p.image_url,
+             s.company_name as seller_name, s.city as seller_city, s.state as seller_state
+      FROM inquiries i
+      LEFT JOIN users u ON i.buyer_id = u.id
+      JOIN products p ON i.product_id = p.id
+      JOIN sellers s ON i.seller_id = s.id
+      ORDER BY i.created_at DESC
+      LIMIT ? OFFSET ?
+    `;
+    const [rows] = await pool.query(query, [limit, offset]);
+
+    const [[{ total }]] = await pool.query("SELECT COUNT(*) as total FROM inquiries");
+
+    res.status(200).json({ 
+      success: true, 
+      inquiries: rows,
+      totalCount: total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page
+    });
+  } catch (error) {
+    console.error("Error fetching all inquiries for admin:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+
+// 16. Toggle Product Hot Deal Status
+export const toggleHotDeal = async (req, res) => {
+  const { id } = req.params;
+  const { is_hot_deal } = req.body;
+  try {
+    const [result] = await pool.query("UPDATE products SET is_hot_deal = ? WHERE id = ?", [is_hot_deal ? 1 : 0, id]);
+    if (result.affectedRows === 0) return res.status(404).json({ success: false, message: "Product not found." });
+    res.status(200).json({ success: true, message: `Product ${is_hot_deal ? 'added to' : 'removed from'} Hot Deals.` });
+  } catch (error) {
+    console.error("Error toggling hot deal:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};

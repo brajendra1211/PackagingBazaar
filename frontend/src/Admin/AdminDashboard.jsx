@@ -1,433 +1,618 @@
 import { useState, useEffect } from "react";
 import { 
-  fetchDashboardStats, fetchAllUsers, fetchAllSellers, fetchPendingSellers, 
-  approveSellerAccount, rejectSellerAccount, fetchAllProductsAdmin, deleteProductAdmin,
-  updateUserAccount, deleteUserAccount, fetchAllOrdersAdmin,
-  fetchUserOrdersAdmin, fetchSellerOrdersAdmin, fetchSellerProductsAdmin,
-  fetchSellersWithOrdersAdmin
-} from "../services/adminServices";
-import { 
-  Users, Store, Package, LayoutDashboard, ShieldCheck, 
-  Trash2, Edit3, CheckCircle, XCircle, Search, MoreVertical,
-  BarChart3, ShoppingBag, ArrowUpRight, TrendingUp, ArrowLeft
+  Users, Store, ShoppingBag, TrendingUp, AlertCircle, 
+  CheckCircle2, XCircle, Search, Filter, Mail, Phone, 
+  MapPin, Clock, ArrowUpRight, MoreVertical, LayoutDashboard,
+  HardDrive, Database, Settings, RefreshCcw, Download,
+  ChevronLeft, ChevronRight, Inbox, MessageSquare, Zap, FileText
 } from "lucide-react";
-import { useNotification } from "../context/NotificationContext";
-import { motion } from "framer-motion";
 import { useSearchParams } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  fetchDashboardStats, 
+  fetchAllSellers, 
+  fetchPendingSellers, 
+  approveSellerAccount, 
+  rejectSellerAccount,
+  fetchAllUsers,
+  updateUserAccount,
+  deleteUserAccount,
+  fetchAllProductsAdmin,
+  deleteProductAdmin,
+  fetchAllOrdersAdmin,
+  fetchInquiriesAdmin,
+  fetchSellersWithOrdersAdmin,
+  fetchSellerProductsAdmin,
+  fetchSellerOrdersAdmin,
+  toggleHotDealAdmin
+} from "../services/adminServices";
 import Pagination from "../components/ui/Pagination";
-import { StatCardSkeleton, TableSkeleton } from "../components/ui/SkeletonLoader";
+import { useNotification } from "../context/NotificationContext";
 
 export default function AdminDashboard() {
   const [searchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "overview";
-  const [stats, setStats] = useState(null);
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const { notifySuccess, notifyError } = useNotification();
-  const [search, setSearch] = useState("");
-  const [selectedEntity, setSelectedEntity] = useState(null); // { type: 'user'|'seller', id, name }
   
-  // Pagination State
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const limit = 10;
-
-  useEffect(() => {
-    setSelectedEntity(null);
-    setSearch("");
-    setCurrentPage(1); // Reset page on tab change
-    loadDashboardData(1, activeTab, null);
-  }, [activeTab]);
-
-  useEffect(() => {
-    if (selectedEntity) {
-      setCurrentPage(1); // Reset page on drill-down
-      loadDashboardData(1, activeTab, selectedEntity);
-    }
-  }, [selectedEntity]);
-
-  const handlePageChange = (newPage) => {
-    setCurrentPage(newPage);
-    loadDashboardData(newPage);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  const TAB_INFO = {
+    overview: { title: "Admin Control", desc: "Manage marketplace operations, users, and business leads." },
+    sellers: { title: "Approved Sellers", desc: "View and manage all verified manufacturers and traders on the platform." },
+    pending: { title: "Pending Approvals", desc: "Review and verify new seller applications before they go live." },
+    users: { title: "User Directory", desc: "Manage buyer accounts and monitor user activity across the system." },
+    products: { title: "Product Catalog", desc: "Inspect and manage all packaging film variants listed by sellers." },
+    orders: { title: "Sales Orders", desc: "Monitor all transactions and order fulfillment statuses in real-time." },
+    inquiries: { title: "Business Leads", desc: "Tracking all buyer inquiries and procurement requests." },
+    "seller-hub": { title: "Seller Hub", desc: "Performance analytics and deep-dive into individual seller operations." },
   };
 
-  const loadDashboardData = async (page = currentPage, currentTab = activeTab, entity = selectedEntity) => {
+  const currentTab = TAB_INFO[activeTab] || TAB_INFO.overview;
+  
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalSellers: 0,
+    pendingSellers: 0,
+    totalProducts: 0,
+    totalOrders: 0,
+    totalInquiries: 0
+  });
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const { notifySuccess, notifyError } = useNotification();
+
+  // Secondary views (e.g., viewing a specific seller's products)
+  const [selectedEntity, setSelectedEntity] = useState(null);
+
+  useEffect(() => {
+    loadDashboardStats();
+  }, []);
+
+  useEffect(() => {
+    setCurrentPage(1); // Reset page on tab change
+    setSearch(""); // Clear search on tab change
+    loadTabData(1);
+  }, [activeTab]);
+
+  const loadDashboardStats = async () => {
+    try {
+      const res = await fetchDashboardStats();
+      if (res.success) setStats(res.stats);
+    } catch (err) {
+      notifyError("Failed to load dashboard stats");
+    }
+  };
+
+  const loadTabData = async (page) => {
     setLoading(true);
+    setData([]); // Clear old data before loading new
     try {
       let res;
-      // Handle Drill-down (Overrides basic tab fetch if entity selected)
-      if (entity) {
-        if (entity.type === "user") {
-          res = await fetchUserOrdersAdmin(entity.id, page, limit); 
-        } else if (entity.type === "seller" && entity.mode === "orders") {
-          res = await fetchSellerOrdersAdmin(entity.id, page, limit);
-        } else if (entity.type === "seller" && entity.mode === "products") {
-          res = await fetchSellerProductsAdmin(entity.id, page, limit);
-        }
-        if (res?.success) {
-          setData(res.orders || res.products || []);
-          setTotalPages(res.totalPages || 1);
-        }
-      } else {
-        if (currentTab === "overview") {
-          res = await fetchDashboardStats();
-          if (res.success) setStats(res.stats);
-        } else if (currentTab === "users") {
-          res = await fetchAllUsers(page, limit);
-          if (res.success) {
-            setData(res.users);
-            setTotalPages(res.totalPages);
-          }
-        } else if (currentTab === "pending") {
-          res = await fetchPendingSellers(page, limit);
-          if (res.success) {
-            setData(res.sellers);
-            setTotalPages(res.totalPages);
-          }
-        } else if (currentTab === "sellers") {
-          res = await fetchAllSellers(page, limit);
-          if (res.success) {
-            setData(res.sellers);
-            setTotalPages(res.totalPages);
-          }
-        } else if (currentTab === "products") {
-          res = await fetchAllProductsAdmin(page, limit);
-          if (res.success) {
-            setData(res.products);
-            setTotalPages(res.totalPages);
-          }
-        } else if (currentTab === "orders") {
-          res = await fetchAllOrdersAdmin(page, limit);
-          if (res.success) {
-            setData(res.orders);
-            setTotalPages(res.totalPages);
-          }
-        } else if (currentTab === "sellerorders") {
-          res = await fetchSellersWithOrdersAdmin(page, limit);
-          if (res.success) {
-            setData(res.sellers);
-            setTotalPages(res.totalPages);
-          }
-        }
+      switch (activeTab) {
+        case "sellers":
+          res = await fetchAllSellers(page);
+          setData(res.sellers);
+          break;
+        case "pending":
+          res = await fetchPendingSellers(page);
+          setData(res.sellers);
+          break;
+        case "users":
+          res = await fetchAllUsers(page);
+          setData(res.users);
+          break;
+        case "products":
+          res = await fetchAllProductsAdmin(page);
+          setData(res.products);
+          break;
+        case "orders":
+          res = await fetchAllOrdersAdmin(page);
+          setData(res.orders);
+          break;
+        case "inquiries":
+          res = await fetchInquiriesAdmin(page);
+          setData(res.inquiries);
+          break;
+        case "seller-hub":
+          res = await fetchSellersWithOrdersAdmin(page);
+          setData(res.sellers);
+          break;
       }
-    } catch (error) {
-      notifyError("Failed to load data");
+      if (res) {
+        setTotalPages(res.totalPages || 1);
+        setCurrentPage(res.currentPage || 1);
+      }
+    } catch (err) {
+      notifyError(`Failed to load ${activeTab}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteUser = async (id) => {
-    if (!window.confirm("Are you sure? This will permanently delete the user.")) return;
-    try {
-      await deleteUserAccount(id);
-      notifySuccess("User deleted");
-      loadDashboardData();
-    } catch (e) { notifyError("Failed to delete"); }
-  };
-
-  const handleDeleteProduct = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this product?")) return;
-    try {
-      await deleteProductAdmin(id);
-      notifySuccess("Product deleted");
-      loadDashboardData();
-    } catch (e) { notifyError("Failed to delete"); }
-  };
-
   const handleApproveSeller = async (id) => {
     try {
-      await approveSellerAccount(id);
-      notifySuccess("Seller approved");
-      loadDashboardData();
-    } catch (e) { notifyError("Approval failed"); }
+      const res = await approveSellerAccount(id);
+      if (res.success) {
+        notifySuccess("Seller approved successfully");
+        loadTabData(currentPage);
+        loadDashboardStats();
+      }
+    } catch (err) {
+      notifyError("Approval failed");
+    }
   };
 
-  const filteredData = data.filter(item => {
-    const term = search.toLowerCase();
-    return (
-      (item.name?.toLowerCase().includes(term)) ||
-      (item.email?.toLowerCase().includes(term)) ||
-      (item.company_name?.toLowerCase().includes(term)) ||
-      (item.owner_name?.toLowerCase().includes(term)) ||
-      (item.customer_name?.toLowerCase().includes(term))
-    );
-  });
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    loadTabData(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleToggleHotDeal = async (id, currentVal) => {
+    try {
+      const res = await toggleHotDealAdmin(id, !currentVal);
+      if (res.success) {
+        notifySuccess(res.message);
+        loadTabData(currentPage);
+      }
+    } catch (err) {
+      notifyError("Failed to update status");
+    }
+  };
+
+  const filteredData = Array.isArray(data) ? data.filter((item) => {
+    const s = search.toLowerCase();
+    if (activeTab === "users") return item.name?.toLowerCase().includes(s) || item.email?.toLowerCase().includes(s);
+    if (activeTab === "products") return item.name?.toLowerCase().includes(s) || item.seller_name?.toLowerCase().includes(s);
+    if (activeTab === "sellers" || activeTab === "pending" || activeTab === "seller-hub") return item.company_name?.toLowerCase().includes(s) || item.owner_name?.toLowerCase().includes(s);
+    if (activeTab === "inquiries") return item.buyer_display_name?.toLowerCase().includes(s) || item.product_name?.toLowerCase().includes(s);
+    if (activeTab === "orders") return item.customer_name?.toLowerCase().includes(s) || item.id?.toString().includes(s);
+    return true;
+  }) : [];
 
   return (
-    <div className="animate-fadeIn">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
+    <div className="p-4 md:p-8">
+      {/* ── Header Section ── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
         <div>
-          <h1 className="text-2xl md:text-3xl font-black font-syne text-gray-900 uppercase tracking-tighter flex items-center gap-2">
-            {selectedEntity ? (
-              <button 
-                onClick={() => {
-                  setSelectedEntity(null);
-                  setCurrentPage(1);
-                  loadDashboardData(1, activeTab, null);
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-colors text-sm font-bold mr-2"
-                title="Back"
-              >
-                <ArrowLeft size={18} />
-                <span className="hidden sm:inline">BACK</span>
-              </button>
-            ) : null}
-            {selectedEntity 
-              ? (selectedEntity.mode === "products" 
-                  ? `Products for ${selectedEntity.name}` 
-                  : `Orders for ${selectedEntity.name}`) 
-              : activeTab.replace("-", " ")}
-          </h1>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-            {selectedEntity 
-              ? (selectedEntity.mode === "products" 
-                  ? `Seller product catalog` 
-                  : `Tracking ${selectedEntity.type} sales and history`) 
-              : "Management Hub"}
-          </p>
+           <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-accent/10 text-accent rounded-2xl flex items-center justify-center">
+                 <LayoutDashboard size={24} />
+              </div>
+              <h1 className="font-syne font-black text-3xl text-gray-900 uppercase tracking-tight">
+                {currentTab.title}
+              </h1>
+           </div>
+           <p className="text-gray-500 text-sm font-medium">
+             {currentTab.desc}
+           </p>
         </div>
-
-        {activeTab !== "overview" && (
-          <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={16} />
-            <input 
-              type="text" 
-              placeholder="Search anything..." 
-              className="pl-11 pr-4 py-3 bg-white border border-gray-100 rounded-2xl text-sm w-full md:w-72 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-        )}
+        
+        <div className="flex items-center gap-3">
+           <div className="relative group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-accent transition-colors" size={18} />
+              <input 
+                type="text" 
+                placeholder={`Search ${activeTab}...`} 
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-12 pr-6 py-3.5 bg-white border border-gray-100 rounded-2xl text-sm font-medium w-full md:w-80 outline-none focus:border-accent focus:ring-4 focus:ring-accent/5 transition-all shadow-sm"
+              />
+           </div>
+           <button className="p-3.5 bg-white border border-gray-100 rounded-2xl text-gray-600 hover:bg-gray-50 transition-all shadow-sm">
+              <Download size={20} />
+           </button>
+        </div>
       </div>
 
-      {loading ? (
-        <div className="animate-fadeIn">
-          {activeTab === "overview" ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[1,2,3,4].map(i => <StatCardSkeleton key={i} />)}
-            </div>
-          ) : (
-            <TableSkeleton rows={6} cols={activeTab === "orders" || activeTab === "sellerorders" ? 5 : 4} />
-          )}
+      {/* ── Stats Overview ── */}
+      {activeTab === "overview" && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-10">
+          {[
+            { label: "Total Users", val: stats.totalUsers, icon: <Users size={20}/>, color: "blue", trend: "+12%" },
+            { label: "Active Sellers", val: stats.totalSellers, icon: <Store size={20}/>, color: "orange", trend: "+5%" },
+            { label: "Live Products", val: stats.totalProducts, icon: <ShoppingBag size={20}/>, color: "purple", trend: "+18%" },
+            { label: "Business Leads", val: stats.totalInquiries, icon: <TrendingUp size={20}/>, color: "green", trend: "+24%" }
+          ].map((stat) => (
+            <motion.div 
+              key={stat.label}
+              whileHover={{ y: -5 }}
+              className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden group"
+            >
+              <div className={`absolute top-0 right-0 w-24 h-24 bg-${stat.color}-50 rounded-full -translate-y-1/2 translate-x-1/2 transition-transform group-hover:scale-125`} />
+              <div className={`w-12 h-12 bg-${stat.color}-50 text-${stat.color}-600 rounded-2xl flex items-center justify-center mb-4 relative`}>
+                {stat.icon}
+              </div>
+              <p className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1">{stat.label}</p>
+              <div className="flex items-end gap-3">
+                <h3 className="text-3xl font-syne font-black text-gray-900">{stat.val}</h3>
+                <span className="text-[10px] font-black text-green-500 mb-1.5">{stat.trend}</span>
+              </div>
+            </motion.div>
+          ))}
         </div>
-      ) : (
-        <div>
-            
-          {/* ── Overview Stats ── */}
-          {activeTab === "overview" && stats && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[
-                { label: "Total Users", val: stats.totalUsers, icon: <Users />, color: "bg-blue-500", trend: "Active Community" },
-                { label: "Active Sellers", val: stats.totalSellers, icon: <Store />, color: "bg-orange-500", trend: "Businesses Sync" },
-                { label: "Total Products", val: stats.totalProducts, icon: <Package />, color: "bg-purple-500", trend: "Market Catalog" },
-                { label: "New Apps", val: stats.pendingSellers, icon: <LayoutDashboard />, color: "bg-red-500", trend: "Awaiting Action" },
-              ].map((s, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.35, delay: i * 0.08 }}
-                  className="relative overflow-hidden bg-white p-6 rounded-[2rem] border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300 group"
-                >
-                  {/* Decorative glow */}
-                  <div className={`absolute -right-6 -top-6 w-32 h-32 rounded-full ${s.color} opacity-10 group-hover:opacity-20 blur-3xl transition-opacity duration-500`} />
-                  
-                  <div className="flex justify-between items-start mb-6">
-                    <div className={`w-12 h-12 ${s.color} text-white rounded-[1.25rem] flex items-center justify-center shadow-lg shadow-${s.color.split('-')[1]}-500/30 ring-1 ring-white/20`}>{s.icon}</div>
-                    <div className="px-2.5 py-1 rounded-full bg-gray-50 border border-gray-100 text-[9px] font-black text-gray-400 group-hover:text-gray-900 transition-colors uppercase tracking-widest shadow-sm">Live</div>
-                  </div>
-                  <p className="text-4xl font-black font-syne text-gray-900 mb-1">{s.val}</p>
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{s.label}</p>
-                  <div className="mt-4 flex items-center gap-1.5 text-[10px] font-black text-green-500">
-                     <TrendingUp size={12} /> {s.trend}
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
+      )}
 
-          {/* ── Users / Sellers / Products / Pending Table ── */}
-          {(activeTab === "users" || activeTab === "sellers" || activeTab === "products" || activeTab === "pending") && !selectedEntity && (
+
+      {/* ── Content Area ── */}
+      <div className="relative">
+        {loading ? (
+             <div className="flex flex-col items-center justify-center py-20 bg-white rounded-[3rem] border border-gray-100 min-h-[400px]">
+                <RefreshCcw className="animate-spin text-accent mb-4" size={40} />
+                <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Syncing real-time data...</p>
+             </div>
+        ) : (
+          <div className="space-y-6">
+            
+            {/* ── Sellers Management Table ── */}
+            {(activeTab === "sellers" || activeTab === "pending") && (
+              <div className="bg-white rounded-[3rem] border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-gray-50">
+                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Company & Owner</th>
+                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Business Detail</th>
+                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Location</th>
+                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Date Joined</th>
+                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {filteredData.map((seller, idx) => (
+                          <motion.tr 
+                            key={seller.user_id}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.3, delay: idx * 0.05 }}
+                            className="hover:bg-gray-50/50 transition-all group"
+                          >
+                            <td className="px-8 py-6">
+                               <div className="flex items-center gap-4">
+                                  <div className="w-12 h-12 bg-gray-900 rounded-2xl flex items-center justify-center text-white font-syne font-black shrink-0">
+                                     {seller.company_name[0]}
+                                  </div>
+                                  <div>
+                                     <h4 className="font-bold text-gray-900 leading-tight">{seller.company_name}</h4>
+                                     <p className="text-xs text-gray-500 font-medium">By {seller.owner_name}</p>
+                                  </div>
+                               </div>
+                            </td>
+                            <td className="px-8 py-6">
+                               <div className="space-y-1.5">
+                                  <span className="inline-flex px-2 py-0.5 rounded-lg bg-blue-50 text-blue-600 text-[10px] font-black uppercase border border-blue-100">
+                                     {seller.business_type}
+                                  </span>
+                                  <p className="text-xs font-bold text-gray-400">GST: {seller.gst_number}</p>
+                               </div>
+                            </td>
+                            <td className="px-8 py-6">
+                               <div className="flex items-center gap-1.5 text-xs font-bold text-gray-600">
+                                  <MapPin size={14} className="text-accent" />
+                                  {seller.city}, {seller.state}
+                               </div>
+                            </td>
+                            <td className="px-8 py-6">
+                               <div className="flex items-center gap-2 text-xs font-medium text-gray-500">
+                                  <Clock size={14} />
+                                  {new Date(seller.created_at).toLocaleDateString()}
+                               </div>
+                            </td>
+                            <td className="px-8 py-6 text-right">
+                               <div className="flex items-center justify-end gap-2 ">
+                                  {activeTab === "pending" && (
+                                    <>
+                                      {seller.gst_certificate && (
+                                        <button 
+                                          onClick={() => window.open(`http://localhost:5000/${seller.gst_certificate}`, '_blank')}
+                                          className="p-2.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl transition-all"
+                                          title="View GST Certificate"
+                                        >
+                                          <FileText size={18} />
+                                        </button>
+                                      )}
+                                      <button 
+                                        onClick={() => handleApproveSeller(seller.user_id)}
+                                        className="p-2.5 bg-green-50 text-green-600 hover:bg-green-100 rounded-xl transition-all"
+                                        title="Approve Seller"
+                                      >
+                                        <CheckCircle2 size={18} />
+                                      </button>
+                                    </>
+                                  )}
+                                  <button className="p-2.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl transition-all" title="Reject/Remove">
+                                     <XCircle size={18} />
+                                  </button>
+                                  <button className="p-2.5 bg-gray-50 text-gray-500 hover:bg-gray-200 rounded-xl transition-all">
+                                     <MoreVertical size={18} />
+                                  </button>
+                               </div>
+                            </td>
+                          </motion.tr>
+                        ))}
+                      </tbody>
+                    </table>
+                </div>
+                {!search && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />}
+              </div>
+            )}
+
+            {/* ── Products Management Table ── */}
+            {activeTab === "products" && (
+               <div className="bg-white rounded-[3rem] border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-gray-50">
+                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Product Info</th>
+                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Manufacturer</th>
+                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Price & Details</th>
+                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {filteredData.map((p, idx) => (
+                          <tr key={p.id} className="hover:bg-gray-50/50 transition-all group">
+                            <td className="px-8 py-6">
+                               <div className="flex items-center gap-4">
+                                  <div className="w-16 h-16 bg-gray-50 rounded-2xl overflow-hidden border border-gray-100 shrink-0">
+                                     <img src={p.image_url} alt="" className="w-full h-full object-cover" />
+                                  </div>
+                                  <div>
+                                     <h4 className="font-bold text-gray-900 leading-tight mb-1">{p.name}</h4>
+                                     <span className="text-[10px] font-black uppercase text-accent bg-accent/5 px-2 py-0.5 rounded border border-accent/10">{p.category_name}</span>
+                                  </div>
+                               </div>
+                            </td>
+                            <td className="px-8 py-6">
+                               <h4 className="text-sm font-bold text-gray-900">{p.seller_name}</h4>
+                               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{p.seller_uid}</p>
+                            </td>
+                            <td className="px-8 py-6">
+                               <div className="space-y-1">
+                                  <p className="font-syne font-black text-gray-900">₹{p.price}/{p.unit}</p>
+                                  <p className="text-[10px] text-gray-400 font-bold uppercase">Min: {p.min_order}kg · Stock: {p.stock}kg</p>
+                               </div>
+                            </td>
+                            <td className="px-8 py-6 text-right">
+                                <div className="flex items-center justify-end gap-2 ">
+                                   <button 
+                                     onClick={() => handleToggleHotDeal(p.id, p.is_hot_deal)}
+                                     className={`p-2.5 rounded-xl transition-all ${
+                                       p.is_hot_deal 
+                                         ? "bg-orange-100 text-orange-600 hover:bg-orange-200" 
+                                         : "bg-gray-100 text-gray-400 hover:bg-gray-200"
+                                     }`}
+                                     title={p.is_hot_deal ? "Remove from Hot Deas" : "Add to Hot Deals"}
+                                   >
+                                      <Zap size={18} fill={p.is_hot_deal ? "currentColor" : "none"} />
+                                   </button>
+                                   <button className="p-2.5 bg-gray-50 text-gray-500 hover:bg-gray-200 rounded-xl transition-all" title="View Details">
+                                      <ArrowUpRight size={18} />
+                                   </button>
+                                   <button className="p-2.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl transition-all" title="Delete Product">
+                                      <XCircle size={18} />
+                                   </button>
+                                </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                </div>
+                {!search && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />}
+               </div>
+            )}
+
+            {/* ── Business Sales Hub ── */}
+            {activeTab === "seller-hub" && (
+                <div className="bg-white rounded-[3rem] border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-gray-50">
+                          <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Manufacturer</th>
+                          <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Contact</th>
+                          <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Sales Performance</th>
+                          <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Revenue</th>
+                          <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">View Hub</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {filteredData.map((seller, idx) => (
+                          <motion.tr 
+                            key={seller.user_id} 
+                            initial={{ opacity: 0 }} 
+                            animate={{ opacity: 1 }}
+                            className="hover:bg-gray-50/50 transition-colors"
+                          >
+                            <td className="px-6 py-5">
+                               <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 bg-accent text-white rounded-xl flex items-center justify-center font-black">
+                                     {seller.company_name[0]}
+                                  </div>
+                                  <div>
+                                     <p className="text-sm font-bold text-gray-900">{seller.company_name}</p>
+                                     <p className="text-[10px] font-black text-accent uppercase">{seller.business_type}</p>
+                                  </div>
+                               </div>
+                            </td>
+                            <td className="px-6 py-5 text-sm font-medium text-gray-500">{seller.email}</td>
+                            <td className="px-6 py-5">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase border bg-blue-50 text-blue-600 border-blue-100">
+                                {seller.total_orders} Orders
+                              </span>
+                            </td>
+                            <td className="px-6 py-5">
+                              <span className="text-sm font-black text-gray-900">₹{Number(seller.total_revenue).toLocaleString()}</span>
+                            </td>
+                            <td className="px-6 py-5 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                {seller.gst_certificate && (
+                                  <button 
+                                    onClick={() => window.open(`http://localhost:5000/${seller.gst_certificate}`, '_blank')}
+                                    className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl transition-all"
+                                    title="View GST Certificate"
+                                  >
+                                    <FileText size={16} />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => setSelectedEntity({ type: "seller", id: seller.user_id, name: seller.company_name, mode: "orders" })}
+                                  className="p-2 bg-orange-50 text-orange-600 hover:bg-orange-100 rounded-xl transition-all"
+                                  title="View Orders"
+                                >
+                                  <ShoppingBag size={16} />
+                                </button>
+                              </div>
+                            </td>
+                          </motion.tr>
+                        ))}
+                      </tbody>
+                    </table>
+                </div>
+                {!search && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />}
+              </div>
+            )}
+            {/* ── Orders Management Table ── */}
+            {activeTab === "orders" && (
+              <div className="bg-white rounded-[3rem] border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-gray-50">
+                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Order ID</th>
+                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Customer</th>
+                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Amount</th>
+                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
+                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Date</th>
+                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {filteredData.map((order, idx) => (
+                          <tr key={order.id} className="hover:bg-gray-50/50 transition-all group">
+                             <td className="px-8 py-6">
+                                <span className="font-bold text-gray-900">#{order.id}</span>
+                             </td>
+                             <td className="px-8 py-6">
+                                <p className="font-bold text-gray-900">{order.customer_name}</p>
+                                <p className="text-xs text-gray-500">{order.customer_email}</p>
+                             </td>
+                             <td className="px-8 py-6">
+                                <p className="font-syne font-black text-gray-900">₹{order.total_price}</p>
+                             </td>
+                             <td className="px-8 py-6">
+                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                  order.status === 'Completed' ? 'bg-green-50 text-green-600' : 
+                                  order.status === 'Pending' ? 'bg-yellow-50 text-yellow-600' : 
+                                  'bg-blue-50 text-blue-600'
+                                }`}>
+                                  {order.status}
+                                </span>
+                             </td>
+                             <td className="px-8 py-6 text-xs font-bold text-gray-500">
+                                {new Date(order.order_date).toLocaleDateString()}
+                             </td>
+                             <td className="px-8 py-6 text-right">
+                                <button className="p-2.5 bg-gray-50 text-gray-500 hover:bg-gray-200 rounded-xl transition-all">
+                                   <MoreVertical size={18} />
+                                </button>
+                             </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                </div>
+                {!search && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />}
+              </div>
+            )}
+
+          {/* ── Inquiries (Leads) Table ── */}
+          {activeTab === "inquiries" && (
             <div className="bg-white rounded-[2rem] border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50/80 border-b border-gray-100 backdrop-blur-sm">
-                      <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Detail</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">{activeTab === "products" ? "Seller" : "Email"}</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">{activeTab === "products" ? "Price" : "Status"}</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
+                      <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Buyer Details</th>
+                      <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Requirement & Specs</th>
+                      <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Manufacturer Details</th>
+                      <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Date</th>
+                      <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {filteredData.map((item, idx) => (
-                      <motion.tr
-                        key={item.id || item.user_id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.25, delay: idx * 0.04 }}
-                        className="hover:bg-gray-50/50 transition-colors group"
-                      >
+                    {filteredData.map((inquiry, idx) => (
+                      <motion.tr key={inquiry.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: idx * 0.04 }} className="hover:bg-gray-50/50 transition-colors group">
                         <td className="px-6 py-5">
-                           <div className="flex items-center gap-4">
-                              <div className="w-10 h-10 rounded-[14px] bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200/60 flex items-center justify-center text-gray-500 text-sm font-black shadow-sm shrink-0">
-                                 {activeTab === "products" ? <Package size={18} /> : item.name?.[0].toUpperCase()}
+                           <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 bg-gray-900 text-white rounded-xl flex items-center justify-center font-black text-xs">
+                                 {inquiry.buyer_display_name[0]}
                               </div>
                               <div>
-                                 <p className="text-sm font-bold text-gray-900">{item.name || item.company_name || "N/A"}</p>
-                                 <p className="text-[10px] text-gray-400 uppercase font-black">{activeTab === "users" ? item.role : activeTab === "products" ? item.category_name : item.business_type}</p>
+                                 <p className="text-sm font-bold text-gray-900">{inquiry.buyer_display_name}</p>
+                                 <div className="flex flex-col gap-1 mt-1">
+                                    <a href={`tel:${inquiry.buyer_display_mobile}`} className="text-[10px] text-blue-500 font-bold flex items-center gap-1 hover:underline">
+                                       <Phone size={10} /> +91 {inquiry.buyer_display_mobile}
+                                    </a>
+                                    <div className="flex flex-col gap-1 mt-0.5">
+                                       <div className="flex items-center gap-1.5 text-[9px] text-gray-400 font-black uppercase tracking-wider">
+                                          <MapPin size={10} /> {inquiry.pincode ? `PIN: ${inquiry.pincode}` : "PIN N/A"}
+                                       </div>
+                                       {inquiry.address && (
+                                         <p className="text-[10px] text-accent font-bold leading-tight mt-0.5">
+                                           {inquiry.address}
+                                         </p>
+                                       )}
+                                    </div>
+                                 </div>
                               </div>
                            </div>
                         </td>
                         <td className="px-6 py-5">
-                          <div className="flex flex-col">
-                            <span className="text-sm font-medium text-gray-600">{activeTab === "products" ? item.seller_name : item.email}</span>
-                            {item.seller_uid && (
-                              <span className="text-[9px] font-black text-orange-500 uppercase tracking-tighter">ID: {item.seller_uid}</span>
-                            )}
-                          </div>
+                           <div className="flex items-center gap-3 mb-2">
+                              <div className="w-8 h-8 bg-gray-50 rounded-lg p-1 border border-gray-100 flex-shrink-0">
+                                 <img src={inquiry.image_url} alt="" className="w-full h-full object-cover rounded-md" />
+                              </div>
+                              <p className="text-xs font-bold text-gray-600 line-clamp-1">{inquiry.product_name}</p>
+                           </div>
+                           <p className="text-xs font-medium text-gray-900 leading-relaxed max-w-xs line-clamp-2 italic mb-2">
+                              "{inquiry.message}"
+                           </p>
+                           <div className="flex flex-wrap gap-2">
+                               <span className="text-[9px] font-black text-orange-500 uppercase tracking-widest bg-orange-50 px-1.5 py-0.5 rounded border border-orange-100">
+                                 Qty: {inquiry.quantity_required}
+                               </span>
+                               {(inquiry.thickness || inquiry.width) && (
+                                 <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
+                                   {inquiry.thickness || "-"} x {inquiry.width || "-"}
+                                 </span>
+                               )}
+                            </div>
                         </td>
                         <td className="px-6 py-5">
-                           {activeTab === "products" ? (
-                             <span className="text-sm font-black text-gray-900">₹{item.price}</span>
-                           ) : activeTab === "sellers" ? (
-                             <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase border ${item.is_verified ? "bg-green-50 text-green-600 border-green-100" : "bg-yellow-50 text-yellow-600 border-yellow-100"}`}>
-                               {item.is_verified ? "Active" : "Pending"}
-                             </span>
-                           ) : activeTab === "pending" ? (
-                             <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase border bg-yellow-50 text-yellow-600 border-yellow-100">Pending</span>
-                           ) : (
-                             <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase border ${item.is_verified ? "bg-green-50 text-green-600 border-green-100" : "bg-red-50 text-red-600 border-red-100"}`}>
-                               {item.is_verified ? "Active" : "Unverified"}
-                             </span>
-                           )}
+                           <p className="text-sm font-bold text-gray-900">{inquiry.seller_name}</p>
+                           <div className="flex items-center gap-1.5 mt-1 text-gray-400 uppercase font-black text-[9px]">
+                              <MapPin size={10} /> {inquiry.seller_city}, {inquiry.seller_state}
+                           </div>
+                        </td>
+                        <td className="px-6 py-5 text-[11px] font-bold text-gray-500">
+                           {new Date(inquiry.created_at).toLocaleDateString()}
                         </td>
                         <td className="px-6 py-5 text-right">
                            <div className="flex items-center justify-end gap-2">
-                               {activeTab === "pending" && (
-                                 <button onClick={() => handleApproveSeller(item.user_id)} className="p-2 bg-green-50 text-green-600 hover:bg-green-100 rounded-xl transition-all" title="Approve"><CheckCircle size={16} /></button>
-                               )}
-                               {activeTab === "sellers" && (
-                                 <button 
-                                    onClick={() => setSelectedEntity({ type: "seller", id: item.user_id, name: item.company_name, mode: "products" })}
-                                    className="p-2 bg-purple-50 text-purple-600 hover:bg-purple-100 rounded-xl transition-all"
-                                    title="View Products"
-                                 >
-                                    <Package size={16} />
-                                 </button>
-                               )}
-                              <button className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl transition-all" title="Edit"><Edit3 size={16} /></button>
-                              <button 
-                                onClick={() => activeTab === "products" ? handleDeleteProduct(item.id) : activeTab === "users" ? handleDeleteUser(item.id) : null}
-                                className="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl transition-all"
-                                title="Delete"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                           </div>
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </tbody>
-                </table>
-            </div>
-            {!search && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />}
-          </div>
-        )}
-
-          {/* ── Orders Table (All Orders tab OR drill-down orders) ── */}
-          {(activeTab === "orders" || selectedEntity?.mode === "orders") && (
-            <div className="bg-white rounded-[2rem] border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50/80 border-b border-gray-100 backdrop-blur-sm">
-                      <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Order Info</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Customer</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Amount</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Date</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {filteredData.map((order, idx) => (
-                      <motion.tr key={order.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: idx * 0.04 }} className="hover:bg-gray-50/50 transition-colors group">
-                        <td className="px-6 py-5">
-                           <p className="text-sm font-bold text-gray-900">Order #{order.id}</p>
-                           <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mt-1">Order Transaction</p>
-                        </td>
-                        <td className="px-6 py-5">
-                           <p className="text-sm font-semibold text-gray-600">{order.customer_name}</p>
-                           <p className="text-[10px] text-gray-400 uppercase font-black">{order.customer_email}</p>
-                        </td>
-                        <td className="px-6 py-5">
-                           <span className="text-sm font-black text-gray-900">₹{order.total_price}</span>
-                        </td>
-                        <td className="px-6 py-5">
-                           <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase border ${
-                             order.status === "Delivered" ? "bg-green-50 text-green-600 border-green-100" :
-                             order.status === "Cancelled" ? "bg-red-50 text-red-600 border-red-100" :
-                             "bg-blue-50 text-blue-600 border-blue-100"
-                           }`}>
-                             {order.status}
-                           </span>
-                        </td>
-                        <td className="px-6 py-5 text-sm font-medium text-gray-500">
-                           {new Date(order.order_date).toLocaleDateString()}
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </tbody>
-                </table>
-            </div>
-            {!search && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />}
-          </div>
-        )}
-
-          {/* ── Seller Products Drill-down Table ── */}
-          {selectedEntity?.mode === "products" && (
-            <div className="bg-white rounded-[2rem] border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50/80 border-b border-gray-100 backdrop-blur-sm">
-                      <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Product</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Category</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Price</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {filteredData.map((item, idx) => (
-                      <motion.tr key={item.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: idx * 0.04 }} className="hover:bg-gray-50/50 transition-colors group">
-                        <td className="px-6 py-5">
-                           <div className="flex items-center gap-4">
-                             <div className="w-10 h-10 rounded-[14px] bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200/60 flex items-center justify-center text-purple-500 shadow-sm shrink-0">
-                               <Package size={18} />
-                             </div>
-                             <div>
-                               <p className="text-sm font-bold text-gray-900">{item.name}</p>
-                               <p className="text-[10px] text-gray-400 uppercase font-black">{item.unit || "—"}</p>
-                             </div>
-                           </div>
-                        </td>
-                        <td className="px-6 py-5">
-                          <span className="text-sm font-medium text-gray-600">{item.category_name || "—"}</span>
-                        </td>
-                        <td className="px-6 py-5">
-                           <span className="text-sm font-black text-gray-900">₹{item.price}</span>
-                        </td>
-                        <td className="px-6 py-5 text-right">
-                           <div className="flex items-center justify-end gap-2">
-                             <button 
-                               onClick={() => handleDeleteProduct(item.id)}
-                               className="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl transition-all"
-                             >
-                               <Trash2 size={16} />
+                             {inquiry.buyer_display_email && (
+                               <a 
+                                 href={`mailto:${inquiry.buyer_display_email}`} 
+                                 className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl transition-all"
+                                 title="Email Buyer"
+                               >
+                                 <Mail size={16} />
+                               </a>
+                             )}
+                             <button className="p-2 bg-gray-50 text-gray-400 hover:bg-gray-100 rounded-xl transition-all" title="More Options">
+                               <MoreVertical size={16} />
                              </button>
                            </div>
                         </td>
@@ -435,71 +620,155 @@ export default function AdminDashboard() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+              {!search && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />}
             </div>
-            {!search && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />}
+          )}
+
+          {/* ── Users Management Table ── */}
+          {activeTab === "users" && (
+             <div className="bg-white rounded-[3rem] border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-gray-50">
+                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Name & Email</th>
+                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Role</th>
+                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Verified</th>
+                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {filteredData.map((u, idx) => (
+                          <tr key={u.id} className="hover:bg-gray-50/50 transition-all group">
+                             <td className="px-8 py-6">
+                                <p className="font-bold text-gray-900">{u.name}</p>
+                                <p className="text-xs text-gray-500">{u.email}</p>
+                             </td>
+                             <td className="px-8 py-6">
+                                <span className="px-3 py-1 bg-gray-100 rounded-full text-[10px] font-black uppercase text-gray-600">{u.role}</span>
+                             </td>
+                             <td className="px-8 py-6">
+                                {u.is_verified ? <CheckCircle2 size={18} className="text-green-500" /> : <XCircle size={18} className="text-gray-300" />}
+                             </td>
+                             <td className="px-8 py-6 text-right">
+                                <button className="p-2.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl transition-all">
+                                   <XCircle size={18} />
+                                </button>
+                             </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                </div>
+                {!search && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />}
+             </div>
+          )}
           </div>
         )}
+      </div>
 
-          {/* ── Seller Orders Hub Table ── */}
-          {activeTab === "sellerorders" && !selectedEntity && (
-            <div className="bg-white rounded-[2rem] border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50/80 border-b border-gray-100 backdrop-blur-sm">
-                      <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Seller</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Email</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Orders</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Revenue</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">View Orders</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {filteredData.map((seller, idx) => (
-                      <motion.tr key={seller.user_id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: idx * 0.04 }} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-6 py-5">
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-[14px] bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200/60 flex items-center justify-center text-orange-600 font-black text-sm shadow-sm shrink-0">
-                              {seller.company_name?.[0]?.toUpperCase()}
+      {/* ── Sub-level Views (Overlays) ── */}
+      <AnimatePresence>
+        {selectedEntity && (
+           <SubViewOverlay 
+              entity={selectedEntity} 
+              onClose={() => setSelectedEntity(null)} 
+              notifyError={notifyError}
+           />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// SubView Component (e.g., View Orders for a Seller)
+function SubViewOverlay({ entity, onClose, notifyError }) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadSubData = async () => {
+      setLoading(true);
+      try {
+        let res;
+        if(entity.type === "seller" && entity.mode === "orders") {
+           res = await fetchSellerOrdersAdmin(entity.id);
+           setItems(res.orders || []);
+        } else if(entity.type === "seller" && entity.mode === "products") {
+           res = await fetchSellerProductsAdmin(entity.id);
+           setItems(res.products || []);
+        }
+      } catch (err) {
+        notifyError("Failed to load details");
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadSubData();
+  }, [entity]);
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }} 
+      animate={{ opacity: 1 }} 
+      exit={{ opacity: 0 }} 
+      className="fixed inset-0 z-[100] bg-gray-900/60 backdrop-blur-md flex items-center justify-center p-4"
+    >
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0 }} 
+        animate={{ scale: 1, opacity: 1 }} 
+        exit={{ scale: 0.9, opacity: 0 }}
+        className="bg-white rounded-[3rem] w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl"
+      >
+        <div className="p-8 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+           <div>
+              <p className="text-[10px] font-black text-accent uppercase tracking-widest mb-1">{entity.type} Hub</p>
+              <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tighter">{entity.name}</h2>
+           </div>
+           <button onClick={onClose} className="p-3 bg-white border border-gray-100 rounded-2xl text-gray-400 hover:text-gray-900 hover:shadow-sm transition-all">
+              <XCircle size={24} />
+           </button>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-8 bg-white">
+           {loading ? (
+             <div className="py-20 text-center"><RefreshCcw className="animate-spin mx-auto text-accent mb-4" /></div>
+           ) : items.length === 0 ? (
+             <div className="py-20 text-center text-gray-400 font-bold uppercase tracking-widest text-xs">No records found.</div>
+           ) : (
+             <div className="space-y-4">
+                {entity.mode === "orders" && items.map(order => (
+                  <div key={order.id} className="p-6 bg-gray-50 rounded-[2rem] border border-gray-100">
+                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+                       <div>
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Order Ref: #{order.id}</p>
+                          <p className="text-sm font-bold text-gray-900">Buyer: {order.customer_name}</p>
+                       </div>
+                       <div className="text-right">
+                          <span className="px-3 py-1 bg-green-50 text-green-600 rounded-full text-[10px] font-black uppercase tracking-wider">{order.status}</span>
+                          <p className="text-xs font-bold text-gray-900 mt-1">₹{order.total_price}</p>
+                       </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                       {order.items?.map((item, i) => (
+                         <div key={i} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-start gap-4">
+                            <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center shrink-0">
+                               <ShoppingBag size={20} className="text-accent" />
                             </div>
                             <div>
-                              <p className="text-sm font-bold text-gray-900">{seller.company_name}</p>
-                              {seller.seller_uid && (
-                                <p className="text-[10px] font-black text-orange-400 uppercase group-hover:text-orange-600 transition-colors">ID: {seller.seller_uid}</p>
-                              )}
-                              <p className="text-[10px] text-gray-400 uppercase font-black">{seller.business_type || "—"}</p>
+                               <p className="text-xs font-bold text-gray-900 leading-tight">{item.name}</p>
+                               <p className="text-[9px] font-black text-gray-400 uppercase mt-1">{item.qty}kg · {item.thickness} · {item.width}mm</p>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-5 text-sm font-medium text-gray-500">{seller.email}</td>
-                        <td className="px-6 py-5">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase border bg-blue-50 text-blue-600 border-blue-100">
-                            {seller.total_orders} Orders
-                          </span>
-                        </td>
-                        <td className="px-6 py-5">
-                          <span className="text-sm font-black text-gray-900">₹{Number(seller.total_revenue).toLocaleString()}</span>
-                        </td>
-                        <td className="px-6 py-5 text-right">
-                          <button
-                            onClick={() => setSelectedEntity({ type: "seller", id: seller.user_id, name: seller.company_name, mode: "orders" })}
-                            className="p-2 bg-orange-50 text-orange-600 hover:bg-orange-100 rounded-xl transition-all"
-                            title="View Orders"
-                          >
-                            <ShoppingBag size={16} />
-                          </button>
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </tbody>
-                </table>
-            </div>
-            {!search && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />}
-          </div>
-        )}
-
+                         </div>
+                       ))}
+                    </div>
+                  </div>
+                ))}
+             </div>
+           )}
         </div>
-      )}
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

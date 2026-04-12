@@ -7,7 +7,8 @@ import Badge from "../components/ui/Badge";
 import StarRating from "../components/ui/StarRating";
 import ProductCard from "../components/ui/ProductCard";
 import WhyChooseUs from "../components/sections/WhyChooseUs";
-import { ShoppingCart, ArrowLeft, CheckCircle, Loader2 } from "lucide-react";
+import InquiryModal from "../components/ui/InquiryModal";
+import { ShoppingCart, ArrowLeft, CheckCircle, Loader2, Send, ShieldCheck, MessageCircle } from "lucide-react";
 
 const catColors = {
   BOPP: "from-green-50 to-emerald-100",
@@ -26,6 +27,7 @@ export default function ProductDetailPage() {
   const [variants, setVariants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [added, setAdded] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Specifications Selection State
   const [selectedThickness, setSelectedThickness] = useState("");
@@ -144,11 +146,10 @@ export default function ProductDetailPage() {
                 <span className="text-xs font-bold text-accent uppercase tracking-wider">
                   {product.category_name} {product.subcategory_name && `· ${product.subcategory_name}`}
                 </span>
-                {product.seller_uid && (
-                  <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-bold">
-                    Sold by: {product.seller_uid}
-                  </span>
-                )}
+                <div className="flex items-center gap-1.5 bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-bold">Sold by: {product.seller_name || "PackagingBazaar Hub"}</span>
+                  {product.is_verified ? <ShieldCheck size={12} className="text-green-500" /> : null}
+                </div>
               </div>
               <h1 className="font-syne font-black text-2xl md:text-3xl text-ink mb-2">
                 {product.name}
@@ -262,16 +263,23 @@ export default function ProductDetailPage() {
                         / {product.unit} (Min {product.min_order} {product.unit})
                      </span>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                     <button
+                        onClick={() => setIsModalOpen(true)}
+                        className="flex-3 flex items-center justify-center gap-3 bg-accent text-white py-4 px-8 rounded-2xl font-black text-sm uppercase tracking-[3px] shadow-xl shadow-orange-200 hover:bg-orange-600 active:scale-[0.98] transition-all"
+                     >
+                        <Send size={18} /> Get Best Price
+                     </button>
+                     
                      <button
                         onClick={handleAdd}
                         disabled={!selectedThickness || !selectedWidth || !selectedBrand}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-lg ${
+                        className={`flex-1 flex items-center justify-center gap-2 py-4 px-6 rounded-2xl font-bold text-xs transition-all border-2 ${
                            added 
-                           ? "bg-green-600 text-white shadow-green-200" 
+                           ? "bg-green-600 text-white border-green-600 shadow-lg shadow-green-100" 
                            : (!selectedThickness || !selectedWidth || !selectedBrand)
-                              ? "bg-gray-100 text-gray-400 cursor-not-allowed shadow-none"
-                              : "bg-accent text-white hover:bg-orange-700 active:scale-[0.98] shadow-accent/20"
+                               ? "bg-gray-50 text-gray-400 border-gray-100 cursor-not-allowed"
+                               : "bg-white border-black/5 text-ink hover:bg-gray-50 active:scale-[0.98]"
                         }`}
                      >
                         {added ? (
@@ -279,12 +287,6 @@ export default function ProductDetailPage() {
                         ) : (
                            <> <ShoppingCart size={18} /> Add to Cart </>
                         )}
-                     </button>
-                     <button
-                        onClick={() => navigate("/contact")}
-                        className="px-4 sm:px-6 py-3.5 sm:py-4 rounded-xl border-2 border-black/5 text-[11px] sm:text-sm font-bold text-ink hover:bg-surface transition-colors"
-                     >
-                        Get Quote
                      </button>
                   </div>
                   {(!selectedThickness || !selectedWidth || !selectedBrand) && (
@@ -363,6 +365,12 @@ export default function ProductDetailPage() {
             </div>
           </div>
         )}
+        {/* Inquiry Modal Integration */}
+        <InquiryModal 
+          isOpen={isModalOpen} 
+          onClose={() => setIsModalOpen(false)} 
+          product={product} 
+        />
       </div>
       <WhyChooseUs />
     </>

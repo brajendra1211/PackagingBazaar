@@ -18,7 +18,7 @@ export default function FeaturedProducts() {
         // Response handle karna (agar backend direct array bhej raha hai toh 'response' use karein)
         setFeaturedItems(response.data || response); 
       } catch (error) {
-        console.error("Featured products load karne mein dikkat aayi:", error);
+        console.error("Featured products failed to load:", error);
       } finally {
         setLoading(false);
       }
@@ -28,7 +28,7 @@ export default function FeaturedProducts() {
   }, []);
 
   return (
-    <section className="py-16 px-4 bg-surface">
+    <section className="py-5 px-4 bg-surface">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-end justify-between mb-8">
           <div>

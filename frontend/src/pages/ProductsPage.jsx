@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { fetchProducts } from "../services/productServices"; 
 import ProductCard from "../components/ui/ProductCard";
 import TrendingProducts from "../components/sections/TrendingProducts";
@@ -8,8 +9,10 @@ import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import Pagination from "../components/ui/Pagination";
 import { motion } from "framer-motion";
 import { ProductCardSkeleton } from "../components/ui/SkeletonLoader";
+import InquiryModal from "../components/ui/InquiryModal";
 
 export default function ProductsPage() {
+  const location = useLocation();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -17,19 +20,49 @@ export default function ProductsPage() {
   const [totalProducts, setTotalProducts] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
 
+  // Inquiry Modal State
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   // Single State Object for all filters
   const categories = ["All", "BOPP", "PET", "CPP", "LAMINATED"];
 
-  const [filters, setFilters] = useState({
-    page: 1,
-    limit: 8,
-    category: "All",
-    sort: "default",
-    search: "",
+  // URL setup
+  const [filters, setFilters] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    const categoryFromUrl = params.get("category");
+    const searchFromUrl = params.get("search");
+    const cityFromUrl = params.get("city");
+    
+    return {
+      page: 1,
+      limit: 8,
+      category: categoryFromUrl && categories.includes(categoryFromUrl) ? categoryFromUrl : "All",
+      sort: "default",
+      search: searchFromUrl || "",
+      city: cityFromUrl || "",
+    };
   });
 
   // Local state for search input (debounce ke liye)
   const [searchInput, setSearchInput] = useState("");
+
+  // Sync url category changes
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const categoryFromUrl = params.get("category");
+    const searchFromUrl = params.get("search");
+    const cityFromUrl = params.get("city");
+
+    setFilters(prev => ({ 
+      ...prev, 
+      category: categoryFromUrl && categories.includes(categoryFromUrl) ? categoryFromUrl : "All",
+      search: searchFromUrl || prev.search,
+      city: cityFromUrl || prev.city
+    }));
+    
+    if (searchFromUrl) setSearchInput(searchFromUrl);
+  }, [location.search]);
 
   // 1. API Call Effect
   useEffect(() => {
@@ -72,6 +105,11 @@ export default function ProductsPage() {
   const handlePageChange = (newPage) => {
     setFilters((prev) => ({ ...prev, page: newPage }));
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleInquiryOpen = (product) => {
+    setSelectedProduct(product);
+    setIsModalOpen(true);
   };
 
   return (
@@ -165,7 +203,10 @@ export default function ProductsPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3, delay: idx * 0.05 }}
                   >
-                    <ProductCard product={p} />
+                    <ProductCard 
+                      product={p} 
+                      onInquiry={handleInquiryOpen} 
+                    />
                   </motion.div>
                 ))}
               </div>
@@ -180,6 +221,13 @@ export default function ProductsPage() {
           )}
         </div>
       </section>
+
+      {/* Shared Inquiry Modal */}
+      <InquiryModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        product={selectedProduct} 
+      />
 
       {/* Additional Sections */}
       <TrendingProducts />

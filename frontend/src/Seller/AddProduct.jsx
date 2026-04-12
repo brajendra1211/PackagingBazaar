@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import {createSellerProduct, updateSellerProduct} from "../services/sellerServices"
+import { fetchUniqueProductNames } from "../services/productServices";
 import { useNotification } from "../context/NotificationContext";
 // ─── Constants ────────────────────────────────────────────────────────────────
 const CATEGORIES = ["BOPP", "PET", "CPP", "LAMINATED"];
@@ -193,6 +194,36 @@ export default function AddProduct() {
     img: editProduct?.img || "",
     color: editProduct?.color || "#e8f5e9",
   });
+
+  const [existingNames, setExistingNames] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestionRef = useRef(null);
+
+  useEffect(() => {
+    const loadNames = async () => {
+      try {
+        const res = await fetchUniqueProductNames();
+        if (res.success) setExistingNames(res.data);
+      } catch (err) {
+        console.error("Failed to load suggestions");
+      }
+    };
+    loadNames();
+
+    // Close suggestions on outside click
+    const handleClickOutside = (event) => {
+      if (suggestionRef.current && !suggestionRef.current.contains(event.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredSuggestions = existingNames.filter(name => 
+    name.toLowerCase().includes(form.name.toLowerCase()) && 
+    name.toLowerCase() !== form.name.toLowerCase()
+  );
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -418,12 +449,35 @@ const handleSubmit = async () => {
                     </div>
 
                     <Field label="Product Name" required>
-                      <input
-                        className={inputCls}
-                        placeholder="e.g. BOPP Transparent Film"
-                        value={form.name}
-                        onChange={(e) => set("name", e.target.value)}
-                      />
+                      <div className="relative" ref={suggestionRef}>
+                        <input
+                          className={inputCls}
+                          placeholder="e.g. BOPP Transparent Film"
+                          value={form.name}
+                          onChange={(e) => {
+                            set("name", e.target.value);
+                            setShowSuggestions(true);
+                          }}
+                          onFocus={() => setShowSuggestions(true)}
+                        />
+                        {showSuggestions && filteredSuggestions.length > 0 && (
+                          <div className="absolute z-50 w-full mt-1 bg-white border border-black/[0.08] rounded-xl shadow-xl max-h-48 overflow-y-auto overflow-x-hidden py-2">
+                             {filteredSuggestions.map((name, i) => (
+                               <button
+                                 key={i}
+                                 type="button"
+                                 onClick={() => {
+                                   set("name", name);
+                                   setShowSuggestions(false);
+                                 }}
+                                 className="w-full px-4 py-2 text-left text-sm text-ink hover:bg-surface hover:text-accent transition-colors"
+                               >
+                                 {name}
+                               </button>
+                             ))}
+                          </div>
+                        )}
+                      </div>
                     </Field>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -487,7 +541,7 @@ const handleSubmit = async () => {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <Field label="Thickness" required hint="e.g. 20 micron">
+                      <Field label="Thickness" hint="e.g. 20 micron">
                         <input
                           className={inputCls}
                           placeholder="20 micron"
@@ -495,7 +549,7 @@ const handleSubmit = async () => {
                           onChange={(e) => set("thickness", e.target.value)}
                         />
                       </Field>
-                      <Field label="Width" required hint="e.g. 1000 mm">
+                      <Field label="Width" hint="e.g. 1000 mm">
                         <input
                           className={inputCls}
                           placeholder="1000 mm"

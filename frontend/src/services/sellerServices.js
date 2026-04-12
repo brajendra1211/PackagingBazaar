@@ -26,6 +26,10 @@ export const updateSellerProduct = async (productId, productData) => {
   const response = await API.put(`/seller/products/${productId}`, productData);
   return response.data;
 };
+export const deleteSellerProductAPI = async (productId) => {
+  const response = await API.delete(`/seller/products/${productId}`);
+  return response.data;
+};
 
 export const updateSellerProfileAPI = async (profileData) => {
   const response = await API.put("/seller/profile", profileData);

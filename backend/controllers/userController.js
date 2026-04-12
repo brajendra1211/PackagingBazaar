@@ -1,10 +1,11 @@
 import pool from "../config/db.js";
+import { validateMobile } from "../utils/validation.js";
 
 // 1. Get Logged-in User Profile
 export const getUserProfile = async (req, res) => {
   try {
     const userId = req.user.id;
-    const [rows] = await pool.query("SELECT id, name, email, role, is_verified, created_at FROM users WHERE id = ?", [userId]);
+    const [rows] = await pool.query("SELECT id, name, email, mobile, role, is_verified, created_at FROM users WHERE id = ?", [userId]);
 
     if (rows.length === 0) {
       return res.status(404).json({ success: false, message: "User not found!" });
@@ -17,15 +18,18 @@ export const getUserProfile = async (req, res) => {
   }
 };
 
-// 2. Update User Profile (Name only)
+// 2. Update User Profile (Name & Mobile)
 export const updateUserProfile = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { name } = req.body;
+    const { name, mobile } = req.body;
 
     if (!name) return res.status(400).json({ success: false, message: "Name is required" });
+    if (mobile && !validateMobile(mobile)) {
+      return res.status(400).json({ success: false, message: "Invalid mobile number. Must be 10 digits." });
+    }
 
-    await pool.query("UPDATE users SET name = ? WHERE id = ?", [name, userId]);
+    await pool.query("UPDATE users SET name = ?, mobile = ? WHERE id = ?", [name, mobile || null, userId]);
 
     res.status(200).json({ success: true, message: "Profile updated successfully!" });
   } catch (err) {

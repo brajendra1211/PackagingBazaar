@@ -54,6 +54,11 @@ export const deleteProductAdmin = async (id) => {
   return response.data;
 };
 
+export const toggleHotDealAdmin = async (id, isHotDeal) => {
+  const response = await API.patch(`/admin/products/${id}/hot-deal`, { is_hot_deal: isHotDeal });
+  return response.data;
+};
+
 // --- Sales Management ---
 export const fetchAllOrdersAdmin = async (page = 1, limit = 10) => {
   const response = await API.get(`/admin/orders?page=${page}&limit=${limit}`);
@@ -77,5 +82,11 @@ export const fetchSellerProductsAdmin = async (sellerId, page = 1, limit = 10) =
 
 export const fetchSellersWithOrdersAdmin = async (page = 1, limit = 10) => {
   const response = await API.get(`/admin/sellers/with-orders?page=${page}&limit=${limit}`);
+  return response.data;
+};
+
+// --- Lead Management (Inquiries) ---
+export const fetchInquiriesAdmin = async (page = 1, limit = 10) => {
+  const response = await API.get(`/admin/inquiries?page=${page}&limit=${limit}`);
   return response.data;
 };

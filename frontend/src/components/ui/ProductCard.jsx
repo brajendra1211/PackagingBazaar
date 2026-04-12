@@ -1,4 +1,4 @@
-import { ShoppingCart, Eye } from "lucide-react";
+import { ShoppingCart, Eye, Send, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
 import Badge from "./Badge";
@@ -11,37 +11,47 @@ const categoryColors = {
   LAMINATED: "from-purple-50 to-pink-100",
 };
 
-export default function ProductCard({ product }) {
-  const { addToCart } = useCart();
+export default function ProductCard({ product, onInquiry }) {
   const navigate = useNavigate();
+  const { addToCart } = useCart();
   
-  // SQL JOIN se humne category name nikala hai (agar 'category_name' bheja hai backend se)
-  // Agar nahi bheja, toh tum fallback de sakte ho. Main maan ke chal raha hu tumhari API me category_name aa raha hai.
-  const categoryName = product.category_name || "BOPP"; // Fallback just in case
+  const categoryName = product.category_name || "BOPP"; 
   const grad = categoryColors[categoryName] || "from-gray-50 to-gray-100";
 
   const handleImageClick = () => {
     navigate(`/products/${product.id}`);
   };
 
+  const handleAddToCart = (e) => {
+    e.stopPropagation();
+    addToCart({
+      ...product,
+      selected_thickness: product.thickness,
+      selected_width: product.width,
+      selected_brand: product.brand || "Default"
+    });
+  };
+
   return (
-    <div className="bg-white rounded-2xl border border-black/[0.07] overflow-hidden hover:-translate-y-1 hover:shadow-xl transition-all duration-200 group">
+    <div className="bg-white rounded-2xl border border-black/[0.07] overflow-hidden hover:-translate-y-1 hover:shadow-xl transition-all duration-200 group flex flex-col h-full">
       {/* Image area */}
       <div
-        className={`bg-gradient-to-br ${grad} h-44 flex items-center justify-center relative cursor-pointer overflow-hidden`}
+        className={`bg-gradient-to-br ${grad} h-40 sm:h-44 flex items-center justify-center relative cursor-pointer overflow-hidden shrink-0`}
         onClick={handleImageClick}
       >
         <div className="absolute top-3 left-3 z-10">
-          {/* SQL join ne hume tag_name diya hai */}
           <Badge tag={product.tag_name} /> 
         </div>
-        <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+        
+        {/* Hover Actions */}
+        <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-all">
           <button
             onClick={(e) => {
               e.stopPropagation();
               navigate(`/products/${product.id}`);
             }}
-            className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow text-ink2 hover:text-accent"
+            className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow text-ink2 hover:text-accent border border-black/[0.05]"
+            title="View Details"
           >
             <Eye size={14} />
           </button>
@@ -56,53 +66,83 @@ export default function ProductCard({ product }) {
 
         {/* Category chip */}
         <div className="absolute bottom-3 left-3 z-10">
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/80 backdrop-blur-sm text-ink2 border border-black/[0.07]">
+          <span className="text-[9px] sm:text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/80 backdrop-blur-sm text-ink2 border border-black/[0.07]">
             {categoryName} · {product.subcategory_name} 
           </span>
         </div>
       </div>
 
       {/* Info */}
-      <div className="p-4">
+      <div className="p-3 sm:p-4 flex flex-col flex-1">
         <h3
           className="font-syne font-bold text-sm text-ink mb-1 line-clamp-1 cursor-pointer hover:text-accent transition-colors"
           onClick={handleImageClick}
         >
           {product.name}
         </h3>
-        <p className="text-xs text-ink3 mb-2 line-clamp-2 leading-relaxed">
+        <p className="text-[11px] text-ink3 mb-2 line-clamp-2 leading-relaxed h-8">
           {product.description}
         </p>
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-[11px] text-ink3 bg-surface px-2 py-0.5 rounded">
+        <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+          <span className="text-[10px] text-ink3 bg-surface px-2 py-0.5 rounded">
             {product.thickness}
           </span>
-          <span className="text-[11px] text-ink3 bg-surface px-2 py-0.5 rounded">
+          <span className="text-[10px] text-ink3 bg-surface px-2 py-0.5 rounded">
             {product.width}
           </span>
         </div>
         
-        {/* Star Rating (avg_rating aur review_count backend se aayega) */}
         <StarRating 
           rating={Number(product.avg_rating) || 0} 
           reviews={Number(product.review_count) || 0} 
         />
         
-        <div className="flex items-center justify-between mt-3">
-          <div>
-            <span className="font-syne font-black text-lg text-accent">
-              ₹{product.price}
+        <div className="flex items-center gap-1.5 mt-2 mb-1">
+          <span className="text-[9px] text-ink3 uppercase font-black tracking-[1px]">Manufacturer:</span>
+          <div className="flex items-center gap-1 min-w-0">
+            <span className="text-[11px] font-bold text-gray-900 truncate">
+              {product.seller_name || "PackagingBazaar Hub"}
             </span>
-            <span className="text-xs text-ink3">
-              /{product.unit} · Min {product.min_order}kg
-            </span>
+            {product.is_verified ? <ShieldCheck size={10} className="text-green-500 flex-shrink-0" /> : null}
           </div>
-          <button
-            onClick={() => navigate(`/products/${product.id}`)}
-            className="w-9 h-9 bg-accent text-white rounded-xl flex items-center justify-center hover:bg-orange-700 active:scale-95 transition-all"
-          >
-            <ShoppingCart size={16} />
-          </button>
+        </div>
+        
+        <div className="mt-auto pt-3 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <span className="font-syne font-black text-base sm:text-lg text-ink">
+                ₹{product.price}
+              </span>
+              <span className="text-[9px] text-gray-400 font-bold uppercase ml-1">
+                /{product.unit}
+              </span>
+            </div>
+            <span className="text-[9px] text-gray-400 font-bold whitespace-nowrap">Min. {product.min_order}kg</span>
+          </div>
+
+          {/* Buttons */}
+          <div className="flex items-center gap-2">
+            {/* Mobile: icon only | Desktop: icon + text */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onInquiry) onInquiry(product);
+              }}
+              className="flex-1 bg-accent text-white rounded-xl flex items-center justify-center gap-1.5 hover:bg-orange-600 active:scale-[0.98] transition-all font-black uppercase shadow-lg shadow-orange-100 py-3"
+            >
+              <Send size={14} className="shrink-0" />
+              <span className="hidden sm:inline text-xs tracking-widest">Get Best Price</span>
+              <span className="sm:hidden text-[10px] tracking-wider">Quote</span>
+            </button>
+
+            <button
+              onClick={handleAddToCart}
+              className="p-3 bg-gray-900 text-white rounded-xl hover:bg-black active:scale-[0.95] transition-all shadow-lg shadow-gray-200 shrink-0"
+              title="Add to Basket"
+            >
+              <ShoppingCart size={16} />
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -95,7 +95,7 @@ export default function Footer() {
         </div>
         <div className="border-t border-white/[0.08] pt-6 flex flex-col md:flex-row justify-between items-center gap-2 text-xs">
           <span>© 2025 PackagingBazaar. All rights reserved.</span>
-          <span>Made with ♥ in India</span>
+          {/* <span>Made with ♥ in India</span> */}
         </div>
       </div>
     </footer>

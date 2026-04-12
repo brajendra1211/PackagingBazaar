@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
-import { updateSellerProfileAPI, fetchSellerProducts, fetchSellerOrders } from "../services/sellerServices";
+import { updateSellerProfileAPI, fetchSellerProducts, fetchSellerOrders, deleteSellerProductAPI } from "../services/sellerServices";
+import { useNotification } from "../context/NotificationContext";
 import Pagination from "../components/ui/Pagination";
 import { motion } from "framer-motion";
 import { TableSkeleton } from "../components/ui/SkeletonLoader";
+import { Mail, Phone, MessageSquare, Clock, ArrowRight, UserCheck } from "lucide-react";
 
 export function SellerDashboard() {
   const { seller, PRODUCTS, ORDERS, icons, Icon, Badge, StatCard } = useOutletContext();
@@ -19,8 +21,8 @@ export function SellerDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6 gap-4">
         <StatCard icon="package" value={PRODUCTS.length} label="Total Products" sub={`${PRODUCTS.filter(p => p.status === "active").length} active`} color="orange" />
         <StatCard icon="eye" value="659" label="Total Views" sub="Last 30 days" color="blue" />
-        <StatCard icon="orders" value="48" label="Total Orders" sub="All time" color="green" />
-        <StatCard icon="star" value="4.7" label="Avg. Rating" sub="All products" color="purple" />
+        <StatCard icon="orders" value={ORDERS.length} label="Total Orders" sub="Direct sales" color="green" />
+        <StatCard icon="star" value="4.8" label="Avg. Rating" sub="Seller score" color="purple" />
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
@@ -35,7 +37,7 @@ export function SellerDashboard() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-semibold text-sm text-gray-800 truncate">{p.name}</div>
-              <div className="text-xs text-gray-400">{p.type} · {p.micron}</div>
+              <div className="text-xs text-gray-400">{p.category_name} · {p.thickness} {p.thickness ? "mic" : ""}</div>
             </div>
             <div className="text-right shrink-0">
               <div className="text-sm font-bold text-gray-800">₹{p.price}/kg</div>
@@ -47,10 +49,10 @@ export function SellerDashboard() {
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
-          <h3 className="font-bold text-gray-800 text-sm">Recent Orders</h3>
+          <h3 className="font-bold text-gray-800 text-sm">Recent Direct Orders</h3>
           <button className="text-xs text-[#e8511a] font-semibold" onClick={() => navigate("/seller/orders")}>View All</button>
         </div>
-        {ORDERS.slice(0, 2).map(o => (
+        {ORDERS.slice(0, 3).map(o => (
           <div key={o.id} className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-50 last:border-0">
             <div className="flex-1 min-w-0">
               <div className="font-semibold text-sm text-gray-800 truncate">{o.buyer}</div>
@@ -75,6 +77,7 @@ export function SellerProducts() {
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const { notifySuccess, notifyError } = useNotification();
 
   useEffect(() => {
     loadProducts();
@@ -93,6 +96,20 @@ export function SellerProducts() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id, name) => {
+    if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
+      try {
+        const res = await deleteSellerProductAPI(id);
+        if (res.success) {
+          notifySuccess("Product deleted successfully.");
+          loadProducts();
+        }
+      } catch (err) {
+        notifyError("Failed to delete product.");
+      }
     }
   };
 
@@ -128,15 +145,36 @@ export function SellerProducts() {
                       <span className="font-bold text-sm text-gray-900">{p.name}</span>
                       <Badge color={p.status === "active" ? "green" : "gray"}>{p.status}</Badge>
                     </div>
-                    <div className="text-xs text-gray-400 mb-1.5">{p.type} · {p.variant} · {p.micron} · {p.width}</div>
+                  <div className="text-xs text-gray-400 mb-1.5">{p.category_name} · {p.subcategory_name} · {p.thickness} · {p.width}</div>
                     <div className="flex items-center gap-3 text-xs">
                       <span className="font-bold text-gray-900">₹{p.price}/kg</span>
                       <span className="text-gray-500">Stock: {p.stock}</span>
                     </div>
                   </div>
                   <div className="flex gap-1.5">
-                    <button onClick={() => navigate("/seller/add-product", { state: { product: p } })} className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:border-[#e8511a] hover:text-[#e8511a] transition-colors">
+                    <button 
+                      onClick={() => navigate("/seller/add-product", { 
+                        state: { 
+                          product: {
+                            ...p,
+                            category: p.category_name,
+                            subcategory: p.subcategory_name,
+                            minOrder: p.min_order,
+                            img: p.image_url
+                          } 
+                        } 
+                      })} 
+                      className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:border-[#e8511a] hover:text-[#e8511a] transition-colors"
+                      title="Edit Product"
+                    >
                       <Icon d={icons.edit} size={13} />
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(p.id, p.name)}
+                      className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:border-red-500 hover:text-red-500 transition-colors"
+                      title="Delete Product"
+                    >
+                      <Icon d={icons.trash} size={13} stroke="currentColor" />
                     </button>
                   </div>
                 </div>

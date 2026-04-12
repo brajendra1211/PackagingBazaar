@@ -9,11 +9,17 @@ import {
   addProduct,
   updateProduct,
   deleteProduct,
+  getCategories,
+  getHotDeals,
+  getUniqueProductNames
 } from "../controllers/productController.js";
 import { verifyToken, isSeller } from "../middlewares/authMiddleware.js";
 
+router.get("/categories", getCategories);
 router.get("/products", getAllProducts);
 router.get("/products/top-selling", getTopSellingProducts);
+router.get("/products/hot-deals", getHotDeals);
+router.get("/products/names", getUniqueProductNames);
 router.get("/products/:id", getProductById);
 router.get("/products/:id/variants", getProductVariants);
 
