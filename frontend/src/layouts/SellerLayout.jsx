@@ -51,12 +51,12 @@ const Badge = ({ children, color = "gray" }) => {
 const StatCard = ({ icon, value, label, sub, color }) => {
   const bg = { orange: "bg-[#e8511a]", blue: "bg-blue-500", green: "bg-green-500", purple: "bg-purple-500" };
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-3 shadow-sm">
-      <div className={`w-11 h-11 ${bg[color]} rounded-xl flex items-center justify-center shrink-0`}>
+    <div className="bg-white rounded-2xl border border-gray-100 p-3 sm:p-4 flex items-center gap-2 sm:gap-3 shadow-sm">
+      <div className={`w-10 h-10 sm:w-11 sm:h-11 ${bg[color]} rounded-xl flex items-center justify-center shrink-0`}>
         <Icon d={icons[icon]} size={20} stroke="white" />
       </div>
       <div className="min-w-0">
-        <div className="text-xl font-black text-gray-900 leading-none">{value}</div>
+        <div className="text-lg sm:text-xl font-black text-gray-900 leading-none">{value}</div>
         <div className="text-xs font-medium text-gray-500 mt-0.5 truncate">{label}</div>
         {sub && <div className="text-[10px] text-gray-400">{sub}</div>}
       </div>
@@ -73,7 +73,7 @@ function EditableField({ label, value, onSave, type = "text", options = null, mu
   const cancel = () => { setVal(value); setEditing(false); };
 
   return (
-    <div className="group flex items-start justify-between py-3.5 border-b border-gray-100 last:border-0">
+    <div className="group flex items-start justify-between py-3 sm:py-3.5 border-b border-gray-100 last:border-0">
       <div className="flex-1 min-w-0 mr-3">
         <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">{label}</div>
         {editing ? (
@@ -99,7 +99,7 @@ function EditableField({ label, value, onSave, type = "text", options = null, mu
         )}
       </div>
       {!editing && !readOnly && (
-        <button onClick={() => setEditing(true)} className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs text-[#e8511a] font-semibold shrink-0 mt-1 hover:text-[#d4460f]">
+        <button onClick={() => setEditing(true)} className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs text-[#e8511a] font-semibold shrink-0 mt-1 hover:text-[#d4460f]">
           <Icon d={icons.edit} size={12} /> Edit
         </button>
       )}
@@ -117,7 +117,7 @@ function FilmTypesEditor({ value, onSave }) {
   const save = () => { onSave(selected); setEditing(false); };
 
   return (
-    <div className="group flex items-start justify-between py-3.5 border-b border-gray-100">
+    <div className="group flex items-start justify-between py-3 sm:py-3.5 border-b border-gray-100">
       <div className="flex-1 mr-3">
         <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Film Types</div>
         {editing ? (
@@ -146,7 +146,7 @@ function FilmTypesEditor({ value, onSave }) {
         )}
       </div>
       {!editing && (
-        <button onClick={() => setEditing(true)} className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs text-[#e8511a] font-semibold shrink-0 mt-1">
+        <button onClick={() => setEditing(true)} className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs text-[#e8511a] font-semibold shrink-0 mt-1">
           <Icon d={icons.edit} size={12} /> Edit
         </button>
       )}
@@ -163,7 +163,7 @@ function BusinessTypesEditor({ value, onSave, readOnly = false }) {
   const save = () => { onSave(selected); setEditing(false); };
 
   return (
-    <div className="group flex items-start justify-between py-3.5 border-b border-gray-100">
+    <div className="group flex items-start justify-between py-3 sm:py-3.5 border-b border-gray-100">
       <div className="flex-1 mr-3">
         <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Business Type</div>
         {editing ? (
@@ -192,7 +192,7 @@ function BusinessTypesEditor({ value, onSave, readOnly = false }) {
         )}
       </div>
       {!editing && !readOnly && (
-        <button onClick={() => setEditing(true)} className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs text-[#e8511a] font-semibold shrink-0 mt-1">
+        <button onClick={() => setEditing(true)} className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs text-[#e8511a] font-semibold shrink-0 mt-1">
           <Icon d={icons.edit} size={12} /> Edit
         </button>
       )}

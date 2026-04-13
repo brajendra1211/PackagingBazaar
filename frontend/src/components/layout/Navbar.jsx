@@ -155,18 +155,18 @@ export default function Navbar() {
           </span>
         </Link>
 
-        <ul className="hidden lg:flex items-center gap-4 xl:gap-6">
+        <ul className="hidden lg:flex items-center gap-4 xl:gap-8">
           {links.map((l) => (
             <li key={l.to}>
-              <Link to={l.to} className="text-[13px] xl:text-sm font-medium text-ink2 hover:text-accent transition-colors">{l.label}</Link>
+              <Link to={l.to} className="text-sm font-medium text-ink2 hover:text-accent transition-colors">{l.label}</Link>
             </li>
           ))}
         </ul>
 
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/cart")} className="relative w-10 h-10 border border-black/[0.08] rounded-xl flex items-center justify-center hover:bg-surface transition-colors">
+          <button onClick={() => navigate("/cart")} className="relative w-9 h-9 sm:w-10 sm:h-10 border border-black/[0.08] rounded-xl flex items-center justify-center hover:bg-surface transition-colors">
             <ShoppingCart size={18} className="text-ink2" />
-            {count > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent text-white text-[10px] font-bold rounded-full flex items-center justify-center">{count}</span>}
+            {count > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-accent text-white text-[9px] sm:text-[10px] font-bold rounded-full flex items-center justify-center">{count}</span>}
           </button>
 
           {!loading && (
@@ -186,8 +186,8 @@ export default function Navbar() {
             </>
           )}
 
-          <button className="lg:hidden p-1.5 sm:p-2 hover:bg-surface rounded-xl transition-colors" onClick={() => setOpen(!open)}>
-            {open ? <X size={20} className="sm:w-6 sm:h-6 text-accent" /> : <Menu size={20} className="sm:w-6 sm:h-6 text-ink" />}
+          <button className="lg:hidden p-1.5 sm:p-2 bg-surface hover:bg-gray-100 rounded-xl transition-colors" onClick={() => setOpen(!open)}>
+            {open ? <X size={20} className="text-accent" /> : <Menu size={20} className="text-ink" />}
           </button>
         </div>
       </div>
@@ -210,7 +210,7 @@ export default function Navbar() {
                 <Link 
                   key={l.to} to={l.to} 
                   onClick={() => setOpen(false)} 
-                  className="block text-xl font-syne font-black text-ink hover:text-accent transition-colors py-1"
+                  className="block text-lg sm:text-xl font-syne font-black text-ink hover:text-accent transition-colors py-1"
                 >
                   {l.label}
                 </Link>

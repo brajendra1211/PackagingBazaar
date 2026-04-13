@@ -208,17 +208,23 @@ export default function AdminDashboard() {
 
       {/* ── Stats Overview ── */}
       {activeTab === "overview" && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-10">
           {[
-            { label: "Total Users", val: stats.totalUsers, icon: <Users size={20}/>, color: "blue", trend: "+12%" },
-            { label: "Active Sellers", val: stats.totalSellers, icon: <Store size={20}/>, color: "orange", trend: "+5%" },
-            { label: "Live Products", val: stats.totalProducts, icon: <ShoppingBag size={20}/>, color: "purple", trend: "+18%" },
-            { label: "Business Leads", val: stats.totalInquiries, icon: <TrendingUp size={20}/>, color: "green", trend: "+24%" }
+            { label: "Total Users", val: stats.totalUsers, icon: <Users size={20}/>, color: "blue", trend: "+12%", tab: "users" },
+            { label: "Active Sellers", val: stats.totalSellers, icon: <Store size={20}/>, color: "orange", trend: "+5%", tab: "sellers" },
+            { label: "Live Products", val: stats.totalProducts, icon: <ShoppingBag size={20}/>, color: "purple", trend: "+18%", tab: "products" },
+            { label: "Business Leads", val: stats.totalInquiries, icon: <TrendingUp size={20}/>, color: "green", trend: "+24%", tab: "inquiries" }
           ].map((stat) => (
             <motion.div 
               key={stat.label}
               whileHover={{ y: -5 }}
-              className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden group"
+              onClick={() => {
+                const url = new URL(window.location.href);
+                url.searchParams.set("tab", stat.tab);
+                window.history.pushState({}, "", url);
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }}
+              className="bg-white p-6 rounded-[2rem] sm:rounded-[2.5rem] border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden group cursor-pointer active:scale-95 transition-all"
             >
               <div className={`absolute top-0 right-0 w-24 h-24 bg-${stat.color}-50 rounded-full -translate-y-1/2 translate-x-1/2 transition-transform group-hover:scale-125`} />
               <div className={`w-12 h-12 bg-${stat.color}-50 text-${stat.color}-600 rounded-2xl flex items-center justify-center mb-4 relative`}>
@@ -247,16 +253,16 @@ export default function AdminDashboard() {
             
             {/* ── Sellers Management Table ── */}
             {(activeTab === "sellers" || activeTab === "pending") && (
-              <div className="bg-white rounded-[3rem] border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
+              <div className="bg-white rounded-[2rem] sm:rounded-[3rem] border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+                <div className="overflow-x-auto scrollbar-hide">
+                    <table className="w-full min-w-[900px] text-left border-collapse">
                       <thead>
                         <tr className="bg-slate-50 border-b border-gray-50">
-                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Company & Owner</th>
-                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Business Detail</th>
-                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Location</th>
-                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Date Joined</th>
-                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
+                          <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Company & Owner</th>
+                          <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Business Detail</th>
+                          <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Location</th>
+                          <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Date Joined</th>
+                          <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
@@ -340,15 +346,15 @@ export default function AdminDashboard() {
 
             {/* ── Products Management Table ── */}
             {activeTab === "products" && (
-               <div className="bg-white rounded-[3rem] border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
+               <div className="bg-white rounded-[2rem] sm:rounded-[3rem] border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+                <div className="overflow-x-auto scrollbar-hide">
+                    <table className="w-full min-w-[850px] text-left border-collapse">
                       <thead>
                         <tr className="bg-slate-50 border-b border-gray-50">
-                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Product Info</th>
-                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Manufacturer</th>
-                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Price & Details</th>
-                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
+                          <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Product Info</th>
+                          <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Manufacturer</th>
+                          <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Price & Details</th>
+                          <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
@@ -477,17 +483,17 @@ export default function AdminDashboard() {
             )}
             {/* ── Orders Management Table ── */}
             {activeTab === "orders" && (
-              <div className="bg-white rounded-[3rem] border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
+              <div className="bg-white rounded-[2rem] sm:rounded-[3rem] border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+                <div className="overflow-x-auto scrollbar-hide">
+                    <table className="w-full min-w-[850px] text-left border-collapse">
                       <thead>
                         <tr className="bg-slate-50 border-b border-gray-50">
-                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Order ID</th>
-                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Customer</th>
-                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Amount</th>
-                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
-                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Date</th>
-                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Action</th>
+                          <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Order ID</th>
+                          <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Customer</th>
+                          <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Amount</th>
+                          <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
+                          <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Date</th>
+                          <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Action</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
@@ -638,10 +644,10 @@ export default function AdminDashboard() {
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-slate-50 border-b border-gray-50">
-                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Name & Email</th>
-                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Role</th>
-                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Verified</th>
-                          <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
+                          <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Name & Email</th>
+                          <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Role</th>
+                          <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Verified</th>
+                          <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
@@ -728,7 +734,7 @@ function SubViewOverlay({ entity, onClose, notifyError }) {
         initial={{ scale: 0.9, opacity: 0 }} 
         animate={{ scale: 1, opacity: 1 }} 
         exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-white rounded-[3rem] w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl"
+        className="bg-white rounded-2xl sm:rounded-[3rem] w-full max-w-4xl max-h-[92vh] sm:max-h-[85vh] overflow-hidden flex flex-col shadow-2xl"
       >
         <div className="p-5 md:p-8 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-50/50">
            <div className="flex items-center gap-4">

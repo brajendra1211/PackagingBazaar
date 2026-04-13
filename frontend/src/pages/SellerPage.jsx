@@ -58,32 +58,32 @@ export default function SellerPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-24 pb-16">
+    <div className="min-h-screen bg-gray-50 pt-20 md:pt-24 pb-10 md:pb-16">
       {/* Hero / Header */}
-      <div className="max-w-7xl mx-auto px-4 mb-16">
-        <div className="bg-ink rounded-[3rem] p-10 md:p-16 text-center relative overflow-hidden shadow-2xl">
+      <div className="max-w-7xl mx-auto px-4 mb-10 md:mb-16">
+        <div className="bg-ink rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 md:p-16 text-center relative overflow-hidden shadow-2xl">
           <div className="absolute top-0 right-0 w-64 h-64 bg-accent/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
           <div className="relative z-10">
             <div className="inline-flex items-center gap-2 bg-accent/20 border border-accent/30 rounded-full px-4 py-1.5 text-xs font-semibold text-accent mb-6 uppercase tracking-widest">
               Manufacturer Directory
             </div>
-            <h1 className="font-syne font-black text-3xl md:text-6xl text-white mb-6 uppercase tracking-tighter leading-[1.1]">
-              Verified <span className="text-accent underline decoration-orange-500/30">Manufacturers</span> <br /> & Suppliers
+            <h1 className="font-syne font-black text-2xl sm:text-4xl md:text-6xl text-white mb-4 md:mb-6 uppercase tracking-tighter leading-[1.1]">
+              Verified <span className="text-accent underline decoration-orange-500/30">Manufacturers</span> <br className="hidden sm:block" /> & Suppliers
             </h1>
             <p className="text-white/60 text-sm md:text-lg max-w-2xl mx-auto mb-10 leading-relaxed px-4">
               Connect directly with premium packaging film manufacturers across India. 
               Get direct factory prices and authentic business leads.
             </p>
-            <div className="flex flex-wrap justify-center gap-4">
+            <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
               <button 
                 onClick={() => navigate("/become-a-seller")}
-                className="bg-accent text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-orange-600 transition-all flex items-center gap-2 shadow-xl shadow-orange-900/20"
+                className="w-full sm:w-auto bg-accent text-white px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-black text-[10px] sm:text-xs uppercase tracking-widest hover:bg-orange-600 transition-all flex items-center justify-center gap-2 shadow-xl shadow-orange-900/20"
               >
                 Join as Manufacturer <ArrowRight size={16} />
               </button>
               <button 
                 onClick={() => navigate("/contact")}
-                className="bg-white/10 backdrop-blur-sm border border-white/10 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-white/20 transition-all"
+                className="w-full sm:w-auto bg-white/10 backdrop-blur-sm border border-white/10 text-white px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-black text-[10px] sm:text-xs uppercase tracking-widest hover:bg-white/20 transition-all"
               >
                 Request Consultation
               </button>
@@ -121,16 +121,16 @@ export default function SellerPage() {
                 transition={{ duration: 0.5, delay: idx * 0.1 }}
               >
                 {/* Seller Profile Header */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm mb-8 gap-6 relative overflow-hidden group">
+                <div className="flex flex-col md:flex-row md:items-end justify-between bg-white p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-gray-100 shadow-sm mb-6 md:mb-8 gap-6 relative overflow-hidden group">
                   <div className="absolute top-0 left-0 w-2 h-full bg-accent opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
-                    <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gray-50 rounded-2xl flex items-center justify-center text-accent border border-gray-100 shrink-0">
-                      <Store size={28} className="sm:w-8 sm:h-8" />
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-50 rounded-xl sm:rounded-2xl flex items-center justify-center text-accent border border-gray-100 shrink-0">
+                      <Store size={24} className="sm:w-8 sm:h-8" />
                     </div>
                     <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                        <h2 className="font-syne font-black text-xl sm:text-2xl text-ink uppercase tracking-tight truncate">{seller.name}</h2>
-                        <ShieldCheck size={18} className="text-green-500 shrink-0" />
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <h2 className="font-syne font-black text-lg sm:text-2xl text-ink uppercase tracking-tight truncate">{seller.name}</h2>
+                        <ShieldCheck size={16} className="text-green-500 shrink-0" />
                       </div>
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-gray-400 text-[10px] font-bold uppercase tracking-widest">
                         <div className="flex items-center gap-1.5 min-w-0">

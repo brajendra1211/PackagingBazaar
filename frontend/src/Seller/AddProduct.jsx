@@ -281,7 +281,7 @@ const handleSubmit = async () => {
   // ── Success Screen ─────────────────────────────────────────────────────────
   if (submitted) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4 py-20 bg-white">
+      <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 sm:py-20 bg-white">
         <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mb-6">
           <CheckCircle size={40} className="text-green-600" />
         </div>
@@ -407,7 +407,7 @@ const handleSubmit = async () => {
   return (
     <>
       {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div className="bg-ink py-12 px-4">
+      <div className="bg-ink py-8 sm:py-12 px-4">
         <div className="max-w-7xl mx-auto">
           <button
             onClick={() => navigate("/seller/dashboard")}
@@ -418,7 +418,7 @@ const handleSubmit = async () => {
           <span className="text-xs font-semibold tracking-[3px] uppercase text-accent">
             Seller Panel
           </span>
-          <h1 className="font-syne font-black text-3xl text-white mt-1">
+          <h1 className="font-syne font-black text-2xl sm:text-3xl text-white mt-1">
             {isEdit ? "Edit Product" : "Add New Product"}
           </h1>
           <p className="text-white/50 text-sm mt-1">
@@ -430,12 +430,12 @@ const handleSubmit = async () => {
       </div>
 
       {/* ── Body ────────────────────────────────────────────────────────────── */}
-      <section className="py-12 px-4 bg-white">
+      <section className="py-8 sm:py-12 px-4 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-3 gap-8">
             {/* ── Form (left 2/3) ───────────────────────────────────────────── */}
             <div className="lg:col-span-2">
-              <div className="bg-white border border-black/[0.08] rounded-3xl p-6 sm:p-10 shadow-sm">
+              <div className="bg-white border border-black/[0.08] rounded-2xl sm:rounded-3xl p-5 sm:p-10 shadow-sm">
                 <StepIndicator current={step} />
 
                 {/* ── Step 0: Basic Info ──────────────────────────────────── */}

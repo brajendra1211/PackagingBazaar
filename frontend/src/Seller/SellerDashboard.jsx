@@ -328,12 +328,12 @@ export function SellerProfile() {
       </div>
 
       {/* Hero card */}
-      <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-5 flex items-center gap-4 text-white relative overflow-hidden">
+      <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-4 sm:p-5 flex items-center gap-3 sm:gap-4 text-white relative overflow-hidden">
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle at 20% 50%, #e8511a 0%, transparent 60%)" }} />
-        <div className="w-14 h-14 bg-[#e8511a] rounded-2xl flex items-center justify-center text-xl font-black shrink-0 z-10">{seller.avatar}</div>
-        <div className="z-10 min-w-0">
+        <div className="w-12 h-12 sm:w-14 sm:h-14 bg-[#e8511a] rounded-2xl flex items-center justify-center text-lg sm:text-xl font-black shrink-0 z-10">{seller.avatar}</div>
+        <div className="z-10 min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-0.5">
-            <div className="text-lg font-black truncate">{seller.businessName}</div>
+            <div className="text-base sm:text-lg font-black truncate">{seller.businessName}</div>
             {seller.uid && (
               <span className="text-[10px] bg-white/20 text-white px-2 py-0.5 rounded-full font-black border border-white/10">
                 ID: {seller.uid}
@@ -352,12 +352,12 @@ export function SellerProfile() {
 
       {/* Business Info */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 bg-gray-50/50">
+        <div className="flex items-center gap-2 px-4 py-3 sm:px-5 sm:py-3.5 border-b border-gray-100 bg-gray-50/50">
           <Icon d={icons.building} size={15} stroke="#e8511a" />
           <h3 className="font-bold text-gray-800 text-sm">Business Information</h3>
           <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full border border-gray-200 ml-auto">Read Only</span>
         </div>
-        <div className="px-5">
+        <div className="px-4 sm:px-5">
           <EditableField label="Business / Company Name" value={seller.businessName} onSave={update("businessName")} readOnly={true} />
           <BusinessTypesEditor value={seller.businessType} onSave={update("businessType")} />
           <EditableField label="GST Number" value={seller.gstNumber} onSave={update("gstNumber")} readOnly={true} />
@@ -367,11 +367,11 @@ export function SellerProfile() {
 
       {/* Contact */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 bg-gray-50/50">
+        <div className="flex items-center gap-2 px-4 py-3 sm:px-5 sm:py-3.5 border-b border-gray-100 bg-gray-50/50">
           <Icon d={icons.phone} size={15} stroke="#e8511a" />
           <h3 className="font-bold text-gray-800 text-sm">Contact Details</h3>
         </div>
-        <div className="px-5">
+        <div className="px-4 sm:px-5">
           <EditableField label="Owner / Contact Name" value={seller.ownerName} onSave={update("ownerName")} />
           <EditableField label="Email Address" value={seller.email} onSave={update("email")} type="email" />
           <EditableField label="Phone / WhatsApp" value={seller.phone} onSave={update("phone")} type="tel" />
@@ -383,11 +383,11 @@ export function SellerProfile() {
 
       {/* Products & Capacity */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 bg-gray-50/50">
+        <div className="flex items-center gap-2 px-4 py-3 sm:px-5 sm:py-3.5 border-b border-gray-100 bg-gray-50/50">
           <Icon d={icons.layers} size={15} stroke="#e8511a" />
           <h3 className="font-bold text-gray-800 text-sm">Products & Capacity</h3>
         </div>
-        <div className="px-5">
+        <div className="px-4 sm:px-5">
           <FilmTypesEditor value={seller.filmTypes} onSave={update("filmTypes")} />
           <EditableField label="Monthly Capacity (MT/month)" value={seller.monthlyCapacity} onSave={update("monthlyCapacity")} type="number" />
           <EditableField label="Price Range (₹/kg)" value={seller.priceRange} onSave={update("priceRange")} />

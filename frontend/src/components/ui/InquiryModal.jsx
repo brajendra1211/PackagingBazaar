@@ -411,7 +411,7 @@ export default function InquiryModal({ isOpen, onClose, product, customSubmit })
       onClick={handleClose}
     >
       <div
-        className="bg-white w-full sm:max-w-lg sm:rounded-[2rem] rounded-t-[2rem] shadow-2xl border border-gray-100 overflow-hidden animate-slideUp relative flex flex-col max-h-[92dvh] sm:max-h-[90vh]"
+        className="bg-white w-full sm:max-w-xl sm:rounded-[2rem] rounded-t-[2rem] shadow-2xl border border-gray-100 overflow-hidden animate-slideUp relative flex flex-col max-h-[92dvh] sm:max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button */}
@@ -425,10 +425,10 @@ export default function InquiryModal({ isOpen, onClose, product, customSubmit })
         {/* Header */}
         <div className="bg-gray-900 px-5 py-4 text-white shrink-0">
           <div className="flex items-center gap-2 mb-0.5">
-            <ShieldCheck size={13} className="text-accent" />
-            <span className="text-[9px] font-black uppercase tracking-widest text-accent">Verified Quotation</span>
+            <ShieldCheck size={12} className="text-accent" />
+            <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-accent">Verified Quotation</span>
           </div>
-          <h2 className="text-base font-syne font-black uppercase tracking-tight">Requirement Details</h2>
+          <h2 className="text-sm sm:text-base font-syne font-black uppercase tracking-tight">Requirement Details</h2>
         </div>
 
         {/* Scrollable form body */}
@@ -438,9 +438,9 @@ export default function InquiryModal({ isOpen, onClose, product, customSubmit })
 
             {/* Guest Name */}
             {!token && (
-              <div className="col-span-2">
-                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Full Name</label>
-                <div className="relative">
+              <div className="col-span-2 sm:flex sm:items-center sm:gap-4">
+                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest sm:w-28 sm:text-right mb-1 sm:mb-0 block shrink-0">Full Name</label>
+                <div className="relative flex-1">
                   <User size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
                     type="text" placeholder="Enter your name"
@@ -452,9 +452,9 @@ export default function InquiryModal({ isOpen, onClose, product, customSubmit })
             )}
 
             {/* Quantity */}
-            <div className="col-span-2 sm:col-span-1">
-              <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Qty Needed</label>
-              <div className="relative">
+            <div className="col-span-2 sm:flex sm:items-center sm:gap-4">
+              <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest sm:w-28 sm:text-right mb-1 sm:mb-0 block shrink-0">Qty Needed</label>
+              <div className="relative flex-1">
                 <Package size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   type="text" placeholder="e.g. 500kg"
@@ -465,9 +465,9 @@ export default function InquiryModal({ isOpen, onClose, product, customSubmit })
             </div>
 
             {/* Phone */}
-            <div className="col-span-2 sm:col-span-1">
-              <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Mobile No.</label>
-              <div className="relative">
+            <div className="col-span-2 sm:flex sm:items-center sm:gap-4">
+              <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest sm:w-28 sm:text-right mb-1 sm:mb-0 block shrink-0">Mobile No.</label>
+              <div className="relative flex-1">
                 <Phone size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   type="text" placeholder="10-digit number"
@@ -479,9 +479,9 @@ export default function InquiryModal({ isOpen, onClose, product, customSubmit })
             </div>
 
             {/* Thickness */}
-            <div className="col-span-1">
-              <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Thickness</label>
-              <div className="relative">
+            <div className="col-span-2 sm:flex sm:items-center sm:gap-4">
+              <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest sm:w-28 sm:text-right mb-1 sm:mb-0 block shrink-0">Thickness</label>
+              <div className="relative flex-1">
                 <Ruler size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 rotate-90" />
                 <input
                   type="text" placeholder="Micro/mm"
@@ -492,9 +492,9 @@ export default function InquiryModal({ isOpen, onClose, product, customSubmit })
             </div>
 
             {/* Width */}
-            <div className="col-span-1">
-              <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Width</label>
-              <div className="relative">
+            <div className="col-span-2 sm:flex sm:items-center sm:gap-4">
+              <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest sm:w-28 sm:text-right mb-1 sm:mb-0 block shrink-0">Width</label>
+              <div className="relative flex-1">
                 <Ruler size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   type="text" placeholder="e.g. 1000"
@@ -505,9 +505,9 @@ export default function InquiryModal({ isOpen, onClose, product, customSubmit })
             </div>
 
             {/* Pincode */}
-            <div className="col-span-2">
-              <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Pincode</label>
-              <div className="relative">
+            <div className="col-span-2 sm:flex sm:items-center sm:gap-4">
+              <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest sm:w-28 sm:text-right mb-1 sm:mb-0 block shrink-0">Pincode</label>
+              <div className="relative flex-1">
                 <MapPin size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   type="text" placeholder="Delivery Pin"
@@ -539,24 +539,26 @@ export default function InquiryModal({ isOpen, onClose, product, customSubmit })
             </div>
           </div>
 
-          {/* Message */}
-          <textarea
-            rows={2} placeholder="Any other requirements..."
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:border-accent text-[12px] font-bold text-ink transition-all resize-none"
-            value={message} onChange={(e) => setMessage(e.target.value)}
-          />
+          <div className="sm:flex sm:items-start sm:gap-4">
+            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest sm:w-28 sm:text-right mb-1 sm:mb-0 block shrink-0 pt-3">Message</label>
+            <textarea
+              rows={2} placeholder="Any other requirements..."
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:border-accent text-[12px] font-bold text-ink transition-all resize-none flex-1"
+              value={message} onChange={(e) => setMessage(e.target.value)}
+            />
+          </div>
 
           {/* Buttons */}
-          <div className="flex gap-3 pt-1 pb-2">
+          <div className="flex flex-col sm:flex-row gap-3 pt-2 pb-4 sm:pb-2">
             <button
               type="button" onClick={handleClose}
-              className="flex-1 px-4 py-3 bg-gray-100 text-gray-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-200 transition-all"
+              className="flex-1 px-4 py-3.5 sm:py-3 bg-gray-50 sm:bg-gray-100 text-gray-500 sm:text-gray-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-200 transition-all border border-black/[0.03] sm:border-none order-2 sm:order-1"
             >
               Cancel
             </button>
             <button
               type="submit" disabled={loading || (pincode.length === 6 && pincodeStatus !== "valid")}
-              className="flex-[2] bg-accent text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-orange-100 hover:bg-orange-600 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              className="flex-[2] bg-accent text-white py-3.5 sm:py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-orange-100 hover:bg-orange-600 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 order-1 sm:order-2"
             >
               {loading ? "Sending..." : <><Send size={13} /> Send Requirement</>}
             </button>

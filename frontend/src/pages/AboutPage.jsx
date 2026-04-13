@@ -3,12 +3,12 @@ import ReviewSection from "../components/sections/ReviewSection";
 export default function AboutPage() {
   return (
     <>
-      <div className="bg-ink py-10 md:py-14 px-4 text-center md:text-left">
+      <div className="bg-ink py-8 md:py-14 px-4 text-center md:text-left">
         <div className="max-w-7xl mx-auto">
           <span className="text-[10px] md:text-xs font-semibold tracking-[3px] uppercase text-accent">
             Our Story
           </span>
-          <h1 className="font-syne font-black text-3xl md:text-4xl text-white mt-2 uppercase">
+          <h1 className="font-syne font-black text-2xl sm:text-3xl md:text-4xl text-white mt-2 uppercase">
             About PackagingBazaar
           </h1>
         </div>
@@ -17,7 +17,7 @@ export default function AboutPage() {
         <div className="max-w-4xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8 md:gap-10 mb-14">
             <div>
-              <h2 className="font-syne font-black text-2xl md:text-3xl text-ink mb-4 uppercase leading-tight">
+              <h2 className="font-syne font-black text-xl sm:text-2xl md:text-3xl text-ink mb-4 uppercase leading-tight">
                 India's Trusted Packaging Film Platform
               </h2>
               <p className="text-sm text-ink2 leading-relaxed mb-4">
@@ -31,7 +31,7 @@ export default function AboutPage() {
                 the flexible packaging industry.
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
                 ["500+", "Happy Clients"],
                 ["50+", "Product Variants"],
@@ -50,7 +50,7 @@ export default function AboutPage() {
               ))}
             </div>
           </div>
-          <div className="bg-ink rounded-3xl p-8 text-white mb-14">
+          <div className="bg-ink rounded-3xl p-6 md:p-8 text-white mb-14">
             <h3 className="font-syne font-black text-2xl mb-3">Our Mission</h3>
             <p className="text-white/60 leading-relaxed">
               To democratize access to premium flexible packaging films by
@@ -59,7 +59,7 @@ export default function AboutPage() {
               sector.
             </p>
           </div>
-          <div className="grid md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {[
               [
                 "Buyers",

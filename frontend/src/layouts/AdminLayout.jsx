@@ -127,6 +127,7 @@ export default function AdminLayout() {
                          <NavLink 
                            key={link.tab}
                            to={link.to}
+                           onClick={() => setMobileOpen(false)}
                            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === link.tab ? "bg-gray-900 text-white shadow-lg" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"}`}
                          >
                            {link.icon}
@@ -141,6 +142,7 @@ export default function AdminLayout() {
                   <NavLink 
                     key={link.tab}
                     to={link.to}
+                    onClick={() => setMobileOpen(false)}
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === link.tab ? "bg-gradient-to-r from-[#e8511a] to-[#ff7a45] text-white shadow-[0_8px_16px_rgba(232,81,26,0.25)]" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"}`}
                   >
                     {link.icon}

@@ -65,8 +65,8 @@ export default function ProductCard({ product, onInquiry }) {
         />
 
         {/* Category chip */}
-        <div className="absolute bottom-3 left-3 z-10">
-          <span className="text-[9px] sm:text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/80 backdrop-blur-sm text-ink2 border border-black/[0.07]">
+        <div className="absolute bottom-2 left-2 sm:bottom-3 sm:left-3 z-10">
+          <span className="text-[8px] sm:text-[10px] font-semibold px-1.5 sm:px-2 py-0.5 rounded-full bg-white/80 backdrop-blur-sm text-ink2 border border-black/[0.07]">
             {categoryName} · {product.subcategory_name} 
           </span>
         </div>
@@ -80,7 +80,7 @@ export default function ProductCard({ product, onInquiry }) {
         >
           {product.name}
         </h3>
-        <p className="text-[10px] sm:text-[11px] md:text-xs text-ink3 mb-3 line-clamp-2 leading-relaxed h-8 sm:h-9">
+        <p className="text-[10px] sm:text-[11px] md:text-[13px] text-ink3 mb-3 md:mb-4 line-clamp-2 md:line-clamp-3 leading-relaxed h-8 sm:h-9 md:h-12 overflow-hidden">
           {product.description}
         </p>
         <div className="flex items-center gap-1.5 mb-3 flex-wrap">
@@ -128,16 +128,16 @@ export default function ProductCard({ product, onInquiry }) {
                 e.stopPropagation();
                 if (onInquiry) onInquiry(product);
               }}
-              className="flex-1 bg-accent text-white rounded-xl flex items-center justify-center gap-1.5 hover:bg-orange-600 active:scale-[0.98] transition-all font-black uppercase shadow-lg shadow-orange-100 py-3 sm:py-3.5"
+              className="flex-1 bg-accent text-white rounded-xl flex items-center justify-center gap-1.5 hover:bg-orange-600 active:scale-[0.98] transition-all font-black uppercase shadow-lg shadow-orange-100 py-3 md:py-4"
             >
               <Send size={14} className="shrink-0" />
-              <span className="hidden sm:inline text-[11px] tracking-widest">Get Best Price</span>
-              <span className="sm:hidden text-[10px] tracking-wider">Quote</span>
+              <span className="hidden sm:inline text-[10px] md:text-[11px] tracking-widest">Get Best Price</span>
+              <span className="sm:hidden text-[9px] tracking-wider">Quote</span>
             </button>
 
             <button
               onClick={handleAddToCart}
-              className="p-3 sm:p-3.5 bg-gray-900 text-white rounded-xl hover:bg-black active:scale-[0.95] transition-all shadow-lg shadow-gray-200 shrink-0"
+              className="p-3 md:p-4 bg-gray-900 text-white rounded-xl hover:bg-black active:scale-[0.95] transition-all shadow-lg shadow-gray-200 shrink-0"
               title="Add to Basket"
             >
               <ShoppingCart size={16} />
