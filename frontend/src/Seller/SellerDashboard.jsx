@@ -281,13 +281,16 @@ export function SellerOrders() {
 
 export function SellerProfile() {
   const { seller, setSeller, icons, Icon, EditableField, FilmTypesEditor, BusinessTypesEditor } = useOutletContext();
+  const { notifySuccess, notifyError } = useNotification();
 
   // Field save hone par: local state + backend dono update karo
   const update = (key) => async (val) => {
+    const prevSeller = { ...seller }; // Revert ke liye layout data store karo
     const updatedSeller = { ...seller, [key]: val };
     setSeller(updatedSeller); // Optimistic UI update
+
     try {
-      await updateSellerProfileAPI({
+      const res = await updateSellerProfileAPI({
         businessName: updatedSeller.businessName,
         businessType: updatedSeller.businessType,
         gstNumber: updatedSeller.gstNumber,
@@ -300,9 +303,19 @@ export function SellerProfile() {
         priceRange: updatedSeller.priceRange,
         description: updatedSeller.description,
         phone: updatedSeller.phone,
+        ownerName: updatedSeller.ownerName, // Added
+        email: updatedSeller.email, // Added
       });
+
+      if (res.success) {
+        notifySuccess(`${key.charAt(0).toUpperCase() + key.slice(1)} updated successfully.`);
+      } else {
+        throw new Error(res.message || "Failed to update profile.");
+      }
     } catch (err) {
       console.error("Profile update failed:", err);
+      notifyError(err.response?.data?.message || err.message || "Something went wrong.");
+      setSeller(prevSeller); // Rollback optimistic update
     }
   };
   const STATES = ["Gujarat", "Maharashtra", "Rajasthan", "Delhi", "Karnataka", "Tamil Nadu", "Uttar Pradesh", "West Bengal", "Telangana", "Other"];

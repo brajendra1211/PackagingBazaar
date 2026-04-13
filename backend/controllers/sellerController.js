@@ -393,64 +393,75 @@ export const updateProduct = async (req, res) => {
 
 // Update seller profile
 export const updateSellerProfile = async (req, res) => {
+  const connection = await pool.getConnection();
   try {
+    await connection.beginTransaction();
     const userId = req.user.id;
 
     const {
       businessName, businessType, gstNumber, yearEstablished,
       city, state, address, filmTypes, monthlyCapacity, 
-      priceRange, description, phone // phone here is the mobile number
+      priceRange, description, phone, ownerName, email // Added ownerName and email
     } = req.body;
 
+    // Basic Validation
     if (gstNumber && !validateGST(gstNumber)) {
+      await connection.rollback();
       return res.status(400).json({ success: false, message: "Invalid GST number format (15 characters required)." });
     }
     if (phone && !validateMobile(phone)) {
+      await connection.rollback();
       return res.status(400).json({ success: false, message: "Invalid mobile number (10 digits required)." });
     }
 
     const businessTypeString = Array.isArray(businessType) ? businessType.join(", ") : businessType;
     const productIdsString = filmTypes?.length > 0 ? filmTypes.join(", ") : null;
 
-    // Check if seller profile exists
-    const [existing] = await pool.query(
-      "SELECT id FROM sellers WHERE user_id = ?", [userId]
+    // 1. Update SELLERS Table
+    await connection.query(
+      `UPDATE sellers SET 
+       company_name=?, business_type=?, gst_number=?, year_established=?,
+       city=?, state=?, business_address=?, monthly_capacity=?, 
+       price_range=?, description=?, products_offered=?, mobile=?
+       WHERE user_id=?`,
+      [businessName, businessTypeString, gstNumber, yearEstablished || null,
+       city, state, address, monthlyCapacity, priceRange, 
+       description, productIdsString, phone || null, userId]
     );
 
-    if (existing.length === 0) {
-      // First time profile creation
-      await pool.query(
-        `INSERT INTO sellers 
-        (user_id, company_name, business_type, gst_number, year_established, 
-         city, state, business_address, monthly_capacity, price_range, 
-         description, products_offered) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [userId, businessName, businessTypeString, gstNumber, yearEstablished || null,
-         city, state, address, monthlyCapacity, priceRange, description, productIdsString]
-      );
-    } else {
-      // Updating profile
-      await pool.query(
-        `UPDATE sellers SET 
-         company_name=?, business_type=?, gst_number=?, year_established=?,
-         city=?, state=?, business_address=?, monthly_capacity=?, 
-         price_range=?, description=?, products_offered=?
-         WHERE user_id=?`,
-        [businessName, businessTypeString, gstNumber, yearEstablished || null,
-         city, state, address, monthlyCapacity, priceRange, 
-         description, productIdsString, userId]
-      );
+    // 2. Update USERS Table (for name, email, mobile)
+    const userUpdateFields = [];
+    const userUpdateValues = [];
 
-      // Also update mobile in users table
-      if (phone) {
-        await pool.query("UPDATE users SET mobile = ? WHERE id = ?", [phone, userId]);
-      }
+    if (ownerName) {
+      userUpdateFields.push("name = ?");
+      userUpdateValues.push(ownerName);
+    }
+    if (email) {
+      userUpdateFields.push("email = ?");
+      userUpdateValues.push(email);
+    }
+    if (phone) {
+      userUpdateFields.push("mobile = ?");
+      userUpdateValues.push(phone);
     }
 
+    if (userUpdateFields.length > 0) {
+      userUpdateValues.push(userId);
+      await connection.query(
+        `UPDATE users SET ${userUpdateFields.join(", ")} WHERE id = ?`,
+        userUpdateValues
+      );
+    }
+
+    await connection.commit();
     res.status(200).json({ success: true, message: "Profile updated successfully" });
   } catch (error) {
+    if (connection) await connection.rollback();
     console.error("Error in updateSellerProfile:", error);
-    res.status(500).json({ success: false, message: "Server Error" });
+    res.status(500).json({ success: false, message: "Server Error", error: error.message });
+  } finally {
+    if (connection) connection.release();
   }
 };
 
