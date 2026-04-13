@@ -72,13 +72,13 @@ export default function ReviewSection() {
   }, []);
 
   return (
-    <section className="py-16 md:py-24 px-4 bg-white overflow-hidden border-t border-black/[0.04]">
+    <section className="py-16 sm:py-24 px-4 bg-white overflow-hidden border-t border-black/[0.04]">
       <div className="max-w-7xl mx-auto relative">
         
-        {/* Section Heading Centered for Premium Look */}
-        <div className="text-center mb-14">
-            <span className="text-[10px] font-bold tracking-[4px] uppercase text-accent bg-accent/5 px-4 py-1.5 rounded-full inline-block mb-3 border border-accent/10">Real Experiences</span>
-            <h2 className="font-syne font-black text-3xl md:text-4xl text-ink">What Our Clients Say</h2>
+        {/* Section Heading */}
+        <div className="text-center mb-10 sm:mb-16">
+            <span className="text-[10px] sm:text-[11px] font-bold tracking-[3px] sm:tracking-[4px] uppercase text-accent bg-accent/5 px-4 py-1.5 rounded-full inline-block mb-3 sm:mb-4 border border-accent/10">Real Experiences</span>
+            <h2 className="font-syne font-black text-3xl sm:text-4xl lg:text-5xl text-ink leading-tight">What Our Clients Say</h2>
         </div>
 
         {/* Carousel Container */}

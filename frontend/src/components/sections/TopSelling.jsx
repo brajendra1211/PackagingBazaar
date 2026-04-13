@@ -39,26 +39,26 @@ export default function TopSelling() {
   }
 
   return (
-    <section className="py-12 md:py-16 px-4 bg-white">
+    <section className="py-12 sm:py-20 px-4 bg-white">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row items-center md:items-end justify-between mb-8 text-center md:text-left">
-          <div className="mb-4 md:mb-0">
-            <span className="text-[10px] md:text-[11px] font-semibold tracking-[3px] uppercase text-accent">
+        <div className="flex flex-col sm:flex-row items-center sm:items-end justify-between mb-8 sm:mb-12 text-center sm:text-left">
+          <div className="mb-4 sm:mb-0">
+            <span className="text-[10px] sm:text-[11px] font-semibold tracking-[3px] uppercase text-accent">
               Most Popular
             </span>
-            <h2 className="font-syne font-black text-2xl md:text-3xl text-ink mt-1 uppercase">
+            <h2 className="font-syne font-black text-2xl sm:text-3xl lg:text-4xl text-ink mt-1 uppercase">
               Top Selling Products
             </h2>
           </div>
           <Link
             to="/products"
-            className="text-sm font-medium text-accent hover:underline flex items-center gap-1"
+            className="text-xs sm:text-sm font-black uppercase tracking-widest text-accent hover:text-orange-700 transition-colors flex items-center gap-1.5"
           >
-            View all →
+            Explore All Products <TrendingUp size={14} />
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {topItems.length > 0 ? (
             topItems.map((p, i) => (
               <div

@@ -36,15 +36,15 @@ function ProfileMenu({ user, onLogout }) {
 
   return (
     <div ref={ref} className="relative">
-      <div className="flex items-center gap-2 h-10 px-2 rounded-xl border border-black/[0.08] hover:bg-surface transition-colors cursor-pointer" onClick={() => setOpen((v) => !v)}>
+      <div className="flex items-center gap-1.5 sm:gap-2 h-9 sm:h-10 px-1.5 sm:px-2 rounded-xl border border-black/[0.08] hover:bg-surface transition-colors cursor-pointer" onClick={() => setOpen((v) => !v)}>
         <div 
           onClick={(e) => { e.stopPropagation(); navigate(profileLink); setOpen(false); }}
-          className="w-7 h-7 rounded-full bg-accent flex items-center justify-center text-white text-xs font-bold hover:scale-105 transition-transform"
+          className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-accent flex items-center justify-center text-white text-[10px] sm:text-xs font-bold hover:scale-105 transition-transform"
         >
           {initials}
         </div>
         <div className="flex items-center gap-1">
-          <span className={`hidden md:flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${role.color}`}>
+          <span className="hidden lg:flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
             {role.icon} {role.label}
           </span>
           <ChevronDown size={14} className={`text-ink2 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
@@ -155,10 +155,10 @@ export default function Navbar() {
           </span>
         </Link>
 
-        <ul className="hidden md:flex items-center gap-6">
+        <ul className="hidden lg:flex items-center gap-4 xl:gap-6">
           {links.map((l) => (
             <li key={l.to}>
-              <Link to={l.to} className="text-sm font-medium text-ink2 hover:text-accent transition-colors">{l.label}</Link>
+              <Link to={l.to} className="text-[13px] xl:text-sm font-medium text-ink2 hover:text-accent transition-colors">{l.label}</Link>
             </li>
           ))}
         </ul>
@@ -172,13 +172,13 @@ export default function Navbar() {
           {!loading && (
             <>
               {user ? (
-                <div className="hidden md:block">
+                <div className="hidden lg:block">
                   <ProfileMenu user={user} onLogout={handleLogout} />
                 </div>
               ) : (
-                <div className="flex gap-2">
-                  <Link to="/become-a-seller" className="hidden md:block bg-accent text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors">Become a Seller</Link>
-                  <Link to="/login" className="hidden md:flex items-center gap-1.5 border border-accent text-accent text-sm font-medium px-4 py-2 rounded-lg hover:bg-orange-50 transition-colors">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <Link to="/become-a-seller" className="hidden sm:block bg-accent text-white text-[10px] sm:text-sm font-medium px-3 sm:px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors">Become a Seller</Link>
+                  <Link to="/login" className="hidden sm:flex items-center gap-1.5 border border-accent text-accent text-[10px] sm:text-sm font-medium px-3 sm:px-4 py-2 rounded-lg hover:bg-orange-50 transition-colors">
                     <User size={15} /> Login
                   </Link>
                 </div>
@@ -186,8 +186,8 @@ export default function Navbar() {
             </>
           )}
 
-          <button className="md:hidden p-2 hover:bg-surface rounded-xl transition-colors" onClick={() => setOpen(!open)}>
-            {open ? <X size={24} className="text-accent" /> : <Menu size={24} className="text-ink" />}
+          <button className="lg:hidden p-1.5 sm:p-2 hover:bg-surface rounded-xl transition-colors" onClick={() => setOpen(!open)}>
+            {open ? <X size={20} className="sm:w-6 sm:h-6 text-accent" /> : <Menu size={20} className="sm:w-6 sm:h-6 text-ink" />}
           </button>
         </div>
       </div>
@@ -202,10 +202,10 @@ export default function Navbar() {
 
       {/* Mobile Menu Content */}
       {open && (
-        <div className="md:hidden fixed inset-x-4 top-20 bottom-4 bg-white z-[60] rounded-[2.5rem] shadow-2xl overflow-y-auto animate-slideUp border border-black/[0.05] flex flex-col">
+        <div className="lg:hidden fixed inset-x-4 top-20 bottom-4 bg-white z-[60] rounded-[2.5rem] shadow-2xl overflow-y-auto animate-slideUp border border-black/[0.05] flex flex-col">
           <div className="px-6 py-8 space-y-6">
             <div className="space-y-4">
-              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[3px] mb-2 pl-1">Menu</h3>
+              <h3 className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-[2px] sm:tracking-[3px] mb-2 pl-1">Menu</h3>
               {links.map((l) => (
                 <Link 
                   key={l.to} to={l.to} 

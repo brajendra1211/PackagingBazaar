@@ -12,6 +12,8 @@ export const submitInquiry = async (req, res) => {
             width, 
             phone, 
             pincode, 
+            city,
+            state,
             address,
             buyer_name, 
             buyer_email 
@@ -37,8 +39,8 @@ export const submitInquiry = async (req, res) => {
 
         const query = `
             INSERT INTO inquiries 
-            (buyer_id, product_id, seller_id, message, quantity_required, thickness, width, phone, pincode, address, buyer_name, buyer_email) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (buyer_id, product_id, seller_id, message, quantity_required, thickness, width, phone, pincode, city, state, address, buyer_name, buyer_email) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
         const values = [
@@ -51,6 +53,8 @@ export const submitInquiry = async (req, res) => {
             width || null,
             phone || null,
             pincode || null,
+            city || null,
+            state || null,
             address || null,
             buyer_name || null,
             buyer_email || null

@@ -4,7 +4,8 @@ import {
   getAllSellers, getAllUsers, updateUser, deleteUser,
   getAllProductsAdmin, getDashboardStats, getAllOrdersAdmin,
   getUserOrdersAdmin, getSellerOrdersAdmin, getSellerProductsAdmin,
-  getSellersWithOrdersAdmin, getAllInquiriesAdmin, toggleHotDeal
+  getSellersWithOrdersAdmin, getAllInquiriesAdmin, toggleHotDeal,
+  getRecommendedSellers
 } from "../controllers/adminController.js";
 import { deleteProduct } from "../controllers/productController.js";
 import { verifyToken, isAdmin } from "../middlewares/authMiddleware.js";
@@ -39,5 +40,7 @@ router.get("/orders/seller/:sellerId", verifyToken, isAdmin, getSellerOrdersAdmi
 
 // --- Inquiry Management (Leads) ---
 router.get("/inquiries", verifyToken, isAdmin, getAllInquiriesAdmin);
+router.get("/inquiries/:id/recommendations", verifyToken, isAdmin, getRecommendedSellers);
 
 export default router;
+

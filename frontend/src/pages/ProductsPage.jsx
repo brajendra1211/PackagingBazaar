@@ -114,16 +114,16 @@ export default function ProductsPage() {
 
   return (
     <>
-      <div className="bg-ink py-10 md:py-14 px-4">
-        <div className="max-w-7xl mx-auto">
-          <span className="text-[10px] md:text-xs font-semibold tracking-[3px] uppercase text-accent">
+      <div className="bg-ink py-12 sm:py-20 px-4">
+        <div className="max-w-7xl mx-auto text-center sm:text-left">
+          <span className="text-[10px] sm:text-[11px] font-semibold tracking-[3px] uppercase text-accent block mb-2">
             Our Catalogue
           </span>
-          <h1 className="font-syne font-black text-3xl md:text-4xl text-white mt-2 mb-1 uppercase">
+          <h1 className="font-syne font-black text-3xl sm:text-4xl lg:text-5xl text-white mt-1 mb-2 uppercase tracking-tight">
             All Products
           </h1>
-          <p className="text-white/50 text-[12px] md:text-sm">
-            60 premium packaging films across BOPP, PET, CPP & LAMINATED
+          <p className="text-white/50 text-sm sm:text-base max-w-lg mx-auto sm:mx-0">
+            Premium packaging films across BOPP, PET, CPP & LAMINATED
           </p>
         </div>
       </div>
@@ -133,40 +133,42 @@ export default function ProductsPage() {
         <div className="max-w-7xl mx-auto">
           
           {/* Controls: Search, Categories, Sort */}
-          <div className="flex flex-col lg:flex-row gap-4 mb-10">
-            <div className="relative w-full lg:max-w-md">
+          <div className="flex flex-col xl:flex-row gap-4 sm:gap-6 mb-10 sm:mb-12">
+            <div className="relative w-full xl:max-w-sm">
               <Search
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-ink3"
+                size={18}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink3"
               />
               <input
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Search products..."
-                className="w-full pl-9 pr-4 py-2.5 text-sm border border-black/[0.1] rounded-xl bg-surface focus:outline-none focus:border-accent"
+                className="w-full pl-10 pr-4 py-3 text-sm font-medium border border-black/[0.1] rounded-2xl bg-surface focus:outline-none focus:border-accent transition-all shadow-sm"
               />
             </div>
             
-            <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 lg:mx-0 lg:px-0 scrollbar-hide flex-nowrap items-center">
-              {categories.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => handleCategoryChange(c)}
-                  className={`px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all whitespace-nowrap shadow-sm border ${
-                    filters.category === c
-                      ? "bg-accent border-accent text-white shadow-orange-100"
-                      : "bg-surface text-ink2 border-black/[0.05] hover:border-accent/20"
-                  }`}
-                >
-                  {c}
-                </button>
-              ))}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 flex-1">
+              <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide flex-nowrap items-center flex-1">
+                {categories.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => handleCategoryChange(c)}
+                    className={`px-5 py-2.5 rounded-xl text-[12px] font-black transition-all whitespace-nowrap border uppercase tracking-widest ${
+                      filters.category === c
+                        ? "bg-accent border-accent text-white shadow-lg shadow-orange-100"
+                        : "bg-surface text-ink2 border-black/[0.05] hover:border-accent/20"
+                    }`}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
               
-              <div className="ml-auto min-w-[160px]">
+              <div className="sm:min-w-[180px]">
                 <select
                   value={filters.sort}
                   onChange={handleSortChange}
-                  className="w-full px-4 py-2.5 rounded-xl text-[12px] font-bold border border-black/[0.05] bg-surface text-ink2 focus:outline-none shadow-sm"
+                  className="w-full px-5 py-3 rounded-2xl text-[12px] font-black border border-black/[0.05] bg-surface text-ink2 focus:outline-none shadow-sm uppercase tracking-widest cursor-pointer hover:border-accent/20 transition-all"
                 >
                   <option value="default">Sort: Default</option>
                   <option value="price_low">Price: Low to High</option>

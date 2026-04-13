@@ -4,7 +4,7 @@ import {
   CheckCircle2, XCircle, Search, Filter, Mail, Phone, 
   MapPin, Clock, ArrowUpRight, MoreVertical, LayoutDashboard,
   HardDrive, Database, Settings, RefreshCcw, Download,
-  ChevronLeft, ChevronRight, Inbox, MessageSquare, Zap, FileText
+  ChevronLeft, ChevronRight, Inbox, MessageSquare, Zap, FileText, Send
 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -24,7 +24,8 @@ import {
   fetchSellersWithOrdersAdmin,
   fetchSellerProductsAdmin,
   fetchSellerOrdersAdmin,
-  toggleHotDealAdmin
+  toggleHotDealAdmin,
+  fetchLeadRecommendations
 } from "../services/adminServices";
 import Pagination from "../components/ui/Pagination";
 import { useNotification } from "../context/NotificationContext";
@@ -527,12 +528,11 @@ export default function AdminDashboard() {
                 {!search && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />}
               </div>
             )}
-
           {/* ── Inquiries (Leads) Table ── */}
           {activeTab === "inquiries" && (
-            <div className="bg-white rounded-[2rem] border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+             <div className="bg-white rounded-[2rem] border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+               <div className="overflow-x-auto scrollbar-hide">
+                 <table className="w-full min-w-[800px] text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50/80 border-b border-gray-100 backdrop-blur-sm">
                       <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Buyer Details</th>
@@ -601,7 +601,14 @@ export default function AdminDashboard() {
                            {new Date(inquiry.created_at).toLocaleDateString()}
                         </td>
                         <td className="px-6 py-5 text-right">
-                           <div className="flex items-center justify-end gap-2">
+                             <button 
+                               onClick={() => setSelectedEntity({ type: "lead", id: inquiry.id, name: inquiry.buyer_display_name, mode: "lead-matching", location: inquiry.address })}
+                               className="p-2 bg-accent/10 text-accent hover:bg-accent/20 rounded-xl transition-all flex items-center gap-1.5"
+                               title="Find Nearby Sellers"
+                             >
+                               <Zap size={16} />
+                               <span className="text-[10px] font-black uppercase tracking-wider pr-1">Match Sellers</span>
+                             </button>
                              {inquiry.buyer_display_email && (
                                <a 
                                  href={`mailto:${inquiry.buyer_display_email}`} 
@@ -614,7 +621,6 @@ export default function AdminDashboard() {
                              <button className="p-2 bg-gray-50 text-gray-400 hover:bg-gray-100 rounded-xl transition-all" title="More Options">
                                <MoreVertical size={16} />
                              </button>
-                           </div>
                         </td>
                       </motion.tr>
                     ))}
@@ -698,6 +704,9 @@ function SubViewOverlay({ entity, onClose, notifyError }) {
         } else if(entity.type === "seller" && entity.mode === "products") {
            res = await fetchSellerProductsAdmin(entity.id);
            setItems(res.products || []);
+        } else if(entity.type === "lead" && entity.mode === "lead-matching") {
+           res = await fetchLeadRecommendations(entity.id);
+           setItems(res.recommendations || []);
         }
       } catch (err) {
         notifyError("Failed to load details");
@@ -721,17 +730,29 @@ function SubViewOverlay({ entity, onClose, notifyError }) {
         exit={{ scale: 0.9, opacity: 0 }}
         className="bg-white rounded-[3rem] w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl"
       >
-        <div className="p-8 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-           <div>
-              <p className="text-[10px] font-black text-accent uppercase tracking-widest mb-1">{entity.type} Hub</p>
-              <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tighter">{entity.name}</h2>
+        <div className="p-5 md:p-8 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-50/50">
+           <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-accent/10 rounded-2xl flex items-center justify-center shrink-0">
+                 <Zap className="text-accent" size={24} />
+              </div>
+              <div>
+                 <p className="text-[10px] font-black text-accent uppercase tracking-widest mb-0.5">
+                    {entity.mode === "lead-matching" ? "Smart Recommendation" : entity.type + " Details"}
+                 </p>
+                 <h2 className="text-xl md:text-2xl font-black text-gray-900 uppercase tracking-tighter leading-tight">{entity.name}</h2>
+                 {entity.location && (
+                   <p className="text-[10px] md:text-xs font-bold text-gray-400 flex items-center gap-1.5 mt-1">
+                      <MapPin size={10} /> {entity.location}
+                   </p>
+                 )}
+              </div>
            </div>
-           <button onClick={onClose} className="p-3 bg-white border border-gray-100 rounded-2xl text-gray-400 hover:text-gray-900 hover:shadow-sm transition-all">
+           <button onClick={onClose} className="self-end sm:self-auto p-3 bg-white border border-gray-100 rounded-2xl text-gray-400 hover:text-gray-900 hover:shadow-sm transition-all">
               <XCircle size={24} />
            </button>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-8 bg-white">
+        <div className="flex-1 overflow-y-auto p-5 md:p-8 bg-white">
            {loading ? (
              <div className="py-20 text-center"><RefreshCcw className="animate-spin mx-auto text-accent mb-4" /></div>
            ) : items.length === 0 ? (
@@ -765,6 +786,55 @@ function SubViewOverlay({ entity, onClose, notifyError }) {
                     </div>
                   </div>
                 ))}
+
+                {entity.mode === "lead-matching" && items.map((seller, idx) => (
+                   <div key={seller.id} className={`p-6 rounded-[2rem] border transition-all ${idx === 0 ? 'bg-accent/5 border-accent/20 shadow-lg shadow-accent/5' : 'bg-gray-50 border-gray-100'}`}>
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                         <div className="flex items-center gap-4">
+                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl ${idx === 0 ? 'bg-accent text-white' : 'bg-gray-900 text-white'}`}>
+                               {seller.company_name[0]}
+                            </div>
+                            <div>
+                               <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="font-syne font-black text-gray-900 text-lg uppercase tracking-tight">{seller.company_name}</h4>
+                                  {idx === 0 && (
+                                    <span className="bg-accent text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full tracking-widest flex items-center gap-1 animate-pulse">
+                                      <Zap size={8} fill="currentColor" /> Best Match
+                                    </span>
+                                  )}
+                               </div>
+                               <div className="flex flex-wrap gap-3">
+                                  <div className="flex items-center gap-1 text-xs font-bold text-gray-500">
+                                     <MapPin size={12} className="text-accent" />
+                                     {seller.city}, {seller.state}
+                                  </div>
+                                  <div className="flex items-center gap-1 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                     Match Score: <span className="text-accent">{seller.match_score}</span>
+                                  </div>
+                               </div>
+                            </div>
+                         </div>
+                         <div className="flex items-center gap-2">
+                            <a href={`tel:${seller.phone}`} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-white border border-gray-100 rounded-xl text-sm font-bold text-gray-900 hover:bg-gray-50 transition-all">
+                               <Phone size={16} /> Call
+                            </a>
+                            <a href={`mailto:${seller.email}`} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-accent text-white rounded-xl text-sm font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-100">
+                               <Send size={16} /> Share Lead
+                            </a>
+                         </div>
+                      </div>
+                      
+                      {/* Seller Badges */}
+                      <div className="mt-4 flex flex-wrap gap-2">
+                         <span className="text-[9px] font-black uppercase tracking-widest bg-white border border-gray-200 px-2.5 py-1 rounded-lg text-gray-400">
+                            {seller.business_type}
+                         </span>
+                         <span className="text-[9px] font-black uppercase tracking-widest bg-white border border-gray-200 px-2.5 py-1 rounded-lg text-gray-400">
+                            GST: {seller.gst_number}
+                         </span>
+                      </div>
+                   </div>
+                 ))}
              </div>
            )}
         </div>

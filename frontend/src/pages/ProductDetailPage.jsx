@@ -129,15 +129,14 @@ export default function ProductDetailPage() {
         >
           <ArrowLeft size={16} /> Back
         </button>
- 
-        <div className="grid md:grid-cols-2 gap-8 mb-10 items-start">
+         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 mb-12 lg:mb-20 items-start">
           {/* Image Section */}
-          <div className="md:sticky md:top-8">
-            <div className={`bg-gradient-to-br ${grad} rounded-3xl h-[300px] md:h-[460px] flex items-center justify-center relative overflow-hidden border border-black/[0.03]`}>
+          <div className="lg:sticky lg:top-24">
+            <div className={`bg-gradient-to-br ${grad} rounded-3xl h-[280px] sm:h-[400px] lg:h-[520px] flex items-center justify-center relative overflow-hidden border border-black/[0.03] shadow-inner`}>
               <img
                 src={product.image_url} 
                 alt={product.name}
-                className="w-full h-full object-contain p-4 md:p-8 hover:scale-102 transition-transform duration-500"
+                className="w-full h-full object-contain p-6 sm:p-10 lg:p-12 hover:scale-105 transition-transform duration-500"
               />
               <div className="absolute top-4 left-4">
                 <Badge tag={product.tag_name} />
@@ -146,53 +145,55 @@ export default function ProductDetailPage() {
           </div>
 
           {/* Info Section */}
-          <div className="flex flex-col justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-xs font-bold text-accent uppercase tracking-wider">
+          <div className="flex flex-col">
+            <div className="text-center lg:text-left">
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 mb-4">
+                <span className="text-[10px] sm:text-xs font-black text-accent uppercase tracking-widest bg-accent/5 px-3 py-1 rounded-full border border-accent/10">
                   {product.category_name} {product.subcategory_name && `· ${product.subcategory_name}`}
                 </span>
-                <div className="flex items-center gap-1.5 bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-                  <span className="text-[10px] font-bold">Sold by: {product.seller_name || "PackagingBazaar Hub"}</span>
-                  {product.is_verified ? <ShieldCheck size={12} className="text-green-500" /> : null}
+                <div className="flex items-center gap-1.5 bg-gray-50 text-gray-500 px-3 py-1 rounded-full border border-gray-100 shadow-sm">
+                  <span className="text-[10px] sm:text-[11px] font-bold">Sold by: {product.seller_name || "PackagingBazaar Hub"}</span>
+                  {product.is_verified ? <ShieldCheck size={12} className="text-green-500 shrink-0" /> : null}
                 </div>
               </div>
-              <h1 className="font-syne font-black text-2xl md:text-3xl text-ink mb-2">
+              <h1 className="font-syne font-black text-3xl sm:text-4xl lg:text-5xl text-ink mb-3 leading-tight uppercase tracking-tight">
                 {product.name}
               </h1>
               
-              <StarRating 
-                rating={Number(product.avg_rating) || 0} 
-                reviews={Number(product.review_count) || 0} 
-              />
+              <div className="flex justify-center lg:justify-start">
+                <StarRating 
+                  rating={Number(product.avg_rating) || 0} 
+                  reviews={Number(product.review_count) || 0} 
+                />
+              </div>
 
-              <p className="text-ink2 text-sm leading-relaxed my-4">
+              <p className="text-ink2 text-sm sm:text-base leading-relaxed my-6 sm:my-8 text-center lg:text-left">
                 {product.description}
               </p>
 
-              <div className="grid grid-cols-2 gap-2 mb-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4 gap-3 mb-8">
                 {[
                   ["Thickness", product.thickness || "N/A"],
                   ["Width", product.width || "N/A"],
                   ["Min. Order", `${product.min_order || 0} ${product.unit || 'units'}`],
                   ["In Stock", `${product.stock || 0} ${product.unit || 'units'}`],
                 ].map(([l, v]) => (
-                  <div key={l} className="bg-surface rounded-xl px-3 py-2 border border-black/[0.03]">
-                    <div className="text-[10px] text-ink3 mb-0.5 font-medium">{l}</div>
-                    <div className="font-bold text-xs text-ink">{v}</div>
+                  <div key={l} className="bg-surface rounded-2xl p-4 border border-black/[0.03] shadow-sm">
+                    <div className="text-[9px] sm:text-[10px] text-ink3 mb-1 font-black uppercase tracking-wider">{l}</div>
+                    <div className="font-black text-sm text-ink">{v}</div>
                   </div>
                 ))}
               </div>
 
               {/* Applications Chips */}
               {product.applications && (
-                <div className="mb-5">
-                  <div className="text-xs text-ink3 mb-2 font-bold uppercase tracking-tighter">Applications</div>
-                  <div className="flex flex-wrap gap-2">
+                <div className="mb-8 text-center lg:text-left">
+                  <div className="text-[10px] text-ink3 mb-3 font-black uppercase tracking-widest text-gray-400">Applications / Usage</div>
+                  <div className="flex flex-wrap justify-center lg:justify-start gap-2">
                     {(Array.isArray(product.applications) ? product.applications : product.applications.split(',')).map((a) => (
                       <span
                         key={a}
-                        className="text-[10px] bg-accent/5 text-accent px-3 py-1 rounded-full border border-accent/10 font-bold uppercase"
+                        className="text-[10px] sm:text-[11px] bg-white text-ink2 px-4 py-1.5 rounded-full border border-black/[0.06] font-bold shadow-sm"
                       >
                         {String(a).trim()}
                       </span>
@@ -269,12 +270,12 @@ export default function ProductDetailPage() {
                         / {product.unit} (Min {product.min_order} {product.unit})
                      </span>
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-3">
+                   <div className="flex flex-col sm:flex-row gap-4">
                       <button
                         onClick={() => handleOpenInquiry(product)}
-                        className="flex-3 flex items-center justify-center gap-3 bg-accent text-white py-4 px-8 rounded-2xl font-black text-sm uppercase tracking-[3px] shadow-xl shadow-orange-200 hover:bg-orange-600 active:scale-[0.98] transition-all"
+                        className="w-full sm:flex-[2] flex items-center justify-center gap-3 bg-accent text-white py-4.5 sm:py-5 rounded-2xl font-black text-sm uppercase tracking-[3px] shadow-2xl shadow-orange-200 hover:bg-orange-600 active:scale-[0.98] transition-all"
                       >
-                         <Send size={18} /> Get Best Price
+                         <Send size={20} className="shrink-0" /> Get Best Price
                       </button>
                      
                      <button

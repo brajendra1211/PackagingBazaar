@@ -4,10 +4,10 @@ import { Package, Mail, Phone, MapPin } from "lucide-react";
 export default function Footer() {
   return (
     <footer className="bg-ink text-white/60">
-      <div className="max-w-7xl mx-auto px-4 py-12 md:py-16">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-10 text-center sm:text-left">
-          <div>
-            <div className="flex items-center justify-center sm:justify-start gap-2 mb-4">
+      <div className="max-w-7xl mx-auto px-4 py-10 sm:py-16">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10 mb-10 text-center sm:text-left">
+          <div className="flex flex-col items-center sm:items-start">
+            <div className="flex items-center gap-2 mb-4">
               <div className="w-7 h-7 bg-accent rounded-lg flex items-center justify-center shadow-lg shadow-orange-500/20">
                 <Package size={16} className="text-white" />
               </div>
@@ -15,11 +15,11 @@ export default function Footer() {
                 Packaging<span className="text-accent">Bazaar</span>
               </span>
             </div>
-            <p className="text-sm leading-relaxed mb-4">
+            <p className="text-sm leading-relaxed mb-6 max-w-xs sm:max-w-none">
               India's trusted marketplace for BOPP, PET & CPP laminate films.
               Buy direct or sell on our platform.
             </p>
-            <div className="flex flex-col items-center sm:items-start gap-3 text-xs md:text-sm">
+            <div className="flex flex-col items-center sm:items-start gap-3 text-[13px]">
               <span className="flex items-center gap-2 hover:text-white transition-colors">
                 <Mail size={14} className="text-accent" /> Admin@packagingbazaar.co.in
               </span>
@@ -31,11 +31,11 @@ export default function Footer() {
               </span>
             </div>
           </div>
-          <div>
-            <h4 className="font-syne font-bold text-sm text-white mb-4">
+          <div className="mt-4 sm:mt-0">
+            <h4 className="font-syne font-bold text-sm text-white mb-4 sm:mb-6 uppercase tracking-widest text-[11px]">
               Products
             </h4>
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-3 text-sm">
               {[
                 "BOPP Films",
                 "PET Films",
@@ -46,7 +46,7 @@ export default function Footer() {
                 <li key={i}>
                   <Link
                     to="/products"
-                    className="hover:text-accent transition-colors"
+                    className="hover:text-accent transition-colors block py-0.5"
                   >
                     {i}
                   </Link>
@@ -54,11 +54,11 @@ export default function Footer() {
               ))}
             </ul>
           </div>
-          <div>
-            <h4 className="font-syne font-bold text-sm text-white mb-4">
+          <div className="mt-4 sm:mt-0">
+            <h4 className="font-syne font-bold text-sm text-white mb-4 sm:mb-6 uppercase tracking-widest text-[11px]">
               Company
             </h4>
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-3 text-sm">
               {[
                 ["About Us", "/about"],
                 ["Contact Us", "/contact"],
@@ -66,18 +66,18 @@ export default function Footer() {
                 ["Blog", "#"],
               ].map(([l, h]) => (
                 <li key={l}>
-                  <Link to={h} className="hover:text-accent transition-colors">
+                  <Link to={h} className="hover:text-accent transition-colors block py-0.5">
                     {l}
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
-          <div>
-            <h4 className="font-syne font-bold text-sm text-white mb-4">
+          <div className="mt-4 sm:mt-0">
+            <h4 className="font-syne font-bold text-sm text-white mb-4 sm:mb-6 uppercase tracking-widest text-[11px]">
               Legal
             </h4>
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-3 text-sm">
               {[
                 ["Privacy Policy", "/policy"],
                 ["Return Policy", "/policy"],
@@ -85,7 +85,7 @@ export default function Footer() {
                 ["Shipping Policy", "/policy"],
               ].map(([l, h]) => (
                 <li key={l}>
-                  <Link to={h} className="hover:text-accent transition-colors">
+                  <Link to={h} className="hover:text-accent transition-colors block py-0.5">
                     {l}
                   </Link>
                 </li>

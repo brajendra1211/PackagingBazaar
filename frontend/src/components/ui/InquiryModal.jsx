@@ -297,6 +297,8 @@ export default function InquiryModal({ isOpen, onClose, product, customSubmit })
   const [message, setMessage] = useState("");
   
   const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
   const [pincodeStatus, setPincodeStatus] = useState("idle");
 
   const [buyerName, setBuyerName] = useState("");
@@ -314,6 +316,8 @@ export default function InquiryModal({ isOpen, onClose, product, customSubmit })
     setPhone("");
     setPincode("");
     setAddress("");
+    setCity("");
+    setState("");
     setPincodeStatus("idle");
     setMessage("");
     setBuyerName("");
@@ -337,10 +341,14 @@ export default function InquiryModal({ isOpen, onClose, product, customSubmit })
 
       if (data[0]?.Status === "Success" && data[0]?.PostOffice?.length > 0) {
         const po = data[0].PostOffice[0];
+        setCity(po.District);
+        setState(po.State);
         setAddress(`${po.Name}, ${po.District}, ${po.State} - ${cleaned}`);
         setPincodeStatus("valid");
       } else {
         setAddress("");
+        setCity("");
+        setState("");
         setPincodeStatus("invalid");
       }
     } catch {
@@ -372,6 +380,8 @@ export default function InquiryModal({ isOpen, onClose, product, customSubmit })
         width,
         phone,
         pincode,
+        city,
+        state,
         address,
         message,
         buyer_name: buyerName,

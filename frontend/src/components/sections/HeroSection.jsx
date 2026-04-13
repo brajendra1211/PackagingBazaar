@@ -46,25 +46,25 @@ export default function HeroSection() {
 
   return (
     <section className="bg-white overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 py-6 md:py-16 grid md:grid-cols-2 gap-6 md:gap-8 items-center text-center md:text-left">
-        <div className="flex flex-col items-center md:items-start">
-          <div className="inline-flex items-center gap-2 bg-accent/10 border border-accent/20 rounded-full px-3 py-1 text-[9px] font-semibold text-accent mb-3 uppercase tracking-wider">
-            <span className="w-1.5 h-1.5 bg-accent rounded-full" />
+      <div className="max-w-7xl mx-auto px-4 py-8 md:py-16 grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+        <div className="flex flex-col items-center lg:items-start text-center lg:text-left">
+          <div className="inline-flex items-center gap-2 bg-accent/10 border border-accent/20 rounded-full px-3 py-1 text-[9px] sm:text-[10px] font-semibold text-accent mb-4 sm:mb-6 uppercase tracking-widest">
+            <span className="w-1.5 h-1.5 bg-accent rounded-full animate-flashing" />
             Premium Packaging Films
           </div>
-          <h1 className="font-syne font-black text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-ink leading-[1.1] mb-4 uppercase text-center md:text-left">
+          <h1 className="font-syne font-black text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-ink leading-[1.1] mb-3 sm:mb-4 uppercase tracking-tight">
             BOPP, PET &<br />
             <span className="text-accent">CPP Laminates</span>
             <br />
             for Every Industry
           </h1>
-          <p className="text-[12px] md:text-sm text-ink3 leading-relaxed mb-8 max-w-sm md:max-w-lg text-center md:text-left">
+          <p className="text-sm md:text-base text-ink3 leading-relaxed mb-6 sm:mb-8 max-w-sm sm:max-w-xl">
             High-quality flexible packaging solutions. Connect with verified 
             manufacturers and get the best quotes for your business needs.
           </p>
 
           {/* Flashing marketing messages */}
-          <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 sm:gap-3 mb-6">
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 sm:gap-3 mb-4">
             <div className="flex items-center gap-1.5 bg-orange-50 text-[#e8511a] px-3 py-1.5 rounded-full border border-orange-100/50 shadow-sm animate-flashing">
               <Zap size={10} fill="#e8511a" />
               <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider">24 Hrs dispatch</span>
@@ -76,30 +76,30 @@ export default function HeroSection() {
           </div>
 
           {/* Search Bar Integration */}
-          <form onSubmit={handleSearch} className="relative z-20 max-w-2xl bg-white border border-black/10 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.06)] p-1.5 flex flex-col sm:flex-row gap-1 items-center mb-8 focus-within:border-accent transition-all">
-            <div className="flex-1 w-full flex items-center gap-3 px-4 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-               <Search size={18} className="text-accent" />
+          <form onSubmit={handleSearch} className="relative z-20 w-full max-w-2xl bg-white border border-black/10 rounded-2xl sm:rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.08)] p-2 sm:p-2.5 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center mb-8 focus-within:border-accent transition-all">
+            <div className="flex-1 flex items-center gap-3 px-4 py-3 sm:py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+               <Search size={20} className="text-accent shrink-0" />
                <input 
                  type="text"
                  placeholder="Search product (e.g. BOPP Film)"
-                 className="w-full bg-transparent outline-none text-sm font-bold text-ink placeholder:text-gray-400 py-2"
+                 className="w-full bg-transparent outline-none text-sm sm:text-base font-bold text-ink placeholder:text-gray-400"
                  value={searchQuery}
                  onChange={(e) => setSearchQuery(e.target.value)}
                />
             </div>
-            <div className="w-full sm:w-48 flex items-center gap-3 px-4 py-2">
-               <MapPin size={18} className="text-gray-400" />
+            <div className="flex-1 sm:max-w-[180px] flex items-center gap-3 px-4 py-3 sm:py-2">
+               <MapPin size={20} className="text-gray-400 shrink-0" />
                <input 
                  type="text"
                  placeholder="Select City"
-                 className="w-full bg-transparent outline-none text-sm font-bold text-ink placeholder:text-gray-400 py-2"
+                 className="w-full bg-transparent outline-none text-sm sm:text-base font-bold text-ink placeholder:text-gray-400"
                  value={searchCity}
                  onChange={(e) => setSearchCity(e.target.value)}
                />
             </div>
             <button 
               type="submit"
-              className="w-full sm:w-auto bg-accent text-white font-black px-8 py-3 rounded-xl hover:bg-orange-700 transition-all text-[11px] uppercase tracking-widest shadow-lg shadow-orange-200"
+              className="bg-accent text-white font-black px-8 py-4 sm:py-3.5 rounded-xl sm:rounded-2xl hover:bg-orange-700 transition-all text-[11px] sm:text-xs uppercase tracking-widest shadow-lg shadow-orange-200"
             >
               Find Sellers
             </button>

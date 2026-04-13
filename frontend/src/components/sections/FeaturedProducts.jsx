@@ -38,12 +38,12 @@ export default function FeaturedProducts() {
   }, []);
 
   return (
-    <section className="py-5 px-4 bg-surface">
+    <section className="py-10 sm:py-16 px-4 bg-surface">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-end justify-between mb-8">
-          <div>
-            <span className="text-[11px] font-semibold tracking-[3px] uppercase text-accent">Our Range</span>
-            <h2 className="font-syne font-black text-3xl text-ink mt-1">Featured Products</h2>
+        <div className="flex items-end justify-between mb-8 sm:mb-12">
+          <div className="text-center sm:text-left w-full sm:w-auto">
+            <span className="text-[10px] sm:text-[11px] font-semibold tracking-[3px] uppercase text-accent">Our Range</span>
+            <h2 className="font-syne font-black text-2xl sm:text-3xl md:text-4xl text-ink mt-1 uppercase">Featured Products</h2>
           </div>
         </div>
 
@@ -54,7 +54,7 @@ export default function FeaturedProducts() {
         ) : featuredItems.length === 0 ? (
           <div className="text-center py-10 text-ink3">No featured products found.</div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
             {featuredItems.map((p) => (
               <ProductCard 
                 key={p.id} 

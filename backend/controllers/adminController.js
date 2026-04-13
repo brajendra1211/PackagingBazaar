@@ -484,3 +484,62 @@ export const toggleHotDeal = async (req, res) => {
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
+
+// 17. Get Recommended Sellers for a lead based on location
+export const getRecommendedSellers = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // 1. Get lead details
+    const [leadRows] = await pool.query(
+      "SELECT i.id, i.pincode as lead_pincode, i.city as lead_city, i.state as lead_state, i.address as lead_address, p.sub_category_id FROM inquiries i JOIN products p ON i.product_id = p.id WHERE i.id = ?",
+      [id]
+    );
+
+    if (leadRows.length === 0) {
+      return res.status(404).json({ success: false, message: "Lead not found" });
+    }
+
+    const lead = leadRows[0];
+    
+    // 2. Fetch all verified sellers with fuzzy matching logic
+    // Scoring logic:
+    // - 100: City match OR Seller City found in Lead Address
+    // - 50: State match OR Seller State found in Lead Address
+    // - 30: Product Sub-Category match
+    
+    const query = `
+      SELECT s.*, u.email, u.mobile as phone, u.name as owner_name,
+      (CASE 
+        WHEN s.pincode = ? THEN 200
+        WHEN LOWER(s.city) = LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(s.city), '%') THEN 100 
+        WHEN LOWER(s.state) = LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(s.state), '%') THEN 50 
+        ELSE 0 
+      END + 
+       CASE WHEN EXISTS (SELECT 1 FROM products p2 WHERE p2.seller_id = s.id AND p2.sub_category_id = ?) THEN 30 ELSE 0 END
+      ) as match_score
+      FROM sellers s
+      JOIN users u ON s.user_id = u.id
+      WHERE u.role = 'seller' AND u.is_verified = 1
+      ORDER BY match_score DESC, s.company_name ASC
+    `;
+
+    const [sellers] = await pool.query(query, [
+      lead.lead_pincode,
+      lead.lead_city, lead.lead_address, 
+      lead.lead_state, lead.lead_address, 
+      lead.sub_category_id
+    ]);
+
+
+    res.status(200).json({ 
+      success: true, 
+      recommendations: sellers,
+      leadLocation: { city: lead.lead_city, state: lead.lead_state }
+    });
+  } catch (error) {
+    console.error("Error in getRecommendedSellers:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+

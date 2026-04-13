@@ -36,10 +36,10 @@ export default function ProductCard({ product, onInquiry }) {
     <div className="bg-white rounded-2xl border border-black/[0.07] overflow-hidden hover:-translate-y-1 hover:shadow-xl transition-all duration-200 group flex flex-col h-full">
       {/* Image area */}
       <div
-        className={`bg-gradient-to-br ${grad} h-40 sm:h-44 flex items-center justify-center relative cursor-pointer overflow-hidden shrink-0`}
+        className={`bg-gradient-to-br ${grad} h-36 sm:h-48 md:h-52 flex items-center justify-center relative cursor-pointer overflow-hidden shrink-0`}
         onClick={handleImageClick}
       >
-        <div className="absolute top-3 left-3 z-10">
+        <div className="absolute top-2 left-2 sm:top-3 sm:left-3 z-10">
           <Badge tag={product.tag_name} /> 
         </div>
         
@@ -73,14 +73,14 @@ export default function ProductCard({ product, onInquiry }) {
       </div>
 
       {/* Info */}
-      <div className="p-3 sm:p-4 flex flex-col flex-1">
+      <div className="p-3 sm:p-4 lg:p-5 flex flex-col flex-1">
         <h3
-          className="font-syne font-bold text-sm text-ink mb-1 line-clamp-1 cursor-pointer hover:text-accent transition-colors"
+          className="font-syne font-black text-xs sm:text-sm md:text-base text-ink mb-1.5 line-clamp-1 cursor-pointer hover:text-accent transition-colors uppercase tracking-tight"
           onClick={handleImageClick}
         >
           {product.name}
         </h3>
-        <p className="text-[11px] text-ink3 mb-2 line-clamp-2 leading-relaxed h-8">
+        <p className="text-[10px] sm:text-[11px] md:text-xs text-ink3 mb-3 line-clamp-2 leading-relaxed h-8 sm:h-9">
           {product.description}
         </p>
         <div className="flex items-center gap-1.5 mb-3 flex-wrap">
@@ -108,16 +108,16 @@ export default function ProductCard({ product, onInquiry }) {
         </div>
         
         <div className="mt-auto pt-3 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <span className="font-syne font-black text-base sm:text-lg text-ink">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-baseline gap-0.5">
+              <span className="font-syne font-black text-base sm:text-lg lg:text-xl text-ink">
                 ₹{product.price}
               </span>
-              <span className="text-[9px] text-gray-400 font-bold uppercase ml-1">
+              <span className="text-[9px] sm:text-[10px] text-gray-400 font-bold uppercase ml-0.5">
                 /{product.unit}
               </span>
             </div>
-            <span className="text-[9px] text-gray-400 font-bold whitespace-nowrap">Min. {product.min_order}kg</span>
+            <span className="text-[9px] sm:text-[10px] text-gray-400 font-bold whitespace-nowrap bg-surface px-1.5 py-0.5 rounded">Min. {product.min_order}kg</span>
           </div>
 
           {/* Buttons */}

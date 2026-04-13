@@ -90,3 +90,9 @@ export const fetchInquiriesAdmin = async (page = 1, limit = 10) => {
   const response = await API.get(`/admin/inquiries?page=${page}&limit=${limit}`);
   return response.data;
 };
+
+export const fetchLeadRecommendations = async (id) => {
+  const response = await API.get(`/admin/inquiries/${id}/recommendations`);
+  return response.data;
+};
+
