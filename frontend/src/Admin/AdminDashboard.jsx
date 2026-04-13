@@ -29,6 +29,7 @@ import {
 } from "../services/adminServices";
 import Pagination from "../components/ui/Pagination";
 import { useNotification } from "../context/NotificationContext";
+import { API_BASE_URL } from "../services/api";
 
 export default function AdminDashboard() {
   const [searchParams] = useSearchParams();
@@ -311,7 +312,7 @@ export default function AdminDashboard() {
                                     <>
                                       {seller.gst_certificate && (
                                         <button 
-                                          onClick={() => window.open(`http://localhost:5000/${seller.gst_certificate}`, '_blank')}
+                                          onClick={() => window.open(`${API_BASE_URL}/${seller.gst_certificate}`, '_blank')}
                                           className="p-2.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl transition-all"
                                           title="View GST Certificate"
                                         >
@@ -457,7 +458,7 @@ export default function AdminDashboard() {
                               <div className="flex items-center justify-end gap-2">
                                 {seller.gst_certificate && (
                                   <button 
-                                    onClick={() => window.open(`http://localhost:5000/${seller.gst_certificate}`, '_blank')}
+                                    onClick={() => window.open(`${API_BASE_URL}/${seller.gst_certificate}`, '_blank')}
                                     className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl transition-all"
                                     title="View GST Certificate"
                                   >
