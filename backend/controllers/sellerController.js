@@ -17,7 +17,9 @@ export const getSellerProfile = async (req, res) => {
     const [rows] = await pool.query(query, [userId]);
 
     if (rows.length === 0) {
-      return res.status(404).json({ success: false, message: "Seller profile not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Seller profile not found." });
     }
 
     const seller = rows[0];
@@ -28,7 +30,9 @@ export const getSellerProfile = async (req, res) => {
       user_id: seller.user_id,
       uid: seller.seller_uid || "PB-S-PENDING",
       businessName: seller.company_name || "",
-      businessType: seller.business_type ? seller.business_type.split(',').map(s => s.trim()) : [],
+      businessType: seller.business_type
+        ? seller.business_type.split(",").map((s) => s.trim())
+        : [],
       gstNumber: seller.gst_number || "",
       yearEstablished: seller.year_established || "",
       ownerName: seller.ownerName || "",
@@ -37,13 +41,17 @@ export const getSellerProfile = async (req, res) => {
       city: seller.city || "",
       state: seller.state || "",
       address: seller.business_address || "",
-      filmTypes: seller.products_offered ? seller.products_offered.split(',').map(s => s.trim()) : [],
+      filmTypes: seller.products_offered
+        ? seller.products_offered.split(",").map((s) => s.trim())
+        : [],
       monthlyCapacity: seller.monthly_capacity || "",
       priceRange: seller.price_range || "",
       description: seller.description || "",
       status: seller.is_verified ? "active" : "pending",
       joinedDate: seller.joinedDate,
-      avatar: seller.company_name ? seller.company_name.substring(0, 2).toUpperCase() : "SL",
+      avatar: seller.company_name
+        ? seller.company_name.substring(0, 2).toUpperCase()
+        : "SL",
     };
 
     res.status(200).json({ success: true, data: frontendSellerInfo });
@@ -63,11 +71,14 @@ export const getSellerProducts = async (req, res) => {
 
     // First fetch sellers.id
     const [sellerRows] = await pool.query(
-      "SELECT id FROM sellers WHERE user_id = ?", [userId]
+      "SELECT id FROM sellers WHERE user_id = ?",
+      [userId],
     );
 
     if (sellerRows.length === 0) {
-      return res.status(200).json({ success: true, data: [], totalCount: 0, totalPages: 0 });
+      return res
+        .status(200)
+        .json({ success: true, data: [], totalCount: 0, totalPages: 0 });
     }
 
     const sellerId = sellerRows[0].id;
@@ -86,16 +97,19 @@ export const getSellerProducts = async (req, res) => {
     `;
 
     const [rows] = await pool.query(query, [sellerId, limit, offset]);
-    
-    // Total count for pagination
-    const [[{ total }]] = await pool.query("SELECT COUNT(*) as total FROM products WHERE seller_id = ?", [sellerId]);
 
-    res.status(200).json({ 
-      success: true, 
+    // Total count for pagination
+    const [[{ total }]] = await pool.query(
+      "SELECT COUNT(*) as total FROM products WHERE seller_id = ?",
+      [sellerId],
+    );
+
+    res.status(200).json({
+      success: true,
       data: rows,
       totalCount: total,
       totalPages: Math.ceil(total / limit),
-      currentPage: page
+      currentPage: page,
     });
   } catch (error) {
     console.error("Error in getSellerProducts:", error);
@@ -113,11 +127,14 @@ export const getSellerOrders = async (req, res) => {
 
     // Get seller_id
     const [sellerRows] = await pool.query(
-      "SELECT id FROM sellers WHERE user_id = ?", [userId]
+      "SELECT id FROM sellers WHERE user_id = ?",
+      [userId],
     );
 
     if (sellerRows.length === 0) {
-      return res.status(200).json({ success: true, data: [], totalCount: 0, totalPages: 0 });
+      return res
+        .status(200)
+        .json({ success: true, data: [], totalCount: 0, totalPages: 0 });
     }
 
     const sellerId = sellerRows[0].id;
@@ -151,21 +168,24 @@ export const getSellerOrders = async (req, res) => {
 
     const [rows] = await pool.query(query, [userId, limit, offset]);
 
-    const [[{ total }]] = await pool.query(`
+    const [[{ total }]] = await pool.query(
+      `
       SELECT COUNT(DISTINCT o.id) as total 
       FROM orders o
       JOIN order_items oi ON o.id = oi.order_id
       JOIN products p ON oi.product_id = p.id
       JOIN sellers s ON p.seller_id = s.id
       WHERE s.user_id = ?
-    `, [userId]);
+    `,
+      [userId],
+    );
 
-    res.status(200).json({ 
-      success: true, 
+    res.status(200).json({
+      success: true,
       data: rows,
       totalCount: total,
       totalPages: Math.ceil(total / limit),
-      currentPage: page
+      currentPage: page,
     });
   } catch (error) {
     console.error("Error in getSellerOrders:", error);
@@ -177,22 +197,22 @@ export const getSellerOrders = async (req, res) => {
 export const createProduct = async (req, res) => {
   try {
     const userId = req.user.id;
-    
+
     // First get seller_id from user_id
     const [sellerRows] = await pool.query(
       "SELECT id FROM sellers WHERE user_id = ?",
-      [userId]
+      [userId],
     );
-    
+
     if (sellerRows.length === 0) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "Seller profile not found" 
+      return res.status(404).json({
+        success: false,
+        message: "Seller profile not found",
       });
     }
-    
+
     const sellerId = sellerRows[0].id;
-    
+
     const {
       name,
       category,
@@ -214,24 +234,24 @@ export const createProduct = async (req, res) => {
       `SELECT sc.id FROM sub_categories sc 
        JOIN categories c ON sc.category_id = c.id 
        WHERE sc.name = ? AND c.name = ?`,
-      [subcategory, category]
+      [subcategory, category],
     );
-    
+
     if (subCatRows.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Invalid category/subcategory combination" 
+      return res.status(400).json({
+        success: false,
+        message: "Invalid category/subcategory combination",
       });
     }
-    
+
     const subCategoryId = subCatRows[0].id;
-    
+
     // Get tag_id if tag exists
     let tagId = null;
     if (tag && tag !== "") {
       const [tagRows] = await pool.query(
         "SELECT id FROM tags WHERE tag_name = ?",
-        [tag]
+        [tag],
       );
       if (tagRows.length > 0) {
         tagId = tagRows[0].id;
@@ -254,8 +274,8 @@ export const createProduct = async (req, res) => {
         price,
         unit,
         description,
-        img
-      ]
+        img,
+      ],
     );
 
     const productId = productResult.insertId;
@@ -264,31 +284,26 @@ export const createProduct = async (req, res) => {
     await pool.query(
       `INSERT INTO product_stocks (product_id, quantity, min_order) 
        VALUES (?, ?, ?)`,
-      [productId, stock, minOrder]
+      [productId, stock, minOrder],
     );
 
-    // Insert applications if you have an applications table
-    // If not, you might want to store them as JSON or comma-separated
-    if (applications && applications.length > 0) {
-      // Option 1: Store as JSON in products table (add a column)
-      await pool.query(
-        "UPDATE products SET applications = ? WHERE id = ?",
-        [JSON.stringify(applications), productId]
-      );
-    }
+    // Insert applications (always store, even if empty)
+    await pool.query("UPDATE products SET applications = ? WHERE id = ?", [
+      JSON.stringify(applications || []),
+      productId,
+    ]);
 
-    res.status(201).json({ 
-      success: true, 
+    res.status(201).json({
+      success: true,
       message: "Product created successfully",
-      productId: productId
+      productId: productId,
     });
-
   } catch (error) {
     console.error("Error in createProduct:", error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: "Server Error",
-      error: error.message 
+      error: error.message,
     });
   }
 };
@@ -298,19 +313,19 @@ export const updateProduct = async (req, res) => {
   try {
     const userId = req.user.id;
     const productId = req.params.id;
-    
+
     // Verify product belongs to this seller
     const [checkRows] = await pool.query(
       `SELECT p.id FROM products p
        JOIN sellers s ON p.seller_id = s.id
        WHERE p.id = ? AND s.user_id = ?`,
-      [productId, userId]
+      [productId, userId],
     );
-    
+
     if (checkRows.length === 0) {
-      return res.status(403).json({ 
-        success: false, 
-        message: "Unauthorized or product not found" 
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized or product not found",
       });
     }
 
@@ -335,17 +350,17 @@ export const updateProduct = async (req, res) => {
       `SELECT sc.id FROM sub_categories sc 
        JOIN categories c ON sc.category_id = c.id 
        WHERE sc.name = ? AND c.name = ?`,
-      [subcategory, category]
+      [subcategory, category],
     );
-    
+
     const subCategoryId = subCatRows[0]?.id;
-    
+
     // Get tag_id
     let tagId = null;
     if (tag && tag !== "") {
       const [tagRows] = await pool.query(
         "SELECT id FROM tags WHERE tag_name = ?",
-        [tag]
+        [tag],
       );
       tagId = tagRows[0]?.id || null;
     }
@@ -356,8 +371,18 @@ export const updateProduct = async (req, res) => {
        SET sub_category_id = ?, tag_id = ?, name = ?, thickness = ?, 
            width = ?, price = ?, unit = ?, description = ?, image_url = ?
        WHERE id = ?`,
-      [subCategoryId, tagId, name, thickness, width, price, unit, 
-       description, img, productId]
+      [
+        subCategoryId,
+        tagId,
+        name,
+        thickness,
+        width,
+        price,
+        unit,
+        description,
+        img,
+        productId,
+      ],
     );
 
     // Update stock
@@ -365,28 +390,25 @@ export const updateProduct = async (req, res) => {
       `UPDATE product_stocks 
        SET quantity = ?, min_order = ? 
        WHERE product_id = ?`,
-      [stock, minOrder, productId]
+      [stock, minOrder, productId],
     );
 
-    // Update applications
-    if (applications && applications.length > 0) {
-      await pool.query(
-        "UPDATE products SET applications = ? WHERE id = ?",
-        [JSON.stringify(applications), productId]
-      );
-    }
+    // Update applications (always update, even if empty)
+    await pool.query("UPDATE products SET applications = ? WHERE id = ?", [
+      JSON.stringify(applications || []),
+      productId,
+    ]);
 
-    res.status(200).json({ 
-      success: true, 
-      message: "Product updated successfully" 
+    res.status(200).json({
+      success: true,
+      message: "Product updated successfully",
     });
-
   } catch (error) {
     console.error("Error in updateProduct:", error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: "Server Error",
-      error: error.message 
+      error: error.message,
     });
   }
 };
@@ -399,23 +421,47 @@ export const updateSellerProfile = async (req, res) => {
     const userId = req.user.id;
 
     const {
-      businessName, businessType, gstNumber, yearEstablished,
-      city, state, address, filmTypes, monthlyCapacity, 
-      priceRange, description, phone, ownerName, email // Added ownerName and email
+      businessName,
+      businessType,
+      gstNumber,
+      yearEstablished,
+      city,
+      state,
+      address,
+      filmTypes,
+      monthlyCapacity,
+      priceRange,
+      description,
+      phone,
+      ownerName,
+      email, // Added ownerName and email
     } = req.body;
 
     // Basic Validation
     if (gstNumber && !validateGST(gstNumber)) {
       await connection.rollback();
-      return res.status(400).json({ success: false, message: "Invalid GST number format (15 characters required)." });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Invalid GST number format (15 characters required).",
+        });
     }
     if (phone && !validateMobile(phone)) {
       await connection.rollback();
-      return res.status(400).json({ success: false, message: "Invalid mobile number (10 digits required)." });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Invalid mobile number (10 digits required).",
+        });
     }
 
-    const businessTypeString = Array.isArray(businessType) ? businessType.join(", ") : businessType;
-    const productIdsString = filmTypes?.length > 0 ? filmTypes.join(", ") : null;
+    const businessTypeString = Array.isArray(businessType)
+      ? businessType.join(", ")
+      : businessType;
+    const productIdsString =
+      filmTypes?.length > 0 ? filmTypes.join(", ") : null;
 
     // 1. Update SELLERS Table
     await connection.query(
@@ -424,9 +470,21 @@ export const updateSellerProfile = async (req, res) => {
        city=?, state=?, business_address=?, monthly_capacity=?, 
        price_range=?, description=?, products_offered=?, mobile=?
        WHERE user_id=?`,
-      [businessName, businessTypeString, gstNumber, yearEstablished || null,
-       city, state, address, monthlyCapacity, priceRange, 
-       description, productIdsString, phone || null, userId]
+      [
+        businessName,
+        businessTypeString,
+        gstNumber,
+        yearEstablished || null,
+        city,
+        state,
+        address,
+        monthlyCapacity,
+        priceRange,
+        description,
+        productIdsString,
+        phone || null,
+        userId,
+      ],
     );
 
     // 2. Update USERS Table (for name, email, mobile)
@@ -450,16 +508,20 @@ export const updateSellerProfile = async (req, res) => {
       userUpdateValues.push(userId);
       await connection.query(
         `UPDATE users SET ${userUpdateFields.join(", ")} WHERE id = ?`,
-        userUpdateValues
+        userUpdateValues,
       );
     }
 
     await connection.commit();
-    res.status(200).json({ success: true, message: "Profile updated successfully" });
+    res
+      .status(200)
+      .json({ success: true, message: "Profile updated successfully" });
   } catch (error) {
     if (connection) await connection.rollback();
     console.error("Error in updateSellerProfile:", error);
-    res.status(500).json({ success: false, message: "Server Error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server Error", error: error.message });
   } finally {
     if (connection) connection.release();
   }
@@ -479,27 +541,38 @@ export const deleteProduct = async (req, res) => {
       `SELECT p.id FROM products p
        JOIN sellers s ON p.seller_id = s.id
        WHERE p.id = ? AND s.user_id = ?`,
-      [id, userId]
+      [id, userId],
     );
 
     if (checkRows.length === 0) {
       await connection.rollback();
-      return res.status(403).json({ success: false, message: "Unauthorized or product not found" });
+      return res
+        .status(403)
+        .json({ success: false, message: "Unauthorized or product not found" });
     }
 
     // Delete associated stock
-    await connection.query("DELETE FROM product_stocks WHERE product_id = ?", [id]);
-    
+    await connection.query("DELETE FROM product_stocks WHERE product_id = ?", [
+      id,
+    ]);
+
     // Delete product
-    const [result] = await connection.query("DELETE FROM products WHERE id = ?", [id]);
+    const [result] = await connection.query(
+      "DELETE FROM products WHERE id = ?",
+      [id],
+    );
 
     if (result.affectedRows === 0) {
       await connection.rollback();
-      return res.status(404).json({ success: false, message: "Product not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found." });
     }
 
     await connection.commit();
-    res.status(200).json({ success: true, message: "Product deleted successfully." });
+    res
+      .status(200)
+      .json({ success: true, message: "Product deleted successfully." });
   } catch (error) {
     await connection.rollback();
     console.error("Error in deleteProduct:", error);

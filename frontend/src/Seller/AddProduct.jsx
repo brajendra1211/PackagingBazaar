@@ -11,7 +11,10 @@ import {
   Plus,
   X,
 } from "lucide-react";
-import {createSellerProduct, updateSellerProduct} from "../services/sellerServices"
+import {
+  createSellerProduct,
+  updateSellerProduct,
+} from "../services/sellerServices";
 import { fetchUniqueProductNames } from "../services/productServices";
 import { useNotification } from "../context/NotificationContext";
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -190,7 +193,11 @@ export default function AddProduct() {
     stock: editProduct?.stock || "",
     // Step 3 - Applications + Description
     description: editProduct?.description || "",
-    applications: editProduct?.applications || [],
+    applications: editProduct?.applications
+      ? typeof editProduct.applications === "string"
+        ? JSON.parse(editProduct.applications)
+        : editProduct.applications
+      : [],
     img: editProduct?.img || "",
     color: editProduct?.color || "#e8f5e9",
   });
@@ -212,7 +219,10 @@ export default function AddProduct() {
 
     // Close suggestions on outside click
     const handleClickOutside = (event) => {
-      if (suggestionRef.current && !suggestionRef.current.contains(event.target)) {
+      if (
+        suggestionRef.current &&
+        !suggestionRef.current.contains(event.target)
+      ) {
         setShowSuggestions(false);
       }
     };
@@ -220,9 +230,10 @@ export default function AddProduct() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const filteredSuggestions = existingNames.filter(name => 
-    name.toLowerCase().includes(form.name.toLowerCase()) && 
-    name.toLowerCase() !== form.name.toLowerCase()
+  const filteredSuggestions = existingNames.filter(
+    (name) =>
+      name.toLowerCase().includes(form.name.toLowerCase()) &&
+      name.toLowerCase() !== form.name.toLowerCase(),
   );
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
@@ -240,44 +251,50 @@ export default function AddProduct() {
       form.applications.filter((a) => a !== app),
     );
 
-const handleSubmit = async () => {
-  try {
-    const isVerified = localStorage.getItem("is_verified");
-    if (isVerified === "0") {
-      notifyError("Your account is pending admin verification. You can add products once your account is verified.");
-      return;
-    }
-    const productData = {
-      name: form.name,
-      category: form.category,
-      subcategory: form.subcategory,
-      tag: form.tag,
-      thickness: form.thickness,
-      width: form.width,
-      price: parseFloat(form.price),
-      unit: form.unit,
-      minOrder: parseInt(form.minOrder),
-      stock: parseInt(form.stock),
-      description: form.description,
-      applications: form.applications,
-      img: form.img,
-    };
+  const handleSubmit = async () => {
+    try {
+      const isVerified = localStorage.getItem("is_verified");
+      if (isVerified === "0") {
+        notifyError(
+          "Your account is pending admin verification. You can add products once your account is verified.",
+        );
+        return;
+      }
+      const productData = {
+        name: form.name,
+        category: form.category,
+        subcategory: form.subcategory,
+        tag: form.tag,
+        thickness: form.thickness,
+        width: form.width,
+        price: parseFloat(form.price),
+        unit: form.unit,
+        minOrder: parseInt(form.minOrder),
+        stock: parseInt(form.stock),
+        description: form.description,
+        applications: form.applications,
+        img: form.img,
+      };
 
-    if (isEdit) {
-      // Update existing product
-      await updateSellerProduct(editProduct.id, productData);
-    } else {
-      // Create new product
-      await createSellerProduct(productData);
-    }
+      if (isEdit) {
+        // Update existing product
+        await updateSellerProduct(editProduct.id, productData);
+      } else {
+        // Create new product
+        await createSellerProduct(productData);
+      }
 
-    notifySuccess(isEdit ? "Product updated successfully!" : "Product listed successfully!");
-    setSubmitted(true);
-  } catch (error) {
-    console.error("Error saving product:", error);
-    notifyError("Failed to save product. Please try again.");
-  }
-};
+      notifySuccess(
+        isEdit
+          ? "Product updated successfully!"
+          : "Product listed successfully!",
+      );
+      setSubmitted(true);
+    } catch (error) {
+      console.error("Error saving product:", error);
+      notifyError("Failed to save product. Please try again.");
+    }
+  };
   // ── Success Screen ─────────────────────────────────────────────────────────
   if (submitted) {
     return (
@@ -462,19 +479,19 @@ const handleSubmit = async () => {
                         />
                         {showSuggestions && filteredSuggestions.length > 0 && (
                           <div className="absolute z-50 w-full mt-1 bg-white border border-black/[0.08] rounded-xl shadow-xl max-h-48 overflow-y-auto overflow-x-hidden py-2">
-                             {filteredSuggestions.map((name, i) => (
-                               <button
-                                 key={i}
-                                 type="button"
-                                 onClick={() => {
-                                   set("name", name);
-                                   setShowSuggestions(false);
-                                 }}
-                                 className="w-full px-4 py-2 text-left text-sm text-ink hover:bg-surface hover:text-accent transition-colors"
-                               >
-                                 {name}
-                               </button>
-                             ))}
+                            {filteredSuggestions.map((name, i) => (
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={() => {
+                                  set("name", name);
+                                  setShowSuggestions(false);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm text-ink hover:bg-surface hover:text-accent transition-colors"
+                              >
+                                {name}
+                              </button>
+                            ))}
                           </div>
                         )}
                       </div>
