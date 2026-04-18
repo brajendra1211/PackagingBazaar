@@ -13,10 +13,13 @@ export function SellerDashboard() {
 
   return (
     <div className="">
-      <div className="mb-6">
-        <h2 className="text-xl font-black text-gray-900 ">Dashboard Overview</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-black text-gray-900">Dashboard Overview</h2>
+          {seller.status === 'hold' && (
+            <span className="bg-orange-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded animate-pulse">Account On Hold</span>
+          )}
+        </div>
         <p className="text-sm text-gray-500 mt-0.5">Welcome back, {seller.ownerName.split(" ")[0]}!</p>
-      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6 gap-4">
         <StatCard icon="package" value={PRODUCTS.length} label="Total Products" sub={`${PRODUCTS.filter(p => p.status === "active").length} active`} color="orange" />
@@ -153,21 +156,11 @@ export function SellerProducts() {
                   </div>
                   <div className="flex gap-1.5">
                     <button 
-                      onClick={() => navigate("/seller/add-product", { 
-                        state: { 
-                          product: {
-                            ...p,
-                            category: p.category_name,
-                            subcategory: p.subcategory_name,
-                            minOrder: p.min_order,
-                            img: p.image_url
-                          } 
-                        } 
-                      })} 
+                      onClick={() => window.open(`https://wa.me/919540248705?text=Hello%20Admin,%20I%20want%20to%20edit%20product:%20${p.name}%20(ID:%20${p.id})`, "_blank")} 
                       className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:border-[#e8511a] hover:text-[#e8511a] transition-colors"
-                      title="Edit Product"
+                      title="Edit Product (WhatsApp)"
                     >
-                      <Icon d={icons.edit} size={13} />
+                      <Icon d={icons.phone} size={13} />
                     </button>
                     <button 
                       onClick={() => handleDelete(p.id, p.name)}
@@ -342,8 +335,22 @@ export function SellerProfile() {
           </div>
           <div className="text-white/60 text-sm mt-0.5">{seller.city}, {seller.state}</div>
           <div className="flex items-center gap-2 mt-2 flex-wrap">
-            <span className="flex items-center gap-1.5 text-xs bg-green-500/20 text-green-400 border border-green-500/30 px-2.5 py-1 rounded-full font-semibold">
-              <Icon d={icons.shield} size={10} stroke="#4ade80" /> Verified Seller
+            <span className={`flex items-center gap-1.5 text-xs border px-2.5 py-1 rounded-full font-semibold ${
+              seller.status === 'verified' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
+              seller.status === 'hold' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
+              'bg-white/10 text-white/40 border-white/5'
+            }`}>
+              {seller.status === 'verified' ? (
+                <>
+                  <Icon d={icons.shield} size={10} stroke="#4ade80" /> Verified Seller
+                </>
+              ) : seller.status === 'hold' ? (
+                <>
+                  <Icon d={icons.star} size={10} stroke="#fb923c" /> Account on Hold
+                </>
+              ) : (
+                ' Verification Pending'
+              )}
             </span>
             <span className="text-xs text-white/40">Since {seller.joinedDate}</span>
           </div>

@@ -331,11 +331,17 @@ export default function ProductDetailPage() {
               </div>
 
               <div className="border-t border-black/[0.07] pt-5">
-                <div className="flex items-baseline gap-2 mb-3">
-                  <span className="font-syne font-black text-3xl text-accent">
-                    ₹{product.price}
-                  </span>
-                  <span className="text-ink3 text-[11px] font-medium">
+                <div className="flex flex-col mb-4">
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-syne font-black text-3xl text-accent">
+                      ₹{product.min_price}
+                    </span>
+                    <span className="text-gray-400 font-bold">-</span>
+                    <span className="font-syne font-black text-3xl text-accent">
+                      ₹{product.max_price}
+                    </span>
+                  </div>
+                  <span className="text-ink3 text-[11px] font-medium mt-1">
                     / {product.unit} (Min {product.min_order} {product.unit})
                   </span>
                 </div>
@@ -436,7 +442,7 @@ export default function ProductDetailPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-accent font-black text-xs">₹{v.price}</p>
+                    <p className="text-accent font-black text-xs">₹{v.min_price} - ₹{v.max_price}</p>
                     <p className="text-[8px] text-gray-400 font-bold">
                       In Stock
                     </p>

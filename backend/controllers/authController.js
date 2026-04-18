@@ -132,8 +132,8 @@ export const registerSeller = async (req, res) => {
 
     await connection.query(
       `INSERT INTO sellers 
-      (user_id, \`mobile\`, seller_uid, company_name, business_type, gst_number, gst_certificate, year_established, city, state, pincode, business_address, monthly_capacity, price_range, description, products_offered) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (user_id, \`mobile\`, status, seller_uid, company_name, business_type, gst_number, gst_certificate, year_established, city, state, pincode, business_address, monthly_capacity, price_range, description, products_offered) 
+      VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId, 
         mobile ? String(mobile).trim() : null, 

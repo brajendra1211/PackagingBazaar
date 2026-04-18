@@ -1,14 +1,15 @@
 import express from "express";
 import { 
-  getPendingSellers, approveSeller, rejectSeller, 
+  getPendingSellers, rejectSeller, 
   getAllSellers, getAllUsers, updateUser, deleteUser,
   getAllProductsAdmin, getDashboardStats, getAllOrdersAdmin,
   getUserOrdersAdmin, getSellerOrdersAdmin, getSellerProductsAdmin,
   getSellersWithOrdersAdmin, getAllInquiriesAdmin, toggleHotDeal,
-  getRecommendedSellers
+  getRecommendedSellers, addProductForSeller, uploadImage, updateSellerStatus
 } from "../controllers/adminController.js";
 import { deleteProduct } from "../controllers/productController.js";
 import { verifyToken, isAdmin } from "../middlewares/authMiddleware.js";
+import upload from "../middlewares/uploadMiddleware.js";
 
 const router = express.Router();
 
@@ -24,13 +25,15 @@ router.delete("/users/:id", verifyToken, isAdmin, deleteUser);
 router.get("/sellers/all", verifyToken, isAdmin, getAllSellers);
 router.get("/sellers/pending", verifyToken, isAdmin, getPendingSellers);
 router.get("/sellers/with-orders", verifyToken, isAdmin, getSellersWithOrdersAdmin);
-router.put("/sellers/:id/approve", verifyToken, isAdmin, approveSeller);
+router.put("/sellers/:id/status", verifyToken, isAdmin, updateSellerStatus);
 router.delete("/sellers/:id/reject", verifyToken, isAdmin, rejectSeller);
 
 // --- Product Management ---
 router.get("/products/all", verifyToken, isAdmin, getAllProductsAdmin);
 router.get("/products/seller/:sellerId", verifyToken, isAdmin, getSellerProductsAdmin);
 router.patch("/products/:id/hot-deal", verifyToken, isAdmin, toggleHotDeal);
+router.post("/products/seller/:sellerUserId", verifyToken, isAdmin, addProductForSeller);
+router.post('/upload-image', verifyToken, isAdmin, upload.single('product_image'), uploadImage);
 router.delete("/products/:id", verifyToken, isAdmin, deleteProduct);
 
 // --- Sales Management ---

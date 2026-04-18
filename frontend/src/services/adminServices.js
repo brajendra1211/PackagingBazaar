@@ -33,8 +33,8 @@ export const fetchPendingSellers = async (page = 1, limit = 10) => {
   return response.data;
 };
 
-export const approveSellerAccount = async (id) => {
-  const response = await API.put(`/admin/sellers/${id}/approve`);
+export const updateSellerStatus = async (id, status) => {
+  const response = await API.put(`/admin/sellers/${id}/status`, { status });
   return response.data;
 };
 
@@ -96,3 +96,16 @@ export const fetchLeadRecommendations = async (id) => {
   return response.data;
 };
 
+export const addProductForSeller = async (sellerUserId, productData) => {
+  const response = await API.post(`/admin/products/seller/${sellerUserId}`, productData);
+  return response.data;
+};
+
+export const uploadProductImage = async (file) => {
+  const formData = new FormData();
+  formData.append('product_image', file);
+  const response = await API.post(`/admin/upload-image`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};

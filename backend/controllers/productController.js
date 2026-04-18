@@ -75,8 +75,8 @@ export const getAllProducts = async (req, res) => {
     `;
 
     // Sorting
-    if (sort === "price_low") dataQuery += ` ORDER BY p.price ASC`;
-    else if (sort === "price_high") dataQuery += ` ORDER BY p.price DESC`;
+    if (sort === "price_low") dataQuery += ` ORDER BY p.min_price ASC`;
+    else if (sort === "price_high") dataQuery += ` ORDER BY p.min_price DESC`;
     else if (sort === "highest_rated") dataQuery += ` ORDER BY avg_rating DESC`;
     else dataQuery += ` ORDER BY p.id ASC`;
 
@@ -173,7 +173,7 @@ export const getProductVariants = async (req, res) => {
 
     // Fetch other products in same subcategory
     const [variants] = await pool.query(
-      `SELECT id, name, thickness, width, price, image_url 
+      `SELECT id, name, thickness, width, min_price, max_price, image_url 
        FROM products 
        WHERE sub_category_id = ? AND id != ?
        LIMIT 10`,
@@ -227,7 +227,8 @@ export const addProduct = async (req, res) => {
       tag_id,
       thickness,
       width,
-      price,
+      minPrice,
+      maxPrice,
       unit,
       min_order,
       stock,
@@ -258,8 +259,8 @@ export const addProduct = async (req, res) => {
     // 1. Insert into products
     const [productResult] = await connection.query(
       `INSERT INTO products 
-      (name, sub_category_id, tag_id, seller_id, thickness, width, price, unit, description, image_url) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (name, sub_category_id, tag_id, seller_id, thickness, width, min_price, max_price, unit, description, image_url) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         name,
         sub_category_id,
@@ -267,7 +268,8 @@ export const addProduct = async (req, res) => {
         seller_id,
         thickness,
         width,
-        price,
+        minPrice,
+        maxPrice,
         unit,
         description,
         image_url,
@@ -318,7 +320,7 @@ export const addProduct = async (req, res) => {
 // 5. Update Product (Seller/Admin Only)
 export const updateProduct = async (req, res) => {
   const { id } = req.params;
-  const { name, price, stock, description, image_url } = req.body;
+  const { name, minPrice, maxPrice, stock, description, image_url } = req.body;
   const userId = req.user.id;
   const role = req.user.role;
 
@@ -342,8 +344,8 @@ export const updateProduct = async (req, res) => {
     }
 
     await pool.query(
-      "UPDATE products SET name=?, price=?, description=?, image_url=? WHERE id=?",
-      [name, price, description, image_url, id],
+      "UPDATE products SET name=?, min_price=?, max_price=?, description=?, image_url=? WHERE id=?",
+      [name, minPrice, maxPrice, description, image_url, id],
     );
 
     // Stock update (product_stocks table)

@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { 
   Users, Store, ShoppingBag, TrendingUp, AlertCircle, 
   CheckCircle2, XCircle, Search, Filter, Mail, Phone, 
   MapPin, Clock, ArrowUpRight, MoreVertical, LayoutDashboard,
   HardDrive, Database, Settings, RefreshCcw, Download,
-  ChevronLeft, ChevronRight, Inbox, MessageSquare, Zap, FileText, Send
+  ChevronLeft, ChevronRight, Inbox, MessageSquare, Zap, FileText, Send,
+  Plus, Tag, Layers, Package, Image as ImageIcon
 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -12,7 +13,7 @@ import {
   fetchDashboardStats, 
   fetchAllSellers, 
   fetchPendingSellers, 
-  approveSellerAccount, 
+  updateSellerStatus, 
   rejectSellerAccount,
   fetchAllUsers,
   updateUserAccount,
@@ -25,11 +26,28 @@ import {
   fetchSellerProductsAdmin,
   fetchSellerOrdersAdmin,
   toggleHotDealAdmin,
-  fetchLeadRecommendations
+  fetchLeadRecommendations,
+  addProductForSeller,
+  uploadProductImage
 } from "../services/adminServices";
+import { fetchAllSellers as fetchAllSellersStatic } from "../services/adminServices"; // Re-importing to use in picker without pagination conflicts if needed
 import Pagination from "../components/ui/Pagination";
 import { useNotification } from "../context/NotificationContext";
 import { API_BASE_URL } from "../services/api";
+
+const CATEGORIES = ["BOPP", "PET", "CPP", "LAMINATED"];
+const SUBCATEGORIES = {
+  BOPP: ["Transparent", "Pearl", "Matte", "Thermal", "Holographic", "Opaque", "Metalized", "Cold Seal", "Anti-fog", "Shrink", "Barrier", "Printable", "Soft Touch", "Woven", "Other"],
+  PET: ["Clear", "Metalized", "Matte", "White", "TTO", "Shrink", "Release", "Barrier", "Antistatic", "Printable", "UV Block", "Laminate", "Retort", "Other"],
+  CPP: ["Transparent", "Matte", "Metalized", "White", "Retort", "Pearl", "Low Seal", "Anti-fog", "Barrier", "Shrink", "Blister", "Soft Pack", "Printable", "Cold Chain", "Lamination", "Premium", "Other"],
+  LAMINATED: ["BOPP-PET", "PET-CPP", "PET-BOPP", "PET-PE", "BOPP-CPP", "3 Layer", "High Barrier", "BOPP-PE", "Retort", "Foil Laminate", "Other"]
+};
+const TAGS = ["", "bestseller", "trending", "featured", "new", "premium"];
+const UNITS = ["kg", "meter", "roll"];
+const COMMON_APPLICATIONS = ["Food packaging", "Retail wrap", "Label stock", "Chocolate wrap", "Gift packaging", "Bakery", "Snack packaging", "Chips", "Namkeen", "Pharma", "Cosmetics", "Garments", "Textiles", "Dairy", "Beverages", "Frozen food", "Retort pouches", "Vacuum packs", "Flexible packaging"];
+const STEPS = ["Seller", "Basic Info", "Specifications", "Applications", "Preview"];
+
+const inputCls = "w-full px-4 py-2.5 text-sm border border-black/[0.1] rounded-xl bg-surface focus:outline-none focus:border-accent transition-colors text-ink placeholder:text-ink3";
 
 export default function AdminDashboard() {
   const [searchParams] = useSearchParams();
@@ -44,6 +62,7 @@ export default function AdminDashboard() {
     orders: { title: "Sales Orders", desc: "Monitor all transactions and order fulfillment statuses in real-time." },
     inquiries: { title: "Business Leads", desc: "Tracking all buyer inquiries and procurement requests." },
     "seller-hub": { title: "Seller Hub", desc: "Performance analytics and deep-dive into individual seller operations." },
+    "add-product": { title: "Add Seller Product", desc: "List new products on behalf of verified marketplace sellers." },
   };
 
   const currentTab = TAB_INFO[activeTab] || TAB_INFO.overview;
@@ -57,14 +76,34 @@ export default function AdminDashboard() {
     totalInquiries: 0
   });
   const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [search, setSearch] = useState("");
+  const [selectedEntity, setSelectedEntity] = useState(null);
   const { notifySuccess, notifyError } = useNotification();
 
-  // Secondary views (e.g., viewing a specific seller's products)
-  const [selectedEntity, setSelectedEntity] = useState(null);
+  // Add Product State
+  const [allVerifiedSellers, setAllVerifiedSellers] = useState([]);
+  const [selectedSeller, setSelectedSeller] = useState(null);
+  const [productSubmitted, setProductSubmitted] = useState(false);
+  const [formStep, setFormStep] = useState(0);
+  const [form, setForm] = useState({
+    name: "", category: "BOPP", subcategory: "", tag: "",
+    thickness: "", width: "", minPrice: "", maxPrice: "", unit: "kg",
+    minOrder: "", stock: "", description: "", applications: [], img: ""
+  });
+
+  // Status Update Modal State
+  const [statusModal, setStatusModal] = useState({ 
+    isOpen: false, 
+    userId: null, 
+    newStatus: '', 
+    message: '', 
+    mobile: '' 
+  });
 
   useEffect(() => {
     loadDashboardStats();
@@ -119,6 +158,11 @@ export default function AdminDashboard() {
           res = await fetchSellersWithOrdersAdmin(page);
           setData(res.sellers);
           break;
+        case "add-product":
+          // Fetch all verified sellers for the picker
+          const sellersRes = await fetchAllSellersStatic(1, 1000); // Get many at once for simple picking
+          setAllVerifiedSellers(sellersRes.sellers || []);
+          break;
       }
       if (res) {
         setTotalPages(res.totalPages || 1);
@@ -131,16 +175,26 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleApproveSeller = async (id) => {
+  const handleStatusUpdate = async () => {
+    const { userId, newStatus, message, mobile } = statusModal;
+    if (!message) return notifyError("Please enter a status message for the seller");
+
     try {
-      const res = await approveSellerAccount(id);
+      const res = await updateSellerStatus(userId, newStatus);
       if (res.success) {
-        notifySuccess("Seller approved successfully");
+        notifySuccess(`Seller updated to ${newStatus}`);
+        setStatusModal({ ...statusModal, isOpen: false });
+        
+        // Notification Logic - Abstracted for future API integration
+        // Currently uses WhatsApp redirect
+        const encodedMsg = encodeURIComponent(message);
+        const waLink = `https://wa.me/${mobile}?text=${encodedMsg}`;
+        window.open(waLink, "_blank");
+        
         loadTabData(currentPage);
-        loadDashboardStats();
       }
     } catch (err) {
-      notifyError("Approval failed");
+      notifyError("Failed to update status");
     }
   };
 
@@ -149,6 +203,151 @@ export default function AdminDashboard() {
     loadTabData(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  // Add Product Handlers
+  const setFormVal = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const addApp = (app) => {
+    if (app && !form.applications.includes(app)) {
+      setFormVal("applications", [...form.applications, app]);
+    }
+  };
+  const removeApp = (app) => setFormVal("applications", form.applications.filter(a => a !== app));
+
+  const handleCreateProductByAdmin = async () => {
+    if (!selectedSeller) return notifyError("Please select a seller first");
+    
+    setLoading(true);
+    try {
+      const productData = {
+        ...form,
+        price: parseFloat(form.price),
+        minOrder: parseInt(form.minOrder),
+        stock: parseInt(form.stock)
+      };
+      
+      const res = await addProductForSeller(selectedSeller.user_id, productData);
+      if (res.success) {
+        notifySuccess("Product listed successfully for " + selectedSeller.company_name);
+        setProductSubmitted(true);
+        loadDashboardStats();
+      }
+    } catch (err) {
+      notifyError(err.response?.data?.message || "Failed to create product");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) return notifyError("File too large (max 5MB)");
+
+    setUploading(true);
+    try {
+      const res = await uploadProductImage(file);
+      if (res.success) {
+        setFormVal("img", res.imageUrl);
+        notifySuccess("Image uploaded successfully");
+      }
+    } catch (err) {
+      notifyError("Failed to upload image");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const resetForm = () => {
+    setProductSubmitted(false);
+    setFormStep(0);
+    setSelectedSeller(null);
+    setForm({
+      name: "", category: "BOPP", subcategory: "", tag: "",
+      thickness: "", width: "", price: "", unit: "kg",
+      minOrder: "", stock: "", description: "", applications: [], img: ""
+    });
+  };
+
+  const StepIndicator = ({ current }) => (
+    <div className="flex items-center justify-center gap-0 mb-10">
+      {STEPS.map((step, i) => (
+        <div key={i} className="flex items-center">
+          <div className="flex flex-col items-center gap-1.5">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all ${i < current ? "bg-accent border-accent text-white" : i === current ? "bg-white border-accent text-accent" : "bg-white border-black/10 text-ink3"}`}>
+              {i < current ? <CheckCircle2 size={14} /> : i + 1}
+            </div>
+            <span className={`text-[10px] font-semibold uppercase tracking-widest hidden sm:block ${i === current ? "text-accent" : "text-ink3"}`}>{step}</span>
+          </div>
+          {i < STEPS.length - 1 && <div className={`h-0.5 w-8 sm:w-14 mx-1 mb-4 rounded ${i < current ? "bg-accent" : "bg-black/10"}`} />}
+        </div>
+      ))}
+    </div>
+  );
+
+  const PreviewCard = () => (
+    <div className="bg-white rounded-2xl border border-black/[0.08] overflow-hidden shadow-sm sticky top-4">
+      <div className="bg-surface h-48 flex items-center justify-center relative">
+        {form.img ? (
+          <img src={form.img} alt="preview" className="w-full h-full object-cover" onError={(e) => { e.target.style.display = "none"; }} />
+        ) : (
+          <div className="text-center">
+            <ImageIcon size={32} className="text-ink3 mx-auto mb-2" />
+            <p className="text-xs text-ink3 font-medium">No image URL</p>
+          </div>
+        )}
+        {form.tag && (
+          <span className="absolute top-3 left-3 text-[10px] bg-accent text-white px-2.5 py-1 rounded-full font-black uppercase tracking-widest">
+            {form.tag}
+          </span>
+        )}
+      </div>
+      <div className="p-5">
+        <div className="text-[10px] text-accent font-black uppercase tracking-widest mb-1.5">
+          {form.category} · {form.subcategory || "Subcategory"}
+        </div>
+        <h3 className="font-syne font-black text-lg text-ink mb-1.5 uppercase leading-tight">
+          {form.name || "Product Name"}
+        </h3>
+        <p className="text-xs text-ink3 line-clamp-2 mb-4 font-medium">
+          {form.description || "No description provided yet."}
+        </p>
+        <div className="grid grid-cols-2 gap-2.5 mb-4">
+          {[
+            ["Thickness", form.thickness],
+            ["Width", form.width],
+            ["Min Order", form.minOrder ? `${form.minOrder} kg` : "—"],
+            ["Stock", form.stock ? `${form.stock} kg` : "—"],
+          ].map(([l, v]) => (
+            <div key={l} className="bg-surface rounded-xl px-3 py-2.5 border border-black/[0.03]">
+              <div className="text-[9px] font-black text-ink3 uppercase tracking-widest mb-0.5">{l}</div>
+              <div className="text-xs font-bold text-ink">{v || "—"}</div>
+            </div>
+          ))}
+        </div>
+        <div className="pt-4 border-t border-black/[0.06] flex items-baseline justify-between">
+          <div className="flex flex-col">
+            <div className="flex items-baseline gap-1.5">
+              <span className="font-syne font-black text-2xl text-accent">
+                {form.minPrice ? `₹${form.minPrice}` : "₹—"}
+              </span>
+              <span className="text-ink3 text-[10px] font-bold">-</span>
+              <span className="font-syne font-black text-2xl text-accent">
+                {form.maxPrice ? `₹${form.maxPrice}` : "₹—"}
+              </span>
+            </div>
+            <span className="text-[10px] font-bold text-ink3 mt-0.5">/ {form.unit}</span>
+          </div>
+          {selectedSeller && (
+            <div className="text-right">
+                <p className="text-[9px] font-black text-ink3 uppercase tracking-tighter">Seller</p>
+                <p className="text-[10px] font-bold text-ink truncate max-w-[80px]">{selectedSeller.company_name}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 
   const handleToggleHotDeal = async (id, currentVal) => {
     try {
@@ -301,13 +500,22 @@ export default function AdminDashboard() {
                                </div>
                             </td>
                             <td className="px-8 py-6">
-                               <div className="flex items-center gap-2 text-xs font-medium text-gray-500">
-                                  <Clock size={14} />
-                                  {new Date(seller.created_at).toLocaleDateString()}
+                               <div className="flex flex-col gap-1">
+                                  <div className="flex items-center gap-2 text-xs font-medium text-gray-500">
+                                     <Clock size={14} />
+                                     {new Date(seller.created_at).toLocaleDateString()}
+                                  </div>
+                                  <span className={`text-[10px] font-black uppercase inline-flex self-start px-2 py-0.5 rounded-full border ${
+                                    seller.status === 'verified' ? 'bg-green-50 text-green-600 border-green-100' :
+                                    seller.status === 'hold' ? 'bg-orange-50 text-orange-600 border-orange-100' :
+                                    'bg-slate-50 text-slate-500 border-slate-100'
+                                  }`}>
+                                    {seller.status || 'Pending'}
+                                  </span>
                                </div>
                             </td>
                             <td className="px-8 py-6 text-right">
-                               <div className="flex items-center justify-end gap-2 ">
+                               <div className="flex items-center justify-end gap-2">
                                   {activeTab === "pending" && (
                                     <>
                                       {seller.gst_certificate && (
@@ -320,9 +528,16 @@ export default function AdminDashboard() {
                                         </button>
                                       )}
                                       <button 
-                                        onClick={() => handleApproveSeller(seller.user_id)}
+                                        onClick={() => setStatusModal({ isOpen: true, userId: seller.user_id, newStatus: 'hold', message: `Hello ${seller.owner_name}, your application is on hold because...`, mobile: seller.mobile })}
+                                        className="p-2.5 bg-orange-50 text-orange-600 hover:bg-orange-100 rounded-xl transition-all"
+                                        title="Hold Application"
+                                      >
+                                        <Clock size={18} />
+                                      </button>
+                                      <button 
+                                        onClick={() => setStatusModal({ isOpen: true, userId: seller.user_id, newStatus: 'verified', message: `Congratulations ${seller.owner_name}, your account is now verified!`, mobile: seller.mobile })}
                                         className="p-2.5 bg-green-50 text-green-600 hover:bg-green-100 rounded-xl transition-all"
-                                        title="Approve Seller"
+                                        title="Approve & Verify"
                                       >
                                         <CheckCircle2 size={18} />
                                       </button>
@@ -677,6 +892,300 @@ export default function AdminDashboard() {
                 {!search && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />}
              </div>
           )}
+
+          {/* ── Add Seller Product Section ── */}
+          {activeTab === "add-product" && (
+            <div className="max-w-7xl mx-auto">
+              {productSubmitted ? (
+                <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-10 sm:p-20 flex flex-col items-center justify-center text-center">
+                  <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mb-6">
+                    <CheckCircle2 size={40} className="text-green-600" />
+                  </div>
+                  <h2 className="font-syne font-black text-3xl text-ink mb-2 uppercase tracking-tight">Product Listed Successfully!</h2>
+                  <p className="text-ink2 max-w-md mb-8 font-medium">
+                      The product <strong>{form.name}</strong> has been listed on behalf of <strong>{selectedSeller?.company_name}</strong>.
+                  </p>
+                  <button onClick={resetForm} className="px-10 py-4 bg-accent text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-orange-600 transition-all shadow-xl shadow-orange-100">
+                      Add Another Product
+                  </button>
+                </div>
+              ) : (
+                <div className="grid lg:grid-cols-3 gap-8 items-start">
+                  {/* Form Container */}
+                  <div className="lg:col-span-2">
+                    <div className="bg-white border border-black/[0.08] rounded-[2rem] sm:rounded-3xl p-6 sm:p-10 shadow-sm">
+                      <StepIndicator current={formStep} />
+
+                      {/* Step 0: Seller Selection */}
+                      {formStep === 0 && (
+                        <div className="flex flex-col gap-6">
+                          <div className="flex items-center gap-2 mb-2">
+                              <Store size={20} className="text-accent" />
+                              <h3 className="font-syne font-black text-xl text-ink uppercase tracking-tight">Select Verified Seller</h3>
+                          </div>
+                          <div className="relative group">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-ink3" size={18} />
+                            <input 
+                              type="text" 
+                              placeholder="Search manufacturer or trader..." 
+                              className={inputCls + " pl-12 py-4 bg-surface/50 font-bold"}
+                              onChange={(e) => setSearch(e.target.value)}
+                            />
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-2 scrollbar-hide">
+                            {allVerifiedSellers.filter(s => !search || s.company_name.toLowerCase().includes(search.toLowerCase()) || s.owner_name.toLowerCase().includes(search.toLowerCase())).map(seller => (
+                              <div 
+                                key={seller.user_id}
+                                onClick={() => setSelectedSeller(seller)}
+                                className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center gap-4 ${selectedSeller?.user_id === seller.user_id ? 'border-accent bg-accent/5' : 'border-black/[0.04] hover:border-black/[0.1] bg-white'}`}
+                              >
+                                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${selectedSeller?.user_id === seller.user_id ? 'bg-accent text-white' : 'bg-ink text-white'}`}>
+                                    {seller.company_name[0]}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="font-black text-ink leading-tight truncate">{seller.company_name}</p>
+                                    <p className="text-[10px] font-bold text-ink3 uppercase truncate">{seller.city}, {seller.state}</p>
+                                  </div>
+                                  {selectedSeller?.user_id === seller.user_id && <CheckCircle2 className="ml-auto text-accent" size={20} />}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Step 1: Basic Information */}
+                      {formStep === 1 && (
+                        <div className="flex flex-col gap-6">
+                          <div className="flex items-center gap-2 mb-2">
+                              <Package size={20} className="text-accent" />
+                              <h3 className="font-syne font-black text-xl text-ink uppercase tracking-tight">Basic Information</h3>
+                          </div>
+                          
+                          <Field label="Product Name" required>
+                            <input 
+                              className={inputCls + " font-bold"}
+                              placeholder="e.g. BOPP Transparent Film"
+                              value={form.name} 
+                              onChange={(e) => setFormVal("name", e.target.value)}
+                            />
+                          </Field>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <Field label="Category" required>
+                              <select className={inputCls + " font-bold cursor-pointer"} value={form.category} onChange={(e) => { setFormVal("category", e.target.value); setFormVal("subcategory", ""); }}>
+                                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                              </select>
+                            </Field>
+                            <Field label="Subcategory" required>
+                              <select className={inputCls + " font-bold cursor-pointer"} value={form.subcategory} onChange={(e) => setFormVal("subcategory", e.target.value)}>
+                                <option value="">Select subcategory...</option>
+                                {(SUBCATEGORIES[form.category] || []).map(s => <option key={s}>{s}</option>)}
+                              </select>
+                            </Field>
+                          </div>
+
+                          <Field label="Product Tag">
+                            <div className="flex flex-wrap gap-2">
+                              {TAGS.map(t => (
+                                <button key={t} onClick={() => setFormVal("tag", t)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${form.tag === t ? 'bg-accent text-white border-accent' : 'bg-surface text-ink3 border-black/[0.08] hover:border-accent/40'}`}>
+                                  {t || "None"}
+                                </button>
+                              ))}
+                            </div>
+                          </Field>
+                        </div>
+                      )}
+
+                      {/* Step 2: Specifications */}
+                      {formStep === 2 && (
+                        <div className="flex flex-col gap-6">
+                          <div className="flex items-center gap-2 mb-2">
+                              <Layers size={20} className="text-accent" />
+                              <h3 className="font-syne font-black text-xl text-ink uppercase tracking-tight">Specifications & Pricing</h3>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <Field label="Thickness" hint="e.g. 20 micron">
+                              <input className={inputCls + " font-bold"} placeholder="20 micron" value={form.thickness} onChange={(e) => setFormVal("thickness", e.target.value)} />
+                            </Field>
+                            <Field label="Width" hint="e.g. 1000 mm">
+                              <input className={inputCls + " font-bold"} placeholder="1000 mm" value={form.width} onChange={(e) => setFormVal("width", e.target.value)} />
+                            </Field>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <Field label="Min Price" required hint="starting range">
+                              <input className={inputCls + " font-bold"} type="number" placeholder="150" value={form.minPrice} onChange={(e) => setFormVal("minPrice", e.target.value)} />
+                            </Field>
+                            <Field label="Max Price" required hint="ending range">
+                              <input className={inputCls + " font-bold"} type="number" placeholder="200" value={form.maxPrice} onChange={(e) => setFormVal("maxPrice", e.target.value)} />
+                            </Field>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <Field label="Unit" required>
+                              <select className={inputCls + " font-bold cursor-pointer"} value={form.unit} onChange={(e) => setFormVal("unit", e.target.value)}>
+                                {UNITS.map(u => <option key={u}>{u}</option>)}
+                              </select>
+                            </Field>
+                            <Field label="Min. Order (kg)" required>
+                              <input className={inputCls + " font-bold"} type="number" placeholder="50" value={form.minOrder} onChange={(e) => setFormVal("minOrder", e.target.value)} />
+                            </Field>
+                          </div>
+
+                          <Field label="Available Stock (kg)" required>
+                            <input className={inputCls + " font-bold"} type="number" placeholder="e.g. 2500" value={form.stock} onChange={(e) => setFormVal("stock", e.target.value)} />
+                          </Field>
+
+                          <Field label="Product Image" hint="Upload file or paste URL">
+                            <div className="flex flex-col gap-3">
+                                <div className="flex gap-2">
+                                    <input className={inputCls + " font-bold flex-1"} placeholder="https://example.com/image.jpg" value={form.img} onChange={(e) => setFormVal("img", e.target.value)} />
+                                    <button 
+                                      type="button"
+                                      onClick={() => fileInputRef.current?.click()}
+                                      disabled={uploading}
+                                      className="px-4 py-2 bg-black text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-800 transition-all flex items-center gap-2 disabled:opacity-50"
+                                    >
+                                        {uploading ? <RefreshCcw className="animate-spin" size={14} /> : <ImageIcon size={14} />}
+                                        {uploading ? "Uploading..." : "Upload"}
+                                    </button>
+                                </div>
+                                <input 
+                                  type="file" 
+                                  ref={fileInputRef} 
+                                  onChange={handleFileUpload} 
+                                  accept="image/*" 
+                                  className="hidden" 
+                                />
+                                {form.img && (
+                                  <div className="text-[10px] text-green-600 font-bold uppercase tracking-widest flex items-center gap-1.5">
+                                      <CheckCircle2 size={12} /> Image Ready to List
+                                  </div>
+                                )}
+                            </div>
+                          </Field>
+                        </div>
+                      )}
+
+                      {/* Step 3: Applications & Description */}
+                      {formStep === 3 && (
+                        <div className="flex flex-col gap-6">
+                            <div className="flex items-center gap-2 mb-2">
+                                <FileText size={20} className="text-accent" />
+                                <h3 className="font-syne font-black text-xl text-ink uppercase tracking-tight">Applications & Description</h3>
+                            </div>
+
+                            <Field label="Product Description" required>
+                                <textarea className={inputCls + " font-bold min-h-[120px] resize-none"} placeholder="Describe key properties and use cases..." value={form.description} onChange={(e) => setFormVal("description", e.target.value)} />
+                            </Field>
+
+                            <Field label="Applications" required hint="Add multiple">
+                                <div className="flex flex-wrap gap-2 mb-4 bg-surface p-4 rounded-2xl border border-black/[0.04]">
+                                  {COMMON_APPLICATIONS.map(app => (
+                                    <button 
+                                      key={app}
+                                      onClick={() => form.applications.includes(app) ? removeApp(app) : addApp(app)}
+                                      className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all border ${form.applications.includes(app) ? 'bg-accent text-white border-accent' : 'bg-white text-ink3 border-black/[0.08] hover:border-accent/40'}`}
+                                    >
+                                      {form.applications.includes(app) ? '✓ ' : '+ '} {app}
+                                    </button>
+                                  ))}
+                                </div>
+                                {form.applications.length > 0 && (
+                                  <div className="flex flex-wrap gap-2 p-3 bg-accent/5 rounded-xl border border-accent/10">
+                                      <p className="w-full text-[9px] font-black text-accent uppercase tracking-widest mb-1">Selected:</p>
+                                      {form.applications.map(a => (
+                                        <span key={a} className="flex items-center gap-1.5 px-3 py-1 bg-white border border-accent/20 text-accent rounded-full text-[10px] font-black tracking-wide">
+                                          {a} <XCircle className="cursor-pointer hover:text-red-500" size={12} onClick={() => removeApp(a)} />
+                                        </span>
+                                      ))}
+                                  </div>
+                                )}
+                            </Field>
+                        </div>
+                      )}
+
+                      {/* Step 4: Preview (Administrative Final Check) */}
+                      {formStep === 4 && (
+                        <div className="flex flex-col gap-8">
+                            <div className="flex items-center gap-2 mb-2">
+                                <CheckCircle2 size={24} className="text-accent" />
+                                <h3 className="font-syne font-black text-xl text-ink uppercase tracking-tight">Administrative Review</h3>
+                            </div>
+                            
+                            <div className="bg-surface rounded-[2rem] p-8 space-y-6">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+                                    {[
+                                      ["Target Seller", selectedSeller?.company_name],
+                                      ["Category", `${form.category} / ${form.subcategory}`],
+                                      ["Specs", `${form.thickness || '—'} / ${form.width || '—'}`],
+                                      ["Stock Level", `${form.stock} kg`],
+                                      ["Commercials", `₹${form.minPrice} - ₹${form.maxPrice} / ${form.unit}`],
+                                      ["MOQ", `${form.minOrder} kg`]
+                                    ].map(([l, v]) => (
+                                      <div key={l}>
+                                          <p className="text-[10px] font-black text-ink3 uppercase tracking-widest mb-1">{l}</p>
+                                          <p className="font-bold text-ink text-sm truncate">{v}</p>
+                                      </div>
+                                    ))}
+                                </div>
+                                <div className="pt-6 border-t border-black/[0.06]">
+                                    <p className="text-[10px] font-black text-ink3 uppercase tracking-widest mb-2 text-center underline">Backend Verification Required</p>
+                                    <ul className="text-[10px] font-medium text-ink2 space-y-2 max-w-sm mx-auto">
+                                        <li className="flex items-center gap-2"><CheckCircle2 size={12} className="text-green-500" /> Confirming seller {selectedSeller?.user_id} association</li>
+                                        <li className="flex items-center gap-2"><CheckCircle2 size={12} className="text-green-500" /> Validating stock and pricing parameters</li>
+                                        <li className="flex items-center gap-2"><CheckCircle2 size={12} className="text-green-500" /> Generating system unique identifiers</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                      )}
+
+                      {/* Navigation */}
+                      <div className="flex items-center justify-between mt-10 pt-8 border-t border-black/[0.05]">
+                          {formStep > 0 && (
+                            <button onClick={() => setFormStep(s => s - 1)} className="px-6 py-3 rounded-xl border border-black/15 text-xs font-black uppercase tracking-widest text-ink hover:bg-surface transition-all flex items-center gap-2">
+                              <ChevronLeft size={16} /> Back
+                            </button>
+                          )}
+                          <div className="ml-auto flex items-center gap-3">
+                            {formStep < 4 ? (
+                              <button 
+                                onClick={() => {
+                                  if (formStep === 0 && !selectedSeller) return notifyError("Select a seller first");
+                                  if (formStep === 1 && (!form.name || !form.subcategory)) return notifyError("Fill required platform fields");
+                                  if (formStep === 2 && (!form.minPrice || !form.maxPrice || !form.stock || !form.minOrder)) return notifyError("Pricing specs are mandatory");
+                                  if (formStep === 3 && (!form.description || form.applications.length === 0)) return notifyError("Add description and apps");
+                                  setFormStep(s => s + 1);
+                                }} 
+                                className="px-10 py-4 bg-ink text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-black transition-all flex items-center gap-3 shadow-xl shadow-black/10"
+                              >
+                                  Continue <ChevronRight size={16} />
+                              </button>
+                            ) : (
+                              <button 
+                                onClick={handleCreateProductByAdmin}
+                                disabled={loading}
+                                className="px-10 py-4 bg-accent text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-orange-600 transition-all flex items-center gap-3 shadow-xl shadow-orange-100 disabled:opacity-50"
+                              >
+                                  {loading ? <RefreshCcw className="animate-spin" size={16} /> : <Zap size={16} />}
+                                  Confirm & List on Platform
+                              </button>
+                            )}
+                          </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Desktop Preview (Right 1/3) */}
+                  <div className="hidden lg:block">
+                     <PreviewCard />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           </div>
         )}
       </div>
@@ -689,6 +1198,51 @@ export default function AdminDashboard() {
               onClose={() => setSelectedEntity(null)} 
               notifyError={notifyError}
            />
+        )}
+      </AnimatePresence>
+
+      {/* ── Status Update Modal ── */}
+      <AnimatePresence>
+        {statusModal.isOpen && (
+          <div className="fixed inset-0 z-[101] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setStatusModal({ ...statusModal, isOpen: false })}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-lg bg-white rounded-[2.5rem] p-8 shadow-2xl overflow-hidden"
+            >
+              <div className="mb-6">
+                <h3 className="text-2xl font-syne font-black text-gray-900 mb-2 uppercase tracking-tight">Status Notification</h3>
+                <p className="text-sm text-gray-500 font-medium">
+                  Updating status to <span className="text-accent font-bold uppercase">{statusModal.newStatus}</span>. 
+                  Enter a message to notify the seller.
+                </p>
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Update Message</label>
+                  <textarea 
+                    value={statusModal.message}
+                    onChange={(e) => setStatusModal({ ...statusModal, message: e.target.value })}
+                    className={inputCls + " h-32 resize-none py-3"}
+                    placeholder="Enter message for the seller..."
+                  />
+                  <p className="text-[10px] text-gray-400 italic">This message will be sent to +{statusModal.mobile} via WhatsApp.</p>
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <button onClick={() => setStatusModal({ ...statusModal, isOpen: false })} className="flex-1 px-8 py-4 bg-gray-50 text-gray-500 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-gray-100 transition-all border border-gray-100">Cancel</button>
+                  <button onClick={handleStatusUpdate} className="flex-[2] px-8 py-4 bg-ink text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-black transition-all flex items-center justify-center gap-2 shadow-xl shadow-black/10"><Send size={16} /> Update & Notify</button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
@@ -725,127 +1279,122 @@ function SubViewOverlay({ entity, onClose, notifyError }) {
   }, [entity]);
 
   return (
-    <motion.div 
-      initial={{ opacity: 0 }} 
-      animate={{ opacity: 1 }} 
-      exit={{ opacity: 0 }} 
-      className="fixed inset-0 z-[100] bg-gray-900/60 backdrop-blur-md flex items-center justify-center p-4"
-    >
+    <div className="fixed inset-0 z-[100] bg-gray-900/60 backdrop-blur-md flex items-center justify-center p-4">
+      <motion.div 
+        initial={{ opacity: 0 }} 
+        animate={{ opacity: 1 }} 
+        exit={{ opacity: 0 }} 
+        onClick={onClose}
+        className="absolute inset-0"
+      />
       <motion.div 
         initial={{ scale: 0.9, opacity: 0 }} 
         animate={{ scale: 1, opacity: 1 }} 
         exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-white rounded-2xl sm:rounded-[3rem] w-full max-w-4xl max-h-[92vh] sm:max-h-[85vh] overflow-hidden flex flex-col shadow-2xl"
+        className="relative bg-white rounded-2xl sm:rounded-[3rem] w-full max-w-4xl max-h-[92vh] sm:max-h-[85vh] overflow-hidden flex flex-col shadow-2xl"
       >
         <div className="p-5 md:p-8 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-50/50">
-           <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-accent/10 rounded-2xl flex items-center justify-center shrink-0">
-                 <Zap className="text-accent" size={24} />
+                <Zap className="text-accent" size={24} />
               </div>
               <div>
-                 <p className="text-[10px] font-black text-accent uppercase tracking-widest mb-0.5">
+                <p className="text-[10px] font-black text-accent uppercase tracking-widest mb-0.5">
                     {entity.mode === "lead-matching" ? "Smart Recommendation" : entity.type + " Details"}
-                 </p>
-                 <h2 className="text-xl md:text-2xl font-black text-gray-900 uppercase tracking-tighter leading-tight">{entity.name}</h2>
-                 {entity.location && (
-                   <p className="text-[10px] md:text-xs font-bold text-gray-400 flex items-center gap-1.5 mt-1">
+                </p>
+                <h2 className="text-xl md:text-2xl font-black text-gray-900 uppercase tracking-tighter leading-tight">{entity.name}</h2>
+                {entity.location && (
+                  <p className="text-[10px] md:text-xs font-bold text-gray-400 flex items-center gap-1.5 mt-1">
                       <MapPin size={10} /> {entity.location}
-                   </p>
-                 )}
+                  </p>
+                )}
               </div>
-           </div>
-           <button onClick={onClose} className="self-end sm:self-auto p-3 bg-white border border-gray-100 rounded-2xl text-gray-400 hover:text-gray-900 hover:shadow-sm transition-all">
+          </div>
+          <button onClick={onClose} className="p-3 bg-white border border-gray-100 rounded-2xl text-gray-400 hover:text-gray-900 hover:shadow-sm transition-all focus:outline-none">
               <XCircle size={24} />
-           </button>
+          </button>
         </div>
-        
-        <div className="flex-1 overflow-y-auto p-5 md:p-8 bg-white">
-           {loading ? (
-             <div className="py-20 text-center"><RefreshCcw className="animate-spin mx-auto text-accent mb-4" /></div>
-           ) : items.length === 0 ? (
-             <div className="py-20 text-center text-gray-400 font-bold uppercase tracking-widest text-xs">No records found.</div>
-           ) : (
-             <div className="space-y-4">
-                {entity.mode === "orders" && items.map(order => (
-                  <div key={order.id} className="p-6 bg-gray-50 rounded-[2rem] border border-gray-100">
-                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
-                       <div>
-                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Order Ref: #{order.id}</p>
-                          <p className="text-sm font-bold text-gray-900">Buyer: {order.customer_name}</p>
-                       </div>
-                       <div className="text-right">
-                          <span className="px-3 py-1 bg-green-50 text-green-600 rounded-full text-[10px] font-black uppercase tracking-wider">{order.status}</span>
-                          <p className="text-xs font-bold text-gray-900 mt-1">₹{order.total_price}</p>
-                       </div>
+
+        <div className="flex-1 overflow-y-auto p-5 md:p-8 bg-white scrollbar-hide">
+          {loading ? (
+            <div className="py-20 text-center"><RefreshCcw className="animate-spin mx-auto text-accent mb-4" /></div>
+          ) : items.length === 0 ? (
+            <div className="py-20 text-center text-gray-400 font-bold uppercase tracking-widest text-xs">No records found.</div>
+          ) : (
+            <div className="space-y-4">
+              {entity.type === "seller" && items.map(subItem => (
+                <div key={subItem.id} className="p-6 bg-gray-50 rounded-3xl border border-gray-100 group hover:border-accent/20 transition-all">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+                        <img src={subItem.image_url} alt="" className="w-full h-full object-cover" />
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                       {order.items?.map((item, i) => (
-                         <div key={i} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-start gap-4">
-                            <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center shrink-0">
-                               <ShoppingBag size={20} className="text-accent" />
-                            </div>
-                            <div>
-                               <p className="text-xs font-bold text-gray-900 leading-tight">{item.name}</p>
-                               <p className="text-[9px] font-black text-gray-400 uppercase mt-1">{item.qty}kg · {item.thickness} · {item.width}mm</p>
-                            </div>
-                         </div>
-                       ))}
+                    <div className="flex-1">
+                      <h4 className="font-bold text-gray-900 mb-1">{subItem.name}</h4>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[10px] font-black text-accent uppercase">₹{subItem.price}/{subItem.unit}</span>
+                        <span className="text-[9px] font-bold text-gray-400 uppercase">Stock: {subItem.stock}</span>
+                      </div>
                     </div>
                   </div>
-                ))}
-
-                {entity.mode === "lead-matching" && items.map((seller, idx) => (
-                   <div key={seller.id} className={`p-6 rounded-[2rem] border transition-all ${idx === 0 ? 'bg-accent/5 border-accent/20 shadow-lg shadow-accent/5' : 'bg-gray-50 border-gray-100'}`}>
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                         <div className="flex items-center gap-4">
-                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl ${idx === 0 ? 'bg-accent text-white' : 'bg-gray-900 text-white'}`}>
-                               {seller.company_name[0]}
-                            </div>
-                            <div>
-                               <div className="flex items-center gap-2 mb-1">
-                                  <h4 className="font-syne font-black text-gray-900 text-lg uppercase tracking-tight">{seller.company_name}</h4>
-                                  {idx === 0 && (
-                                    <span className="bg-accent text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full tracking-widest flex items-center gap-1 animate-pulse">
-                                      <Zap size={8} fill="currentColor" /> Best Match
-                                    </span>
-                                  )}
-                               </div>
-                               <div className="flex flex-wrap gap-3">
-                                  <div className="flex items-center gap-1 text-xs font-bold text-gray-500">
-                                     <MapPin size={12} className="text-accent" />
-                                     {seller.city}, {seller.state}
-                                  </div>
-                                  <div className="flex items-center gap-1 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                     Match Score: <span className="text-accent">{seller.match_score}</span>
-                                  </div>
-                               </div>
-                            </div>
-                         </div>
-                         <div className="flex items-center gap-2">
-                            <a href={`tel:${seller.phone}`} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-white border border-gray-100 rounded-xl text-sm font-bold text-gray-900 hover:bg-gray-50 transition-all">
-                               <Phone size={16} /> Call
-                            </a>
-                            <a href={`mailto:${seller.email}`} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-accent text-white rounded-xl text-sm font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-100">
-                               <Send size={16} /> Share Lead
-                            </a>
-                         </div>
+                </div>
+              ))}
+              {entity.mode === "lead-matching" && items.map((seller, idx) => (
+                <div key={seller.id} className={`p-6 rounded-[2rem] border transition-all ${idx === 0 ? 'bg-accent/5 border-accent/20 shadow-lg shadow-accent/5' : 'bg-gray-50 border-gray-100'}`}>
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl ${idx === 0 ? 'bg-accent text-white' : 'bg-gray-900 text-white'}`}>
+                          {seller.company_name[0]}
                       </div>
-                      
-                      {/* Seller Badges */}
-                      <div className="mt-4 flex flex-wrap gap-2">
-                         <span className="text-[9px] font-black uppercase tracking-widest bg-white border border-gray-200 px-2.5 py-1 rounded-lg text-gray-400">
-                            {seller.business_type}
-                         </span>
-                         <span className="text-[9px] font-black uppercase tracking-widest bg-white border border-gray-200 px-2.5 py-1 rounded-lg text-gray-400">
-                            GST: {seller.gst_number}
-                         </span>
+                      <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-syne font-black text-gray-900 text-lg uppercase tracking-tight">{seller.company_name}</h4>
+                            {idx === 0 && (
+                              <span className="bg-accent text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full tracking-widest flex items-center gap-1 animate-pulse">
+                                <Zap size={8} fill="currentColor" /> Best Match
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-3">
+                            <div className="flex items-center gap-1 text-xs font-bold text-gray-500">
+                                <MapPin size={12} className="text-accent" />
+                                {seller.city}, {seller.state}
+                            </div>
+                            <div className="flex items-center gap-1 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                Match Score: <span className="text-accent">{seller.match_score}</span>
+                            </div>
+                          </div>
                       </div>
-                   </div>
-                 ))}
-             </div>
-           )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <a href={`tel:${seller.phone}`} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-white border border-gray-100 rounded-xl text-sm font-bold text-gray-900 hover:bg-gray-50 transition-all">
+                          <Phone size={16} /> Call
+                      </a>
+                      <a href={`mailto:${seller.email}`} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-accent text-white rounded-xl text-sm font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-100">
+                          <Send size={16} /> Share Lead
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </motion.div>
-    </motion.div>
+    </div>
+  );
+}
+
+
+function Field({ label, required, hint, children }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-baseline justify-between">
+        <label className="text-xs font-semibold text-ink uppercase tracking-wider">
+          {label} {required && <span className="text-accent">*</span>}
+        </label>
+        {hint && <span className="text-[10px] text-ink3">{hint}</span>}
+      </div>
+      {children}
+    </div>
   );
 }

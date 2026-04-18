@@ -5,7 +5,7 @@ export const getCart = async (req, res) => {
   try {
     const userId = req.user.id;
     const [rows] = await pool.query(
-      `SELECT c.id as cart_id, c.product_id, c.quantity, p.name, p.price, p.seller_id, p.description, p.image_url as image,
+      `SELECT c.id as cart_id, c.product_id, c.quantity, p.name, p.min_price as price, p.seller_id, p.description, p.image_url as image,
               p.thickness, p.width, p.unit,
               c.selected_thickness, c.selected_width, c.selected_brand
        FROM cart_items c 

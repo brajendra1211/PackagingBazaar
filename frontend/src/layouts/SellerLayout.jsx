@@ -243,7 +243,15 @@ function Sidebar({ seller, collapsed, setCollapsed, mobileOpen, setMobileOpen, n
               <div className="min-w-0">
                 <div className="text-[10px] font-black text-orange-400 uppercase tracking-tighter mb-0.5">ID: {seller.uid}</div>
                 <div className="text-xs font-bold text-white truncate">{seller.businessName || seller.ownerName}</div>
-                <div className="text-[10px] text-green-400 font-semibold mt-0.5 whitespace-nowrap">✓ Verified Seller</div>
+                <div className={`text-[10px] font-semibold mt-0.5 whitespace-nowrap ${
+                  seller.status === 'verified' ? 'text-green-400' :
+                  seller.status === 'hold' ? 'text-orange-400' :
+                  'text-gray-400'
+                }`}>
+                  {seller.status === 'verified' ? '✓ Verified Seller' : 
+                   seller.status === 'hold' ? '⚠ Account on Hold' : 
+                   '○ Verification Pending'}
+                </div>
               </div>
             </div>
           </div>
@@ -421,15 +429,21 @@ export default function SellerLayout() {
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="hidden sm:flex items-center gap-1.5 text-xs text-green-600 bg-green-50 border border-green-200 px-3 py-1.5 rounded-full font-semibold">
-              <Icon d={icons.shield} size={11} stroke="#16a34a" /> {seller.status === "active" ? "Verified" : "Pending"}
+            <div className={`hidden sm:flex items-center gap-1.5 text-xs border px-3 py-1.5 rounded-full font-semibold ${
+              seller.status === 'verified' ? 'text-green-600 bg-green-50 border-green-200' :
+              seller.status === 'hold' ? 'text-orange-600 bg-orange-50 border-orange-200' :
+              'text-gray-500 bg-gray-50 border-gray-200'
+            }`}>
+              {seller.status === 'verified' && <Icon d={icons.shield} size={11} stroke="#16a34a" />}
+              {seller.status === 'hold' && <Icon d={icons.star} size={11} stroke="#ea580c" />}
+              <span className="uppercase tracking-widest text-[10px]">{seller.status || 'pending'}</span>
             </div>
             <button
-              onClick={() => navigate("/seller/add-product")}
+              onClick={() => window.open(`https://wa.me/919540248705?text=Hello%20Admin,%20I%20want%20to%20add%20a%20product%20on%20PackagingBazaar.`, "_blank")}
               className="flex items-center gap-1.5 bg-[#e8511a] text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-sm font-bold hover:bg-[#d4460f] transition-colors shadow-sm"
             >
-              <Icon d={icons.add} size={15} stroke="white" />
-              <span className="hidden sm:block">Add Product</span>
+              <Icon d={icons.phone} size={15} stroke="white" />
+              <span className="hidden sm:block">Add Product (WhatsApp)</span>
             </button>
           </div>
         </header>

@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { 
   Store, Menu, X, Package, LogOut, ShieldCheck, 
   ChevronDown, Users, LayoutDashboard, ClipboardList, 
-  CheckCircle, ShoppingBag, MessageSquare 
+  CheckCircle, ShoppingBag, MessageSquare, Plus 
 } from "lucide-react";
 import { Toaster } from 'react-hot-toast';
 import { AnimatePresence, motion } from "framer-motion";
@@ -67,6 +67,7 @@ export default function AdminLayout() {
         { to: "/admin/dashboard?tab=sellers", icon: <CheckCircle size={16} />, label: "Active Businesses", tab: "sellers" },
         { to: "/admin/dashboard?tab=pending", icon: <ClipboardList size={16} />, label: `Pending Sellers (${stats.pendingSellers})`, tab: "pending" },
         { to: "/admin/dashboard?tab=seller-hub", icon: <ShoppingBag size={16} />, label: "Seller Sales Hub", tab: "seller-hub" },
+        { to: "/admin/dashboard?tab=add-product", icon: <Plus size={16} />, label: "Add Seller Product", tab: "add-product" },
       ]
     }
   ];

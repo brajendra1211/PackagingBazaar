@@ -9,7 +9,14 @@ const __dirname = path.dirname(__filename);
 // Storage configuration
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = path.join(__dirname, '../uploads/gst_certificates');
+    let folder = 'others';
+    if (file.fieldname === 'gst_certificate') {
+      folder = 'gst_certificates';
+    } else if (file.fieldname === 'product_image') {
+      folder = 'product_images';
+    }
+    
+    const dir = path.join(__dirname, '../uploads', folder);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -17,7 +24,8 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, 'gst-' + uniqueSuffix + path.extname(file.originalname));
+    const prefix = file.fieldname === 'product_image' ? 'prod-' : 'gst-';
+    cb(null, prefix + uniqueSuffix + path.extname(file.originalname));
   }
 });
 

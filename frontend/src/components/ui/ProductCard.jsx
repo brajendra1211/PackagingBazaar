@@ -109,11 +109,17 @@ export default function ProductCard({ product, onInquiry }) {
         
         <div className="mt-auto pt-3 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-baseline gap-0.5">
-              <span className="font-syne font-black text-base sm:text-lg lg:text-xl text-ink">
-                ₹{product.price}
-              </span>
-              <span className="text-[9px] sm:text-[10px] text-gray-400 font-bold uppercase ml-0.5">
+            <div className="flex flex-col">
+              <div className="flex items-baseline gap-1">
+                <span className="font-syne font-black text-sm lg:text-base text-ink">
+                  ₹{product.min_price}
+                </span>
+                <span className="text-[10px] text-gray-400 font-bold">-</span>
+                <span className="font-syne font-black text-sm lg:text-base text-ink">
+                  ₹{product.max_price}
+                </span>
+              </div>
+              <span className="text-[9px] sm:text-[10px] text-gray-400 font-bold uppercase">
                 /{product.unit}
               </span>
             </div>

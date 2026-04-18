@@ -17,11 +17,13 @@ export const getPendingSellers = async (req, res) => {
              COALESCE(s.gst_number, 'Not Provided') as gst_number, 
              s.gst_certificate,
              COALESCE(s.city, 'N/A') as city, 
-             COALESCE(s.state, 'N/A') as state, 
-             s.created_at
+             s.city, 
+             s.state, 
+             s.created_at,
+             s.status
       FROM users u
       LEFT JOIN sellers s ON u.id = s.user_id
-      WHERE u.role = 'seller' AND u.is_verified = 0
+      WHERE u.role = 'seller' AND (u.is_verified = 0 OR s.status IN ('pending', 'hold'))
       ORDER BY s.created_at DESC
       LIMIT ? OFFSET ?
     `;
@@ -52,13 +54,13 @@ export const getAllSellers = async (req, res) => {
     const offset = (page - 1) * limit;
 
     const query = `
-      SELECT u.id as user_id, u.name as owner_name, u.email, 
+      SELECT u.id as user_id, u.name as owner_name, u.email, u.mobile,
              u.is_verified,                        
              s.seller_uid, s.company_name, s.business_type, s.gst_number, s.gst_certificate,
-             s.city, s.state, s.created_at
+             s.city, s.state, s.created_at, s.status
       FROM users u
       JOIN sellers s ON u.id = s.user_id
-      WHERE u.role = 'seller' AND u.is_verified = 1
+      WHERE u.role = 'seller' AND (u.is_verified = 1 OR s.status = 'verified')
       ORDER BY s.created_at DESC
       LIMIT ? OFFSET ?
     `;
@@ -84,15 +86,41 @@ export const getAllSellers = async (req, res) => {
   }
 };
 
-// 3. Approve Seller
-export const approveSeller = async (req, res) => {
+// 3. Update Seller Status (Pending -> Hold -> Verified)
+export const updateSellerStatus = async (req, res) => {
   const { id } = req.params;
+  const { status } = req.body;
+  
+  const connection = await pool.getConnection();
   try {
-    const [result] = await pool.query("UPDATE users SET is_verified = 1 WHERE id = ?", [id]);
-    if (result.affectedRows === 0) return res.status(404).json({ success: false, message: "User not found." });
-    res.status(200).json({ success: true, message: "Seller approved." });
+    await connection.beginTransaction();
+
+    // 1. Update seller status
+    await connection.query("UPDATE sellers SET status = ? WHERE user_id = ?", [status, id]);
+
+    // 2. If status is 'verified', update users table
+    if (status === 'verified') {
+      await connection.query("UPDATE users SET is_verified = 1 WHERE id = ?", [id]);
+    } else {
+      await connection.query("UPDATE users SET is_verified = 0 WHERE id = ?", [id]);
+    }
+
+    // 3. Fetch seller mobile for WhatsApp redirect
+    const [rows] = await connection.query("SELECT mobile FROM users WHERE id = ?", [id]);
+    const mobile = rows[0]?.mobile;
+
+    await connection.commit();
+    res.status(200).json({ 
+      success: true, 
+      message: `Seller status updated to ${status}.`,
+      mobile: mobile
+    });
   } catch (error) {
+    await connection.rollback();
+    console.error("Error updating seller status:", error);
     res.status(500).json({ success: false, message: "Server Error" });
+  } finally {
+    connection.release();
   }
 };
 
@@ -540,6 +568,124 @@ export const getRecommendedSellers = async (req, res) => {
   } catch (error) {
     console.error("Error in getRecommendedSellers:", error);
     res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+// 18. Add product for a seller (Admin)
+export const addProductForSeller = async (req, res) => {
+  const { sellerUserId } = req.params;
+  const { 
+    name, category, subcategory, tag, thickness, width, 
+    minPrice, maxPrice, unit, description, img, stock, minOrder, applications 
+  } = req.body;
+
+  try {
+    // 1. Get seller_id from user_id
+    const [sellerRows] = await pool.query(
+      "SELECT id FROM sellers WHERE user_id = ?",
+      [sellerUserId]
+    );
+
+    if (sellerRows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Seller profile not found for the given user ID"
+      });
+    }
+
+    const sellerId = sellerRows[0].id;
+
+    // 2. Get sub_category_id
+    const [subCatRows] = await pool.query(
+      `SELECT sc.id FROM sub_categories sc 
+       JOIN categories c ON sc.category_id = c.id 
+       WHERE sc.name = ? AND c.name = ?`,
+      [subcategory, category]
+    );
+
+    if (subCatRows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid category/subcategory combination"
+      });
+    }
+
+    const subCategoryId = subCatRows[0].id;
+
+    // 3. Get tag_id
+    let tagId = null;
+    if (tag && tag !== "") {
+      const [tagRows] = await pool.query(
+        "SELECT id FROM tags WHERE tag_name = ?",
+        [tag]
+      );
+      if (tagRows.length > 0) {
+        tagId = tagRows[0].id;
+      }
+    }
+
+    // 4. Insert product
+    const [productResult] = await pool.query(
+      `INSERT INTO products 
+       (seller_id, sub_category_id, tag_id, name, thickness, width, 
+        min_price, max_price, unit, description, image_url, applications) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        sellerId,
+        subCategoryId,
+        tagId,
+        name,
+        thickness,
+        width,
+        minPrice,
+        maxPrice,
+        unit,
+        description,
+        img,
+        JSON.stringify(applications || [])
+      ]
+    );
+
+    const productId = productResult.insertId;
+
+    // 5. Insert stock information
+    await pool.query(
+      `INSERT INTO product_stocks (product_id, quantity, min_order) 
+       VALUES (?, ?, ?)`,
+      [productId, stock, minOrder]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "Product created successfully by Admin",
+      productId: productId
+    });
+  } catch (error) {
+    console.error("Error in addProductForSeller:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+      error: error.message
+    });
+  }
+};
+
+export const uploadImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "No file uploaded" });
+    }
+
+    const imageUrl = `${req.protocol}://${req.get('host')}/uploads/product_images/${req.file.filename}`;
+    
+    res.status(200).json({
+      success: true,
+      message: "Image uploaded successfully",
+      imageUrl: imageUrl
+    });
+  } catch (error) {
+    console.error("Upload error:", error);
+    res.status(500).json({ success: false, message: "Failed to upload image" });
   }
 };
 
