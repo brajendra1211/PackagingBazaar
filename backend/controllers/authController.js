@@ -84,8 +84,7 @@ export const registerSeller = async (req, res) => {
 
     const {
       ownerName, email, password, mobile, businessName, businessType,
-      gstNumber, yearEstablished, pincode, city, state, address, filmTypes,
-      monthlyCapacity, priceRange, description,
+      gstNumber, yearEstablished, pincode, city, state, address, description,
     } = req.body;
 
     // GST Certificate validation
@@ -120,20 +119,14 @@ export const registerSeller = async (req, res) => {
     );
     const userId = userResult.insertId;
 
-    // Film types handling (might come as a string or array depending on FormData)
-    let productIdsString = null;
-    if (filmTypes) {
-      productIdsString = Array.isArray(filmTypes) ? filmTypes.join(", ") : filmTypes;
-    }
-    
     const businessTypeString = Array.isArray(businessType) ? businessType.join(", ") : businessType;
 
     const sellerUID = generateSellerUID();
 
     await connection.query(
       `INSERT INTO sellers 
-      (user_id, \`mobile\`, status, seller_uid, company_name, business_type, gst_number, gst_certificate, year_established, city, state, pincode, business_address, monthly_capacity, price_range, description, products_offered) 
-      VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (user_id, \`mobile\`, status, seller_uid, company_name, business_type, gst_number, gst_certificate, year_established, city, state, pincode, business_address, description) 
+      VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId, 
         mobile ? String(mobile).trim() : null, 
@@ -147,10 +140,7 @@ export const registerSeller = async (req, res) => {
         state, 
         pincode || null, 
         address, 
-        monthlyCapacity, 
-        priceRange, 
-        description, 
-        productIdsString
+        description
       ]
     );
 

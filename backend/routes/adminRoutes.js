@@ -6,7 +6,8 @@ import {
   getUserOrdersAdmin, getSellerOrdersAdmin, getSellerProductsAdmin,
   getSellersWithOrdersAdmin, getAllInquiriesAdmin, toggleHotDeal,
   getRecommendedSellers, addProductForSeller, uploadImage, updateSellerStatus,
-  addSellerAdmin
+  addSellerAdmin, updateSellerDetailsAdmin,
+  createCategory, deleteCategory, createSubCategory, deleteSubCategory
 } from "../controllers/adminController.js";
 import { deleteProduct } from "../controllers/productController.js";
 import { verifyToken, isAdmin } from "../middlewares/authMiddleware.js";
@@ -27,7 +28,8 @@ router.get("/sellers/all", verifyToken, isAdmin, getAllSellers);
 router.get("/sellers/pending", verifyToken, isAdmin, getPendingSellers);
 router.get("/sellers/with-orders", verifyToken, isAdmin, getSellersWithOrdersAdmin);
 router.put("/sellers/:id/status", verifyToken, isAdmin, updateSellerStatus);
-router.post("/sellers/add", verifyToken, isAdmin, addSellerAdmin);
+router.put("/sellers/:id", verifyToken, isAdmin, upload.single('gst_certificate'), updateSellerDetailsAdmin);
+router.post("/sellers/add", verifyToken, isAdmin, upload.single('gst_certificate'), addSellerAdmin);
 router.delete("/sellers/:id/reject", verifyToken, isAdmin, rejectSeller);
 
 // --- Product Management ---
@@ -47,5 +49,10 @@ router.get("/orders/seller/:sellerId", verifyToken, isAdmin, getSellerOrdersAdmi
 router.get("/inquiries", verifyToken, isAdmin, getAllInquiriesAdmin);
 router.get("/inquiries/:id/recommendations", verifyToken, isAdmin, getRecommendedSellers);
 
-export default router;
+// --- Category & SubCategory Management ---
+router.post("/categories", verifyToken, isAdmin, createCategory);
+router.delete("/categories/:id", verifyToken, isAdmin, deleteCategory);
+router.post("/subcategories", verifyToken, isAdmin, createSubCategory);
+router.delete("/subcategories/:id", verifyToken, isAdmin, deleteSubCategory);
 
+export default router;

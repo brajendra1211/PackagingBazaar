@@ -1,6 +1,8 @@
 import pool from "../config/db.js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 
 // --- SELLER MANAGEMENT ---
 
@@ -12,7 +14,7 @@ export const getPendingSellers = async (req, res) => {
     const offset = (page - 1) * limit;
 
     const query = `
-      SELECT u.id as user_id, u.name as owner_name, u.email, u.is_verified, 
+      SELECT u.id as user_id, u.name as owner_name, u.email, u.mobile, u.is_verified, 
              COALESCE(s.seller_uid, 'N/A') as seller_uid,
              COALESCE(s.company_name, 'Incomplete Registration') as company_name, 
              COALESCE(s.business_type, 'N/A') as business_type, 
@@ -21,6 +23,10 @@ export const getPendingSellers = async (req, res) => {
              COALESCE(s.city, 'N/A') as city, 
              s.city, 
              s.state, 
+             s.pincode,
+             s.business_address,
+             s.year_established,
+             s.description,
              s.created_at,
              s.status
       FROM users u
@@ -59,7 +65,8 @@ export const getAllSellers = async (req, res) => {
       SELECT u.id as user_id, u.name as owner_name, u.email, u.mobile,
              u.is_verified,                        
              s.seller_uid, s.company_name, s.business_type, s.gst_number, s.gst_certificate,
-             s.city, s.state, s.created_at, s.status
+             s.city, s.state, s.pincode, s.business_address, s.year_established, s.description,
+             s.created_at, s.status
       FROM users u
       JOIN sellers s ON u.id = s.user_id
       WHERE u.role = 'seller' AND (u.is_verified = 1 OR s.status IN ('verified', 'approved', 'active'))
@@ -158,17 +165,10 @@ export const getAllUsers = async (req, res) => {
     const role = req.query.role || '';
     const offset = (page - 1) * limit;
 
-    let query = "SELECT id, name, email, role, is_verified, created_at FROM users WHERE id != ?";
-    let countQuery = "SELECT COUNT(*) as total FROM users WHERE id != ?";
+    let query = "SELECT id, name, email, role, is_verified, created_at FROM users WHERE id != ? AND role = 'user'";
+    let countQuery = "SELECT COUNT(*) as total FROM users WHERE id != ? AND role = 'user'";
     const params = [req.user.id];
     const countParams = [req.user.id];
-
-    if (role) {
-      query += " AND role = ?";
-      countQuery += " AND role = ?";
-      params.push(role);
-      countParams.push(role);
-    }
 
     query += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
     params.push(limit, offset);
@@ -222,17 +222,22 @@ export const getAllProductsAdmin = async (req, res) => {
     const offset = (page - 1) * limit;
 
     const query = `
-      SELECT p.*, s.company_name as seller_name, s.seller_uid, c.name as category_name
-      FROM products p
-      LEFT JOIN sellers s ON p.seller_id = s.id
+      SELECT 
+        sp.id, p.id as product_id, p.name, p.group_key, p.thickness, p.color, p.type, p.unit, p.image_url,
+        sp.price_min, sp.price_max, sp.moq, sp.stock, sp.stock_qty,
+        s.company_name as seller_name, s.seller_uid,
+        c.name as category_name
+      FROM seller_products sp
+      JOIN products p ON sp.product_id = p.id
+      JOIN sellers s ON sp.seller_id = s.id
       LEFT JOIN sub_categories sc ON p.sub_category_id = sc.id
       LEFT JOIN categories c ON sc.category_id = c.id
-      ORDER BY p.id DESC
+      ORDER BY sp.id DESC
       LIMIT ? OFFSET ?
     `;
     const [rows] = await pool.query(query, [limit, offset]);
 
-    const [[{ total }]] = await pool.query("SELECT COUNT(*) as total FROM products");
+    const [[{ total }]] = await pool.query("SELECT COUNT(*) as total FROM seller_products");
 
     res.status(200).json({ 
       success: true, 
@@ -242,6 +247,7 @@ export const getAllProductsAdmin = async (req, res) => {
       currentPage: page
     });
   } catch (error) {
+    console.error("getAllProductsAdmin Error:", error);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
@@ -249,8 +255,12 @@ export const getAllProductsAdmin = async (req, res) => {
 // 9. Get Dashboard Summary Stats
 export const getDashboardStats = async (req, res) => {
   try {
-    const [users] = await pool.query("SELECT COUNT(*) as count FROM users");
-    const [sellers] = await pool.query("SELECT COUNT(*) as count FROM sellers");
+    const [users] = await pool.query("SELECT COUNT(*) as count FROM users WHERE role = 'user'");
+    const [sellers] = await pool.query(`
+      SELECT COUNT(*) as count FROM users u 
+      JOIN sellers s ON u.id = s.user_id 
+      WHERE u.role = 'seller' AND (u.is_verified = 1 OR s.status IN ('verified', 'approved', 'active'))
+    `);
     const [pending] = await pool.query("SELECT COUNT(*) as count FROM users WHERE role='seller' AND is_verified=0");
     const [products] = await pool.query("SELECT COUNT(*) as count FROM products");
     const [orders] = await pool.query("SELECT COUNT(*) as count FROM orders");
@@ -514,6 +524,59 @@ export const getAllInquiriesAdmin = async (req, res) => {
 };
 
 
+// ── CATEGORY & SUBCATEGORY MANAGEMENT ──────────────────────────────────────
+
+export const createCategory = async (req, res) => {
+  const { name } = req.body;
+  if (!name?.trim()) return res.status(400).json({ success: false, message: "Category name required" });
+  try {
+    const codePrefix = name.trim().substring(0, 3).toUpperCase();
+    const [existing] = await pool.query("SELECT id FROM categories WHERE name = ?", [name.trim()]);
+    if (existing.length > 0) return res.status(400).json({ success: false, message: "Category already exists" });
+    const [result] = await pool.query("INSERT INTO categories (name, code_prefix) VALUES (?, ?)", [name.trim(), codePrefix]);
+    res.status(201).json({ success: true, id: result.insertId, name: name.trim(), code_prefix: codePrefix });
+  } catch (err) {
+    console.error("createCategory error:", err);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+export const deleteCategory = async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query("DELETE FROM sub_categories WHERE category_id = ?", [id]);
+    await pool.query("DELETE FROM categories WHERE id = ?", [id]);
+    res.json({ success: true, message: "Category deleted" });
+  } catch (err) {
+    console.error("deleteCategory error:", err);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+export const createSubCategory = async (req, res) => {
+  const { name, category_id } = req.body;
+  if (!name?.trim() || !category_id) return res.status(400).json({ success: false, message: "Name and category required" });
+  try {
+    const [existing] = await pool.query("SELECT id FROM sub_categories WHERE name = ? AND category_id = ?", [name.trim(), category_id]);
+    if (existing.length > 0) return res.status(400).json({ success: false, message: "Subcategory already exists in this category" });
+    const [result] = await pool.query("INSERT INTO sub_categories (name, category_id) VALUES (?, ?)", [name.trim(), category_id]);
+    res.status(201).json({ success: true, id: result.insertId, name: name.trim(), category_id });
+  } catch (err) {
+    console.error("createSubCategory error:", err);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+export const deleteSubCategory = async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query("DELETE FROM sub_categories WHERE id = ?", [id]);
+    res.json({ success: true, message: "Subcategory deleted" });
+  } catch (err) {
+    console.error("deleteSubCategory error:", err);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
 // 16. Toggle Product Hot Deal Status
 export const toggleHotDeal = async (req, res) => {
   const { id } = req.params;
@@ -627,6 +690,47 @@ export const getRecommendedSellers = async (req, res) => {
 };
 
 // 18. Add product for a seller (Admin - Phase 2 Dual Insert)
+// Helper for dynamic entity resolution (Category, SubCategory, Tag)
+const resolveEntityId = async (connection, table, nameField, value, parentField = null, parentValue = null) => {
+  if (!value) return null;
+  
+  // Check if value is an existing ID (numeric)
+  const isId = !isNaN(value) && value !== "";
+  if (isId) {
+    const [exists] = await connection.query(`SELECT id FROM ${table} WHERE id = ?`, [value]);
+    if (exists.length > 0) return value;
+  }
+
+  // Search by name
+  let sql = `SELECT id FROM ${table} WHERE ${nameField} = ?`;
+  let params = [value];
+  if (parentField && parentValue) {
+    sql += ` AND ${parentField} = ?`;
+    params.push(parentValue);
+  }
+
+  const [rows] = await connection.query(sql, params);
+  if (rows.length > 0) return rows[0].id;
+
+  // Create new record
+  let insertSql, insertParams;
+  if (table === 'categories') {
+    const codePrefix = value.substring(0, 3).toUpperCase();
+    insertSql = `INSERT INTO categories (name, code_prefix) VALUES (?, ?)`;
+    insertParams = [value, codePrefix];
+  } else if (parentField && parentValue) {
+    insertSql = `INSERT INTO ${table} (${nameField}, ${parentField}) VALUES (?, ?)`;
+    insertParams = [value, parentValue];
+  } else {
+    insertSql = `INSERT INTO ${table} (${nameField}) VALUES (?)`;
+    insertParams = [value];
+  }
+
+  const [result] = await connection.query(insertSql, insertParams);
+  return result.insertId;
+};
+
+// 18. Add product for a seller (Admin - Phase 2 Dual Insert)
 export const addProductForSeller = async (req, res) => {
   const { sellerUserId } = req.params;
   const { 
@@ -652,28 +756,27 @@ export const addProductForSeller = async (req, res) => {
 
     const sellerId = sellerRows[0].id;
 
-    // 2. Get sub_category_id & category prefix
-    const [subCatRows] = await connection.query(
-      `SELECT sc.id, c.code_prefix FROM sub_categories sc 
-       JOIN categories c ON sc.category_id = c.id 
-       WHERE (sc.name = ? OR sc.id = ?) AND (c.name = ? OR c.id = ?)`,
-      [subcategory, subcategory, category, category]
-    );
+    // 2. Resolve Category, SubCategory, and Tag (Dynamic Creation if needed)
+    const resolvedCategoryId = await resolveEntityId(connection, 'categories', 'name', category);
+    const subCategoryId = await resolveEntityId(connection, 'sub_categories', 'name', subcategory, 'category_id', resolvedCategoryId);
+    const resolvedTagId = await resolveEntityId(connection, 'tags', 'tag_name', tag);
 
-    if (subCatRows.length === 0) {
+    if (!subCategoryId) {
       await connection.rollback();
-      return res.status(400).json({ success: false, message: "Invalid category/subcategory" });
+      return res.status(400).json({ success: false, message: "Could not resolve or create category/subcategory" });
     }
 
-    const { id: subCategoryId, code_prefix: catPrefix } = subCatRows[0];
+    const [catRows] = await connection.query("SELECT code_prefix FROM categories WHERE id = ?", [resolvedCategoryId]);
+    const catPrefix = catRows[0]?.code_prefix || "PRD";
 
-    // --- AUTO GEN group_key if missing (Matches Excel Pattern: CAT_THICK_TYPE) ---
+    // --- AUTO GEN group_key if missing (Matches Excel Pattern: CAT_COLOR_THICK_TYPE) ---
     let finalGroupKey = req.body.group_key;
     if (!finalGroupKey) {
-      const subCatPart = subcategory ? subcategory.toString().toUpperCase().replace(/\s+/g, '_') : 'PRD';
+      const catPart = category ? category.toString().toUpperCase().replace(/\s+/g, '_') : 'PRD';
+      const colorPart = color ? color.toString().toUpperCase().replace(/\s+/g, '_') : 'NA';
       const thickPart = (thickness || "X").toString().replace(/\s+/g, '');
       const typePart = (type || color || "NA").toString().substring(0, 3).toUpperCase();
-      finalGroupKey = `${subCatPart}_${thickPart}_${typePart}`;
+      finalGroupKey = `${catPart}_${colorPart}_${thickPart}_${typePart}`;
     }
 
     // 3. Check for existing Master Product (by group_key or spec match)
@@ -693,10 +796,10 @@ export const addProductForSeller = async (req, res) => {
       // Create new Master Product
       const [productResult] = await connection.query(
         `INSERT INTO products 
-         (product_group_id, sub_category_id, name, display_name, group_key, thickness, width, color, type, unit, description, image_url, applications) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (product_group_id, sub_category_id, tag_id, name, display_name, group_key, thickness, width, color, type, unit, description, image_url, applications) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          product_group_id || null, subCategoryId, name, display_name, finalGroupKey, thickness, width, color, type,
+          product_group_id || null, subCategoryId, resolvedTagId || null, name, display_name, finalGroupKey, thickness, width, color, type,
           unit || 'kg', description, img, JSON.stringify(applications || [])
         ]
       );
@@ -764,7 +867,7 @@ export const uploadImage = async (req, res) => {
 export const addSellerAdmin = async (req, res) => {
   const { 
     ownerName, email, password, mobile, companyName, businessType,
-    gstNumber, city, state, pincode, businessAddress
+    gstNumber, city, state, pincode, businessAddress, yearEstablished, description
   } = req.body;
 
   const connection = await pool.getConnection();
@@ -793,11 +896,13 @@ export const addSellerAdmin = async (req, res) => {
 
     // 4. Create Seller Profile
     const sellerUID = `PB-S-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+    const gstCertificate = req.file ? `uploads/gst_certificates/${req.file.filename}` : null;
+    
     await connection.query(
       `INSERT INTO sellers 
-      (user_id, mobile, status, seller_uid, company_name, business_type, gst_number, city, state, pincode, business_address, is_verified) 
-      VALUES (?, ?, 'verified', ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-      [userId, mobile, sellerUID, companyName, businessType, gstNumber, city, state, pincode, businessAddress]
+      (user_id, mobile, status, seller_uid, company_name, business_type, gst_number, gst_certificate, city, state, pincode, business_address, year_established, description, is_verified) 
+      VALUES (?, ?, 'verified', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+      [userId, mobile, sellerUID, companyName, businessType, gstNumber, gstCertificate, city, state, pincode, businessAddress, yearEstablished || null, description || null]
     );
 
     await connection.commit();
@@ -809,6 +914,73 @@ export const addSellerAdmin = async (req, res) => {
   } catch (error) {
     if (connection) await connection.rollback();
     console.error("Error in addSellerAdmin:", error);
+    res.status(500).json({ success: false, message: "Server Error", error: error.message });
+  } finally {
+    if (connection) connection.release();
+  }
+};
+
+// 21. Update Seller Details by Admin
+export const updateSellerDetailsAdmin = async (req, res) => {
+  const { id } = req.params; // Expecting seller user_id
+  const { 
+    ownerName, email, mobile, companyName, businessType,
+    gstNumber, city, state, pincode, businessAddress, yearEstablished, description
+  } = req.body;
+
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    // 1. Update User Table
+    if (ownerName || email || mobile) {
+      await connection.query(
+        "UPDATE users SET name = ?, email = ?, mobile = ? WHERE id = ?",
+        [ownerName, email, mobile, id]
+      );
+    }
+
+    // 2. Handle GST Certificate if uploaded
+    let gstCertificate = req.body.existingGstCertificate || null;
+    if (req.file) {
+      // NEW: Delete old file if it exists and a new one is uploaded
+      if (req.body.existingGstCertificate) {
+        try {
+          const oldPath = path.join(process.cwd(), req.body.existingGstCertificate);
+          if (fs.existsSync(oldPath)) {
+            fs.unlinkSync(oldPath);
+          }
+        } catch (fsErr) {
+          console.error("Failed to delete old GST certificate:", fsErr);
+          // We continue anyway so the update isn't blocked by a file system error
+        }
+      }
+      gstCertificate = `uploads/gst_certificates/${req.file.filename}`;
+    }
+
+    // 3. Update Seller Table
+    await connection.query(
+      `UPDATE sellers SET 
+        company_name = ?, 
+        business_type = ?, 
+        gst_number = ?, 
+        gst_certificate = ?,
+        city = ?, 
+        state = ?, 
+        pincode = ?, 
+        business_address = ?,
+        mobile = ?,
+        year_established = ?,
+        description = ?
+      WHERE user_id = ?`,
+      [companyName, businessType, gstNumber, gstCertificate, city, state, pincode, businessAddress, mobile, yearEstablished || null, description || null, id]
+    );
+
+    await connection.commit();
+    res.status(200).json({ success: true, message: "Seller details updated successfully!" });
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error("Error in updateSellerDetailsAdmin:", error);
     res.status(500).json({ success: false, message: "Server Error", error: error.message });
   } finally {
     if (connection) connection.release();

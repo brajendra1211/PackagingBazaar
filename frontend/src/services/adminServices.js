@@ -104,7 +104,34 @@ export const addProductForSeller = async (sellerUserId, productData) => {
 };
 
 export const addSellerAdmin = async (sellerData) => {
-  const response = await API.post("/admin/sellers/add", sellerData);
+  const formData = new FormData();
+  Object.keys(sellerData).forEach(key => {
+    if (key === 'gstCertificate' && sellerData[key]) {
+      formData.append('gst_certificate', sellerData[key]);
+    } else if (sellerData[key] !== undefined && sellerData[key] !== null) {
+      formData.append(key, sellerData[key]);
+    }
+  });
+
+  const response = await API.post("/admin/sellers/add", formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+
+export const updateSellerAdmin = async (id, sellerData) => {
+  const formData = new FormData();
+  Object.keys(sellerData).forEach(key => {
+    if (key === 'gstCertificate' && sellerData[key] instanceof File) {
+      formData.append('gst_certificate', sellerData[key]);
+    } else if (sellerData[key] !== undefined && sellerData[key] !== null) {
+      formData.append(key, sellerData[key]);
+    }
+  });
+
+  const response = await API.put(`/admin/sellers/${id}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
   return response.data;
 };
 
@@ -146,5 +173,26 @@ export const fetchProductGroups = async (categoryId = "") => {
 
 export const createProductGroup = async (groupData) => {
   const response = await API.post("/product-groups", groupData);
+  return response.data;
+};
+
+// --- Category & SubCategory Management ---
+export const createCategoryAdmin = async (name) => {
+  const response = await API.post("/admin/categories", { name });
+  return response.data;
+};
+
+export const deleteCategoryAdmin = async (id) => {
+  const response = await API.delete(`/admin/categories/${id}`);
+  return response.data;
+};
+
+export const createSubCategoryAdmin = async (name, categoryId) => {
+  const response = await API.post("/admin/subcategories", { name, category_id: categoryId });
+  return response.data;
+};
+
+export const deleteSubCategoryAdmin = async (id) => {
+  const response = await API.delete(`/admin/subcategories/${id}`);
   return response.data;
 };

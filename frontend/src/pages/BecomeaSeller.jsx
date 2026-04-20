@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
-const FILM_TYPES = ["BOPP", "PET", "CPP", "LAMINATED", "Others"];
 const BUSINESS_TYPES = ["Manufacturer", "Trader", "Stockist", "Distributor", "Converter"];
 
 const inputCls =
@@ -106,8 +105,6 @@ export default function BecomeaSeller() {
     state: "",
     address: "",
     filmTypes: [],
-    monthlyCapacity: "",
-    priceRange: "",
     description: "",
     gstCertificate: null,
   });
@@ -163,13 +160,6 @@ export default function BecomeaSeller() {
         : [...formData.businessType, type]
     );
 
-  const toggleFilm = (film) =>
-    setF(
-      "filmTypes",
-      formData.filmTypes.includes(film)
-        ? formData.filmTypes.filter((f) => f !== film)
-        : [...formData.filmTypes, film]
-    );
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -635,44 +625,6 @@ export default function BecomeaSeller() {
                   </Field>
                 </div>
 
-                <Field label="Film Types You Sell">
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    {FILM_TYPES.map((film) => (
-                      <button
-                        key={film}
-                        type="button"
-                        onClick={() => toggleFilm(film)}
-                        className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-all ${
-                          formData.filmTypes.includes(film)
-                            ? "bg-[#e8511a] text-white border-[#e8511a] shadow-md shadow-orange-200"
-                            : "bg-gray-50 text-gray-600 border-gray-200 hover:border-[#e8511a]"
-                        }`}
-                      >
-                        {film}
-                      </button>
-                    ))}
-                  </div>
-                </Field>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Field label="Monthly Capacity (MT)">
-                    <input
-                      type="number"
-                      className={inputCls}
-                      placeholder="e.g. 50"
-                      value={formData.monthlyCapacity}
-                      onChange={(e) => setF("monthlyCapacity", e.target.value)}
-                    />
-                  </Field>
-                  <Field label="Price Range (₹/kg)">
-                    <input
-                      className={inputCls}
-                      placeholder="e.g. 80-120"
-                      value={formData.priceRange}
-                      onChange={(e) => setF("priceRange", e.target.value)}
-                    />
-                  </Field>
-                </div>
 
                 <Field label="Brief Description">
                   <textarea
