@@ -54,3 +54,8 @@ export const fetchSellerMetaData = async () => {
   const response = await API.get("/products/metadata");
   return response.data;
 };
+
+export const fetchSellersByGroupKey = async (groupKey) => {
+  const response = await API.get(`/products/group/${groupKey}/sellers`);
+  return response.data;
+};

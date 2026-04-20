@@ -7,8 +7,10 @@ export const fetchDashboardStats = async () => {
 };
 
 // --- User Management ---
-export const fetchAllUsers = async (page = 1, limit = 10) => {
-  const response = await API.get(`/admin/users?page=${page}&limit=${limit}`);
+export const fetchAllUsers = async (page = 1, limit = 10, role = '') => {
+  let url = `/admin/users?page=${page}&limit=${limit}`;
+  if (role) url += `&role=${role}`;
+  const response = await API.get(url);
   return response.data;
 };
 
@@ -101,11 +103,48 @@ export const addProductForSeller = async (sellerUserId, productData) => {
   return response.data;
 };
 
+export const addSellerAdmin = async (sellerData) => {
+  const response = await API.post("/admin/sellers/add", sellerData);
+  return response.data;
+};
+
 export const uploadProductImage = async (file) => {
   const formData = new FormData();
   formData.append('product_image', file);
   const response = await API.post(`/admin/upload-image`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
+  return response.data;
+};
+
+// --- Master Data ---
+export const fetchCategories = async () => {
+  const response = await API.get("/categories");
+  return response.data;
+};
+
+export const fetchSubCategories = async (categoryId = "") => {
+  const response = await API.get(`/sub-categories${categoryId ? `?categoryId=${categoryId}` : ""}`);
+  return response.data;
+};
+
+export const fetchTags = async () => {
+  const response = await API.get("/tags");
+  return response.data;
+};
+
+export const fetchApplications = async () => {
+  const response = await API.get("/applications");
+  return response.data;
+};
+
+// --- Product Groups ---
+export const fetchProductGroups = async (categoryId = "") => {
+  const response = await API.get(`/product-groups?categoryId=${categoryId}`);
+  return response.data;
+};
+
+export const createProductGroup = async (groupData) => {
+  const response = await API.post("/product-groups", groupData);
   return response.data;
 };

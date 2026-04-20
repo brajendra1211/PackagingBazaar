@@ -5,6 +5,7 @@ import {
   fetchProductById,
   fetchProducts,
   fetchProductVariants,
+  fetchSellersByGroupKey,
 } from "../services/productServices";
 import { useCart } from "../context/CartContext";
 import Badge from "../components/ui/Badge";
@@ -41,6 +42,8 @@ export default function ProductDetailPage() {
   const [added, setAdded] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [inquiryProduct, setInquiryProduct] = useState(null);
+  const [otherSellers, setOtherSellers] = useState([]);
+  const [sellersLoading, setSellersLoading] = useState(false);
 
   const handleOpenInquiry = (p) => {
     setInquiryProduct(p || product);
@@ -82,6 +85,17 @@ export default function ProductDetailPage() {
         const variantsRes = await fetchProductVariants(id);
         if (variantsRes.success) {
           setVariants(variantsRes.variants || []);
+        }
+
+        // 4. Fetch Other Sellers for comparison
+        if (productData && productData.group_key) {
+          setSellersLoading(true);
+          const sellersRes = await fetchSellersByGroupKey(productData.group_key);
+          if (sellersRes.success) {
+            // Filter out current seller if needed, or show all
+            setOtherSellers(sellersRes.data || []);
+          }
+          setSellersLoading(false);
         }
       } catch (err) {
         console.error("Error loading product details:", err);
@@ -388,6 +402,89 @@ export default function ProductDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Other Sellers Comparison Section (Phase 3) */}
+        {otherSellers.length > 1 && (
+          <div className="mt-12 md:mt-16 bg-white rounded-[2.5rem] p-6 md:p-10 border border-black/[0.05] shadow-xl shadow-black/5">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+              <div>
+                <h2 className="font-syne font-black text-2xl text-gray-900 uppercase tracking-tight">Compare Other Sellers</h2>
+                <p className="text-[11px] text-gray-500 font-medium uppercase tracking-widest mt-1">Get the best rates from verified manufacturers</p>
+              </div>
+              <div className="bg-accent/5 px-4 py-2 rounded-full border border-accent/10">
+                <span className="text-[11px] font-black text-accent uppercase tracking-widest">{otherSellers.length} Sellers Available</span>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto scrollbar-hide -mx-6 px-6">
+              <div className="min-w-[800px] inline-block w-full">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Manufacturer</th>
+                      <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Location</th>
+                      <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Price Range</th>
+                      <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">MOQ / Stock</th>
+                      <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {otherSellers.map((s) => (
+                      <tr key={s.id} className={`group hover:bg-gray-50/50 transition-all ${s.id === product.id ? 'bg-orange-50/30' : ''}`}>
+                        <td className="py-5 pr-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gray-900 text-white rounded-xl flex items-center justify-center font-black text-xs shrink-0">
+                              {s.company_name[0]}
+                            </div>
+                            <div>
+                              <p className="font-black text-gray-900 text-sm leading-tight">{s.company_name}</p>
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <ShieldCheck size={10} className="text-green-500" />
+                                <span className="text-[9px] font-bold text-gray-400 uppercase">Verified Supplier</span>
+                              </div>
+                            </div>
+                            {s.product_id === product.id && (
+                                <span className="bg-accent/10 text-accent text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-tighter">Current</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-5 pr-4">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-gray-600">
+                            <MapPin size={12} className="text-accent" />
+                            {s.city}, {s.state}
+                          </div>
+                        </td>
+                        <td className="py-5 pr-4">
+                          <p className="font-black text-gray-900 text-sm">₹{s.price_min} - ₹{s.price_max}</p>
+                          <p className="text-[9px] font-bold text-gray-400 uppercase">Per {product.unit}</p>
+                        </td>
+                        <td className="py-5 pr-4">
+                          <div className="space-y-1">
+                            <span className="text-[9px] font-black text-gray-500 uppercase tracking-wider block">Min Order: {s.moq} {product.unit}</span>
+                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded inline-block ${s.stock_qty > 0 ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                              {s.stock_qty > 0 ? `Ready Stock (${s.stock_qty})` : 'Out of Stock'}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-5 text-right">
+                          <button 
+                            onClick={() => {
+                              navigate(`/product/${s.product_id}`);
+                              window.scrollTo(0, 0);
+                            }}
+                            className="px-6 py-2.5 bg-white border border-black/10 text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white transition-all shadow-sm"
+                          >
+                            View Product
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* All Variants Reflection Section */}
         {variants?.length > 0 && (

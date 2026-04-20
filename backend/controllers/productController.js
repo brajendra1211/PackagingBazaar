@@ -1,19 +1,112 @@
 import pool from "../config/db.js";
 
-// Fetch Categories with their variant or product count
-export const getCategories = async (req, res) => {
+// Fetch Categories
+// 10. Get Product Groups (for variant grouping)
+export const getProductGroups = async (req, res) => {
   try {
-    const query = `
-      SELECT c.id, c.name, COUNT(p.id) as variants
-      FROM categories c
-      LEFT JOIN sub_categories sc ON c.id = sc.category_id
-      LEFT JOIN products p ON sc.id = p.sub_category_id
-      GROUP BY c.id
+    const { categoryId } = req.query;
+    let query = `
+      SELECT pg.*, c.name as category_name, c.code_prefix
+      FROM product_groups pg
+      JOIN categories c ON pg.category_id = c.id
     `;
-    const [rows] = await pool.query(query);
+    const params = [];
+
+    if (categoryId) {
+      query += " WHERE pg.category_id = ?";
+      params.push(categoryId);
+    }
+
+    query += " ORDER BY pg.name ASC";
+    const [rows] = await pool.query(query, params);
     res.status(200).json({ success: true, data: rows });
   } catch (error) {
-    console.error("Error in getCategories:", error);
+    console.error("Error in getProductGroups:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+// 11. Create Product Group (Admin)
+export const createProductGroup = async (req, res) => {
+  try {
+    const { name, categoryId, description } = req.body;
+
+    if (!name || !categoryId) {
+      return res.status(400).json({ success: false, message: "Name and Category are required" });
+    }
+
+    // 1. Get category prefix
+    const [catRows] = await pool.query("SELECT code_prefix FROM categories WHERE id = ?", [categoryId]);
+    if (catRows.length === 0) return res.status(404).json({ success: false, message: "Category not found" });
+    const prefix = catRows[0].code_prefix || "GRP";
+
+    // 2. Count existing groups for fallback
+    const [[{ count }]] = await pool.query("SELECT COUNT(*) as count FROM product_groups WHERE category_id = ?", [categoryId]);
+    const finalMasterId = req.body.masterId || `GP-${prefix}-${count + 1}`;
+
+    const [result] = await pool.query(
+      "INSERT INTO product_groups (category_id, master_id, name, description) VALUES (?, ?, ?, ?)",
+      [categoryId, finalMasterId, name, description]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "Product Group created!",
+      groupId: result.insertId,
+      masterId: finalMasterId
+    });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+       return res.status(400).json({ success: false, message: "A group with this name or ID already exists" });
+    }
+    console.error("Error creating product group:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+export const getCategories = async (req, res) => {
+  try {
+    const [rows] = await pool.query("SELECT id, name FROM categories ORDER BY name ASC");
+    res.status(200).json({ success: true, data: rows });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+// Fetch SubCategories (Optionally filtered by category)
+export const getSubCategories = async (req, res) => {
+  const { categoryId } = req.query;
+  try {
+    let query = "SELECT id, category_id, name FROM sub_categories";
+    const params = [];
+    if (categoryId) {
+      query += " WHERE category_id = ?";
+      params.push(categoryId);
+    }
+    query += " ORDER BY name ASC";
+    const [rows] = await pool.query(query, params);
+    res.status(200).json({ success: true, data: rows });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+// Fetch Tags
+export const getTags = async (req, res) => {
+  try {
+    const [rows] = await pool.query("SELECT id, tag_name FROM tags ORDER BY tag_name ASC");
+    res.status(200).json({ success: true, data: rows });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+// Fetch Applications
+export const getApplications = async (req, res) => {
+  try {
+    const [rows] = await pool.query("SELECT id, app_name FROM applications ORDER BY app_name ASC");
+    res.status(200).json({ success: true, data: rows });
+  } catch (error) {
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
@@ -223,6 +316,7 @@ export const addProduct = async (req, res) => {
 
     const {
       name,
+      category_id, // Added to handle category resolution
       sub_category_id,
       tag_id,
       thickness,
@@ -234,46 +328,56 @@ export const addProduct = async (req, res) => {
       stock,
       image_url,
       description,
-      applications,
+      applications, // Expecting array of app_names or app_ids
     } = req.body;
 
-    const userId = req.user.id; // verifyToken middleware se mil raha hai
+    const userId = req.user.id;
     const role = req.user.role;
 
     let seller_id = null;
-
     if (role !== "admin") {
-      // Get seller_id from user_id
-      const [sellerRows] = await connection.query(
-        "SELECT id FROM sellers WHERE user_id = ?",
-        [userId]
-      );
-
-      if (sellerRows.length === 0) {
-        return res.status(404).json({ success: false, message: "Seller profile not found." });
-      }
-      
+      const [sellerRows] = await connection.query("SELECT id FROM sellers WHERE user_id = ?", [userId]);
+      if (sellerRows.length === 0) return res.status(404).json({ success: false, message: "Seller profile not found." });
       seller_id = sellerRows[0].id;
     }
+
+    // Helper: Dynamic Master Data Resolution
+    const resolveId = async (table, nameField, value, parentField = null, parentValue = null) => {
+      if (!value) return null;
+      if (!isNaN(value)) return value; // If purely numeric, assume it's an ID
+
+      // If string, search by name
+      let sql = `SELECT id FROM ${table} WHERE ${nameField} = ?`;
+      let params = [value];
+      if (parentField && parentValue) {
+        sql += ` AND ${parentField} = ?`;
+        params.push(parentValue);
+      }
+
+      const [rows] = await connection.query(sql, params);
+      if (rows.length > 0) return rows[0].id;
+
+      // Create new record if not found
+      const insertSql = parentField 
+        ? `INSERT INTO ${table} (${nameField}, ${parentField}) VALUES (?, ?)` 
+        : `INSERT INTO ${table} (${nameField}) VALUES (?)`;
+      const insertParams = parentField ? [value, parentValue] : [value];
+      
+      const [result] = await connection.query(insertSql, insertParams);
+      return result.insertId;
+    };
+
+    // Resolve Category, SubCategory, Tag
+    const resolvedCategoryId = await resolveId('categories', 'name', category_id);
+    const resolvedSubCategoryId = await resolveId('sub_categories', 'name', sub_category_id, 'category_id', resolvedCategoryId);
+    const resolvedTagId = await resolveId('tags', 'tag_name', tag_id);
 
     // 1. Insert into products
     const [productResult] = await connection.query(
       `INSERT INTO products 
       (name, sub_category_id, tag_id, seller_id, thickness, width, min_price, max_price, unit, description, image_url) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        name,
-        sub_category_id,
-        tag_id,
-        seller_id,
-        thickness,
-        width,
-        minPrice,
-        maxPrice,
-        unit,
-        description,
-        image_url,
-      ],
+      [name, resolvedSubCategoryId, resolvedTagId, seller_id, thickness, width, minPrice, maxPrice, unit, description, image_url],
     );
 
     const productId = productResult.insertId;
@@ -284,38 +388,30 @@ export const addProduct = async (req, res) => {
       [productId, stock, min_order],
     );
 
-    // 3. Insert Applications (Bulk Mapping Support)
+    // 3. Resolve and Insert Applications
     if (applications && applications.length > 0) {
-      // Direct ID mapping logic (Agar frontend ID bhej raha hai toh directly dalo, warna pehle fetch karo)
-      const [appData] = await connection.query(
-        "SELECT id FROM applications WHERE app_name IN (?)",
-        [applications],
-      );
+      const appIds = [];
+      for (const app of applications) {
+         const id = await resolveId('applications', 'app_name', app);
+         if (id) appIds.push(id);
+      }
 
-      const mappingValues = appData.map((app) => [productId, app.id]);
-      if (mappingValues.length > 0) {
-        await connection.query(
-          "INSERT INTO product_application_mapping (product_id, app_id) VALUES ?",
-          [mappingValues],
-        );
+      if (appIds.length > 0) {
+        const mappingValues = appIds.map(aid => [productId, aid]);
+        await connection.query("INSERT INTO product_application_mapping (product_id, app_id) VALUES ?", [mappingValues]);
       }
     }
 
     await connection.commit();
-    res.status(201).json({
-      success: true,
-      message: "Product added successfully!",
-      productId,
-    });
+    res.status(201).json({ success: true, message: "Product added successfully!", productId });
   } catch (error) {
     await connection.rollback();
-    res.status(500).json({ success: false, message: "Failed to add product." });
+    console.error("Error in addProduct:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
   } finally {
     connection.release();
   }
 };
-
-/////////////////////////////////////
 
 // 5. Update Product (Seller/Admin Only)
 export const updateProduct = async (req, res) => {
@@ -439,6 +535,40 @@ export const getUniqueProductNames = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in getUniqueProductNames:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+// 9. Get all sellers for a specific product group key (Phase 2)
+export const getSellersByGroupKey = async (req, res) => {
+  try {
+    const { groupKey } = req.params;
+
+    if (!groupKey) {
+      return res.status(400).json({ success: false, message: "Group key is required" });
+    }
+
+    const query = `
+      SELECT sp.*, s.company_name, s.city, s.state, s.pincode,
+             u.name as owner_name, u.mobile as phone, u.email,
+             p.display_name, p.name as master_product_name
+      FROM seller_products sp
+      JOIN sellers s ON sp.seller_id = s.id
+      JOIN users u ON s.user_id = u.id
+      JOIN products p ON sp.product_id = p.id
+      WHERE p.group_key = ? AND sp.status = 'active'
+      ORDER BY sp.price_min ASC
+    `;
+
+    const [sellers] = await pool.query(query, [groupKey]);
+
+    res.status(200).json({
+      success: true,
+      totalSellers: sellers.length,
+      data: sellers
+    });
+  } catch (error) {
+    console.error("Error in getSellersByGroupKey:", error);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };

@@ -1,4 +1,6 @@
 import pool from "../config/db.js";
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 // --- SELLER MANAGEMENT ---
 
@@ -60,7 +62,7 @@ export const getAllSellers = async (req, res) => {
              s.city, s.state, s.created_at, s.status
       FROM users u
       JOIN sellers s ON u.id = s.user_id
-      WHERE u.role = 'seller' AND (u.is_verified = 1 OR s.status = 'verified')
+      WHERE u.role = 'seller' AND (u.is_verified = 1 OR s.status IN ('verified', 'approved', 'active'))
       ORDER BY s.created_at DESC
       LIMIT ? OFFSET ?
     `;
@@ -70,7 +72,7 @@ export const getAllSellers = async (req, res) => {
     const [[{ total }]] = await pool.query(`
       SELECT COUNT(*) as total FROM users u 
       JOIN sellers s ON u.id = s.user_id 
-      WHERE u.role = 'seller' AND u.is_verified = 1
+      WHERE u.role = 'seller' AND (u.is_verified = 1 OR s.status IN ('verified', 'approved', 'active'))
     `);
 
     res.status(200).json({ 
@@ -153,14 +155,26 @@ export const getAllUsers = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
+    const role = req.query.role || '';
     const offset = (page - 1) * limit;
 
-    const [rows] = await pool.query(
-      "SELECT id, name, email, role, is_verified, created_at FROM users WHERE id != ? ORDER BY created_at DESC LIMIT ? OFFSET ?", 
-      [req.user.id, limit, offset]
-    );
+    let query = "SELECT id, name, email, role, is_verified, created_at FROM users WHERE id != ?";
+    let countQuery = "SELECT COUNT(*) as total FROM users WHERE id != ?";
+    const params = [req.user.id];
+    const countParams = [req.user.id];
 
-    const [[{ total }]] = await pool.query("SELECT COUNT(*) as total FROM users WHERE id != ?", [req.user.id]);
+    if (role) {
+      query += " AND role = ?";
+      countQuery += " AND role = ?";
+      params.push(role);
+      countParams.push(role);
+    }
+
+    query += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+    params.push(limit, offset);
+
+    const [rows] = await pool.query(query, params);
+    const [[{ total }]] = await pool.query(countQuery, countParams);
 
     res.status(200).json({ 
       success: true, 
@@ -170,6 +184,7 @@ export const getAllUsers = async (req, res) => {
       currentPage: page
     });
   } catch (error) {
+    console.error("Error in getAllUsers:", error);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
@@ -513,14 +528,14 @@ export const toggleHotDeal = async (req, res) => {
   }
 };
 
-// 17. Get Recommended Sellers for a lead based on location
+// 17. Get Recommended Sellers for a lead (Phase 2 - Smart Matching)
 export const getRecommendedSellers = async (req, res) => {
   try {
     const { id } = req.params;
     
     // 1. Get lead details
     const [leadRows] = await pool.query(
-      "SELECT i.id, i.pincode as lead_pincode, i.city as lead_city, i.state as lead_state, i.address as lead_address, p.sub_category_id FROM inquiries i JOIN products p ON i.product_id = p.id WHERE i.id = ?",
+      "SELECT i.*, p.sub_category_id FROM inquiries i JOIN products p ON i.product_id = p.id WHERE i.id = ?",
       [id]
     );
 
@@ -530,22 +545,56 @@ export const getRecommendedSellers = async (req, res) => {
 
     const lead = leadRows[0];
     
-    // 2. Fetch all verified sellers with fuzzy matching logic
-    // Scoring logic:
-    // - 100: City match OR Seller City found in Lead Address
-    // - 50: State match OR Seller State found in Lead Address
-    // - 30: Product Sub-Category match
+    // Helper function to extract number from string (e.g., "500 kg" -> 500)
+    const parseQty = (str) => {
+      if (!str) return 0;
+      const match = str.match(/(\d+)/);
+      return match ? parseInt(match[1]) : 0;
+    };
+
+    const leadQty = parseQty(lead.quantity_required);
+    const leadThickness = lead.thickness ? lead.thickness.toLowerCase() : null;
+    const leadWidth = lead.width ? lead.width.toLowerCase() : null;
+
+    // 2. Fetch all verified sellers with smart matching logic
+    // Scoring logic (Phase 2):
+    // - Location: Pincode (200), City (100), State (50)
+    // - Sub-Category Match (30)
+    // - Stock Sufficient (+50)
+    // - MOQ Fits (+40)
+    // - Thickness Match (+30)
+    // - Width Match (+20)
     
     const query = `
       SELECT s.*, u.email, u.mobile as phone, u.name as owner_name,
-      (CASE 
-        WHEN s.pincode = ? THEN 200
-        WHEN LOWER(s.city) = LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(s.city), '%') THEN 100 
-        WHEN LOWER(s.state) = LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(s.state), '%') THEN 50 
-        ELSE 0 
-      END + 
-       CASE WHEN EXISTS (SELECT 1 FROM products p2 WHERE p2.seller_id = s.id AND p2.sub_category_id = ?) THEN 30 ELSE 0 END
-      ) as match_score
+      (
+        -- Location Scores
+        CASE 
+          WHEN s.pincode = ? THEN 200
+          WHEN LOWER(s.city) = LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(s.city), '%') THEN 100 
+          WHEN LOWER(s.state) = LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(s.state), '%') THEN 50 
+          ELSE 0 
+        END + 
+        -- Sub-Category Match
+        CASE WHEN EXISTS (SELECT 1 FROM products p2 WHERE p2.seller_id = s.id AND p2.sub_category_id = ?) THEN 30 ELSE 0 END +
+        -- Smart Matching Scores (from seller_products)
+        COALESCE((
+          SELECT MAX(
+            CASE WHEN sp.stock_qty >= ? THEN 60 ELSE 0 END +
+            CASE WHEN sp.moq <= ? THEN 40 ELSE 0 END +
+            CASE WHEN LOWER(sp.width) = LOWER(?) THEN 30 ELSE 0 END +
+            -- Compare Price (Best value gets points - simplified)
+            CASE WHEN sp.price_min <= (SELECT AVG(price_min) FROM seller_products WHERE product_id = sp.product_id) THEN 20 ELSE 0 END +
+            -- Check thickness from master product as well
+            CASE WHEN EXISTS (SELECT 1 FROM products p3 WHERE p3.id = sp.product_id AND LOWER(p3.thickness) = LOWER(?)) THEN 50 ELSE 0 END
+          )
+          FROM seller_products sp
+          WHERE sp.seller_id = s.id AND sp.status = 'active'
+        ), 0)
+      ) as match_score,
+      -- Fetch match breakdown for UI
+      EXISTS (SELECT 1 FROM seller_products sp2 WHERE sp2.seller_id = s.id AND sp2.stock_qty >= ? ) as has_stock,
+      EXISTS (SELECT 1 FROM seller_products sp3 WHERE sp3.seller_id = s.id AND sp3.moq <= ? ) as moq_fit
       FROM sellers s
       JOIN users u ON s.user_id = u.id
       WHERE u.role = 'seller' AND u.is_verified = 1
@@ -553,17 +602,23 @@ export const getRecommendedSellers = async (req, res) => {
     `;
 
     const [sellers] = await pool.query(query, [
-      lead.lead_pincode,
-      lead.lead_city, lead.lead_address, 
-      lead.lead_state, lead.lead_address, 
-      lead.sub_category_id
+      lead.pincode,
+      lead.city, lead.address, 
+      lead.state, lead.address, 
+      lead.sub_category_id,
+      leadQty, // for stock score
+      leadQty, // for moq score
+      leadWidth,
+      leadThickness,
+      leadQty, // for breakdown has_stock
+      leadQty  // for breakdown moq_fit
     ]);
-
 
     res.status(200).json({ 
       success: true, 
       recommendations: sellers,
-      leadLocation: { city: lead.lead_city, state: lead.lead_state }
+      leadLocation: { city: lead.city, state: lead.state },
+      leadRequirements: { qty: leadQty, thickness: leadThickness, width: leadWidth }
     });
   } catch (error) {
     console.error("Error in getRecommendedSellers:", error);
@@ -571,102 +626,118 @@ export const getRecommendedSellers = async (req, res) => {
   }
 };
 
-// 18. Add product for a seller (Admin)
+// 18. Add product for a seller (Admin - Phase 2 Dual Insert)
 export const addProductForSeller = async (req, res) => {
   const { sellerUserId } = req.params;
   const { 
-    name, category, subcategory, tag, thickness, width, 
-    minPrice, maxPrice, unit, description, img, stock, minOrder, applications 
+    name, display_name, product_group_id, category, subcategory, tag, thickness, width, 
+    minPrice, maxPrice, unit, description, img, stock, minOrder, applications,
+    delivery_days, payment_terms, color, type
   } = req.body;
 
+  const connection = await pool.getConnection();
   try {
+    await connection.beginTransaction();
+
     // 1. Get seller_id from user_id
-    const [sellerRows] = await pool.query(
+    const [sellerRows] = await connection.query(
       "SELECT id FROM sellers WHERE user_id = ?",
       [sellerUserId]
     );
 
     if (sellerRows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Seller profile not found for the given user ID"
-      });
+      await connection.rollback();
+      return res.status(404).json({ success: false, message: "Seller profile not found" });
     }
 
     const sellerId = sellerRows[0].id;
 
-    // 2. Get sub_category_id
-    const [subCatRows] = await pool.query(
-      `SELECT sc.id FROM sub_categories sc 
+    // 2. Get sub_category_id & category prefix
+    const [subCatRows] = await connection.query(
+      `SELECT sc.id, c.code_prefix FROM sub_categories sc 
        JOIN categories c ON sc.category_id = c.id 
-       WHERE sc.name = ? AND c.name = ?`,
-      [subcategory, category]
+       WHERE (sc.name = ? OR sc.id = ?) AND (c.name = ? OR c.id = ?)`,
+      [subcategory, subcategory, category, category]
     );
 
     if (subCatRows.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid category/subcategory combination"
-      });
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: "Invalid category/subcategory" });
     }
 
-    const subCategoryId = subCatRows[0].id;
+    const { id: subCategoryId, code_prefix: catPrefix } = subCatRows[0];
 
-    // 3. Get tag_id
-    let tagId = null;
-    if (tag && tag !== "") {
-      const [tagRows] = await pool.query(
-        "SELECT id FROM tags WHERE tag_name = ?",
-        [tag]
-      );
-      if (tagRows.length > 0) {
-        tagId = tagRows[0].id;
+    // --- AUTO GEN group_key if missing (Matches Excel Pattern: CAT_THICK_TYPE) ---
+    let finalGroupKey = req.body.group_key;
+    if (!finalGroupKey) {
+      const subCatPart = subcategory ? subcategory.toString().toUpperCase().replace(/\s+/g, '_') : 'PRD';
+      const thickPart = (thickness || "X").toString().replace(/\s+/g, '');
+      const typePart = (type || color || "NA").toString().substring(0, 3).toUpperCase();
+      finalGroupKey = `${subCatPart}_${thickPart}_${typePart}`;
+    }
+
+    // 3. Check for existing Master Product (by group_key or spec match)
+    let productId = null;
+    const [existingMaster] = await connection.query(
+      "SELECT id FROM products WHERE (group_key = ? AND group_key IS NOT NULL) OR (name = ? AND thickness = ? AND width = ? AND sub_category_id = ?)",
+      [finalGroupKey, name, thickness, width, subCategoryId]
+    );
+
+    if (existingMaster.length > 0) {
+      productId = existingMaster[0].id;
+      // Update group if provided and not set
+      if (product_group_id) {
+         await connection.query("UPDATE products SET product_group_id = ? WHERE id = ?", [product_group_id, productId]);
       }
+    } else {
+      // Create new Master Product
+      const [productResult] = await connection.query(
+        `INSERT INTO products 
+         (product_group_id, sub_category_id, name, display_name, group_key, thickness, width, color, type, unit, description, image_url, applications) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          product_group_id || null, subCategoryId, name, display_name, finalGroupKey, thickness, width, color, type,
+          unit || 'kg', description, img, JSON.stringify(applications || [])
+        ]
+      );
+      productId = productResult.insertId;
     }
 
-    // 4. Insert product
-    const [productResult] = await pool.query(
-      `INSERT INTO products 
-       (seller_id, sub_category_id, tag_id, name, thickness, width, 
-        min_price, max_price, unit, description, image_url, applications) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    // 4. Insert into seller_products (Seller Listing)
+    await connection.query(
+      `INSERT INTO seller_products 
+       (product_id, seller_id, price_min, price_max, moq, stock_qty, stock, width, delivery_days, payment_terms) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE 
+       price_min = VALUES(price_min), price_max = VALUES(price_max), moq = VALUES(moq), 
+       stock_qty = VALUES(stock_qty), stock = VALUES(stock), delivery_days = VALUES(delivery_days)`,
       [
-        sellerId,
-        subCategoryId,
-        tagId,
-        name,
-        thickness,
-        width,
-        minPrice,
-        maxPrice,
-        unit,
-        description,
-        img,
-        JSON.stringify(applications || [])
+        productId, sellerId, minPrice, maxPrice, minOrder || 100, stock || 0,
+        (stock > 0 ? 'Available' : 'Out of Stock'), width, delivery_days || 48, payment_terms
       ]
     );
 
-    const productId = productResult.insertId;
-
-    // 5. Insert stock information
-    await pool.query(
+    // 5. Keep product_stocks in sync for legacy compatibility (Optional)
+    await connection.query(
       `INSERT INTO product_stocks (product_id, quantity, min_order) 
-       VALUES (?, ?, ?)`,
+       VALUES (?, ?, ?) 
+       ON DUPLICATE KEY UPDATE quantity = VALUES(quantity), min_order = VALUES(min_order)`,
       [productId, stock, minOrder]
     );
 
+    await connection.commit();
+
     res.status(201).json({
       success: true,
-      message: "Product created successfully by Admin",
+      message: "Product added to Seller successfully",
       productId: productId
     });
   } catch (error) {
+    if (connection) await connection.rollback();
     console.error("Error in addProductForSeller:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server Error",
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: "Server Error", error: error.message });
+  } finally {
+    if (connection) connection.release();
   }
 };
 
@@ -686,6 +757,61 @@ export const uploadImage = async (req, res) => {
   } catch (error) {
     console.error("Upload error:", error);
     res.status(500).json({ success: false, message: "Failed to upload image" });
+  }
+};
+
+// 20. Add Seller by Admin (Auto-Verified)
+export const addSellerAdmin = async (req, res) => {
+  const { 
+    ownerName, email, password, mobile, companyName, businessType,
+    gstNumber, city, state, pincode, businessAddress
+  } = req.body;
+
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    // 1. Validation
+    if (!ownerName || !email || !password || !companyName) {
+      return res.status(400).json({ success: false, message: "Missing required fields." });
+    }
+
+    // 2. Check if user already exists
+    const [existing] = await connection.query("SELECT id FROM users WHERE email = ?", [email]);
+    if (existing.length > 0) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: "Email already registered." });
+    }
+
+    // 3. Create User (Verified)
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const [userResult] = await connection.query(
+      "INSERT INTO users (name, email, mobile, password, role, is_verified) VALUES (?, ?, ?, ?, 'seller', 1)",
+      [ownerName, email, mobile, hashedPassword]
+    );
+    const userId = userResult.insertId;
+
+    // 4. Create Seller Profile
+    const sellerUID = `PB-S-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+    await connection.query(
+      `INSERT INTO sellers 
+      (user_id, mobile, status, seller_uid, company_name, business_type, gst_number, city, state, pincode, business_address, is_verified) 
+      VALUES (?, ?, 'verified', ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+      [userId, mobile, sellerUID, companyName, businessType, gstNumber, city, state, pincode, businessAddress]
+    );
+
+    await connection.commit();
+    res.status(201).json({ 
+      success: true, 
+      message: "Seller account created and verified successfully!",
+      sellerUID
+    });
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error("Error in addSellerAdmin:", error);
+    res.status(500).json({ success: false, message: "Server Error", error: error.message });
+  } finally {
+    if (connection) connection.release();
   }
 };
 
