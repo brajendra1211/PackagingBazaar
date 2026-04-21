@@ -66,9 +66,18 @@ export const createProductGroup = async (req, res) => {
 
 export const getCategories = async (req, res) => {
   try {
-    const [rows] = await pool.query("SELECT id, name FROM categories ORDER BY name ASC");
+    const query = `
+      SELECT c.id, c.name, COUNT(p.id) as variants 
+      FROM categories c 
+      LEFT JOIN sub_categories sc ON c.id = sc.category_id 
+      LEFT JOIN products p ON sc.id = p.sub_category_id 
+      GROUP BY c.id 
+      ORDER BY c.name ASC
+    `;
+    const [rows] = await pool.query(query);
     res.status(200).json({ success: true, data: rows });
   } catch (error) {
+    console.error("Error in getCategories: ", error);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
@@ -153,18 +162,23 @@ export const getAllProducts = async (req, res) => {
 
     // Main Data Query
     let dataQuery = `
-      SELECT p.*, t.tag_name, sc.name as subcategory_name, c.name as category_name,
-             ps.quantity as stock, ps.min_order, s.seller_uid, s.company_name as seller_name,
-             s.city, s.state,
+      SELECT p.*, MAX(t.tag_name) as tag_name, MAX(sc.name) as subcategory_name, MAX(c.name) as category_name,
+             COALESCE(MIN(sp.price_min), p.min_price) as min_price,
+             COALESCE(MAX(sp.price_max), p.max_price) as max_price,
+             COALESCE(SUM(sp.stock_qty), 0) as stock, 
+             COALESCE(MIN(sp.moq), 100) as min_order,
+             MAX(s.seller_uid) as seller_uid, MAX(s.company_name) as seller_name,
+             MAX(s.city) as city, MAX(s.state) as state,
              (SELECT AVG(rating) FROM product_reviews WHERE product_id = p.id) as avg_rating,
              (SELECT COUNT(*) FROM product_reviews WHERE product_id = p.id) as review_count
       FROM products p
       LEFT JOIN tags t ON p.tag_id = t.id
       LEFT JOIN sub_categories sc ON p.sub_category_id = sc.id
       LEFT JOIN categories c ON sc.category_id = c.id
-      LEFT JOIN product_stocks ps ON p.id = ps.product_id
-      LEFT JOIN sellers s ON p.seller_id = s.id
+      LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.status = 'active'
+      LEFT JOIN sellers s ON s.id = COALESCE(p.seller_id, sp.seller_id)
       ${whereClause}
+      GROUP BY p.id
     `;
 
     // Sorting
@@ -183,7 +197,8 @@ export const getAllProducts = async (req, res) => {
       LEFT JOIN tags t ON p.tag_id = t.id
       LEFT JOIN sub_categories sc ON p.sub_category_id = sc.id
       LEFT JOIN categories c ON sc.category_id = c.id
-      LEFT JOIN sellers s ON p.seller_id = s.id
+      LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.status = 'active'
+      LEFT JOIN sellers s ON s.id = COALESCE(p.seller_id, sp.seller_id)
       ${whereClause}
     `;
 
@@ -217,19 +232,23 @@ export const getProductById = async (req, res) => {
 
     // controllers/productController.js me sirf query wali string badal lo
     const query = `
-  SELECT p.*, t.tag_name, sc.name as subcategory_name, c.name as category_name,
-         ps.quantity as stock, ps.min_order, s.seller_uid, s.company_name as seller_name,
+  SELECT p.*, MAX(t.tag_name) as tag_name, MAX(sc.name) as subcategory_name, MAX(c.name) as category_name,
+         COALESCE(MIN(sp.price_min), p.min_price) as min_price,
+         COALESCE(MAX(sp.price_max), p.max_price) as max_price,
+         COALESCE(SUM(sp.stock_qty), 0) as stock, 
+         COALESCE(MIN(sp.moq), 100) as min_order,
+         MAX(s.seller_uid) as seller_uid, MAX(s.company_name) as seller_name,
          (SELECT AVG(rating) FROM product_reviews WHERE product_id = p.id) as avg_rating,
          (SELECT COUNT(*) FROM product_reviews WHERE product_id = p.id) as review_count,
-         COALESCE(GROUP_CONCAT(a.app_name), '') as applications  -- Safe check
+         COALESCE(GROUP_CONCAT(DISTINCT a.app_name), '') as applications 
   FROM products p
   LEFT JOIN tags t ON p.tag_id = t.id
   LEFT JOIN sub_categories sc ON p.sub_category_id = sc.id
   LEFT JOIN categories c ON sc.category_id = c.id
-  LEFT JOIN product_stocks ps ON p.id = ps.product_id
+  LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.status = 'active'
   LEFT JOIN product_application_mapping pam ON p.id = pam.product_id
   LEFT JOIN applications a ON pam.app_id = a.id
-  LEFT JOIN sellers s ON p.seller_id = s.id
+  LEFT JOIN sellers s ON s.id = COALESCE(p.seller_id, sp.seller_id)
   WHERE p.id = ?
   GROUP BY p.id
 `;
@@ -284,14 +303,19 @@ export const getProductVariants = async (req, res) => {
 export const getTopSellingProducts = async (req, res) => {
   try {
     const query = `
-      SELECT p.*, t.tag_name, c.name as category_name, s.seller_uid, s.company_name as seller_name,
+      SELECT p.*, MAX(t.tag_name) as tag_name, MAX(c.name) as category_name, MAX(s.seller_uid) as seller_uid, MAX(s.company_name) as seller_name,
+             COALESCE(MIN(sp.price_min), p.min_price) as min_price,
+             COALESCE(MAX(sp.price_max), p.max_price) as max_price,
+             COALESCE(SUM(sp.stock_qty), 0) as stock, 
+             COALESCE(MIN(sp.moq), 100) as min_order,
              (SELECT AVG(rating) FROM product_reviews WHERE product_id = p.id) as avg_rating,
              (SELECT COUNT(*) FROM product_reviews WHERE product_id = p.id) as review_count
       FROM products p
       LEFT JOIN tags t ON p.tag_id = t.id
       LEFT JOIN sub_categories sc ON p.sub_category_id = sc.id
       LEFT JOIN categories c ON sc.category_id = c.id
-      LEFT JOIN sellers s ON p.seller_id = s.id
+      LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.status = 'active'
+      LEFT JOIN sellers s ON s.id = COALESCE(p.seller_id, sp.seller_id)
       GROUP BY p.id
       ORDER BY review_count DESC
       LIMIT 8
@@ -372,12 +396,28 @@ export const addProduct = async (req, res) => {
     const resolvedSubCategoryId = await resolveId('sub_categories', 'name', sub_category_id, 'category_id', resolvedCategoryId);
     const resolvedTagId = await resolveId('tags', 'tag_name', tag_id);
 
+    // Resolve Product Group (Variant Linking)
+    let resolvedGroupId = null;
+    const { groupKey, newGroupName, newGroupId } = req.body;
+    
+    if (groupKey === "NEW_GROUP") {
+      const finalMasterId = newGroupId || `GP-${Date.now()}`;
+      const [grpRes] = await connection.query(
+        "INSERT INTO product_groups (category_id, master_id, name) VALUES (?, ?, ?)",
+        [resolvedCategoryId, finalMasterId, newGroupName]
+      );
+      resolvedGroupId = grpRes.insertId;
+    } else if (groupKey) {
+       const [grpRows] = await connection.query("SELECT id FROM product_groups WHERE master_id = ?", [groupKey]);
+       if (grpRows.length > 0) resolvedGroupId = grpRows[0].id;
+    }
+
     // 1. Insert into products
     const [productResult] = await connection.query(
       `INSERT INTO products 
-      (name, sub_category_id, tag_id, seller_id, thickness, width, min_price, max_price, unit, description, image_url) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [name, resolvedSubCategoryId, resolvedTagId, seller_id, thickness, width, minPrice, maxPrice, unit, description, image_url],
+      (name, sub_category_id, tag_id, seller_id, group_id, product_code, thickness, width, product_type, color, min_price, max_price, unit, description, image_url, delivery_time) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [name, resolvedSubCategoryId, resolvedTagId, seller_id, resolvedGroupId, req.body.productCode, thickness, width, req.body.productType, req.body.color, minPrice, maxPrice, unit, description, image_url, req.body.deliveryTime],
     );
 
     const productId = productResult.insertId;
@@ -495,17 +535,21 @@ export const deleteProduct = async (req, res) => {
 export const getHotDeals = async (req, res) => {
   try {
     const query = `
-      SELECT p.*, t.tag_name, c.name as category_name, s.seller_uid, s.company_name as seller_name,
-             ps.quantity as stock, ps.min_order,
+      SELECT p.*, MAX(t.tag_name) as tag_name, MAX(c.name) as category_name, MAX(s.seller_uid) as seller_uid, MAX(s.company_name) as seller_name,
+             COALESCE(MIN(sp.price_min), p.min_price) as min_price,
+             COALESCE(MAX(sp.price_max), p.max_price) as max_price,
+             COALESCE(SUM(sp.stock_qty), 0) as stock, 
+             COALESCE(MIN(sp.moq), 100) as min_order,
              (SELECT AVG(rating) FROM product_reviews WHERE product_id = p.id) as avg_rating,
              (SELECT COUNT(*) FROM product_reviews WHERE product_id = p.id) as review_count
       FROM products p
       LEFT JOIN tags t ON p.tag_id = t.id
       LEFT JOIN sub_categories sc ON p.sub_category_id = sc.id
       LEFT JOIN categories c ON sc.category_id = c.id
-      LEFT JOIN product_stocks ps ON p.id = ps.product_id
-      LEFT JOIN sellers s ON p.seller_id = s.id
+      LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.status = 'active'
+      LEFT JOIN sellers s ON s.id = COALESCE(p.seller_id, sp.seller_id)
       WHERE p.is_hot_deal = 1
+      GROUP BY p.id
       ORDER BY p.id DESC
       LIMIT 12
     `;

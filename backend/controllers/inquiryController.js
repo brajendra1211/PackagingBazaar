@@ -25,8 +25,15 @@ export const submitInquiry = async (req, res) => {
             return res.status(400).json({ success: false, message: "Product ID is required." });
         }
 
-        // First, get the seller_id for this product
-        const [pRows] = await pool.query("SELECT seller_id FROM products WHERE id = ?", [product_id]);
+        // First, get the seller_id for this product (check master table or seller_products listing)
+        const [pRows] = await pool.query(`
+            SELECT COALESCE(p.seller_id, sp.seller_id) as seller_id 
+            FROM products p
+            LEFT JOIN seller_products sp ON p.id = sp.product_id
+            WHERE p.id = ?
+            LIMIT 1
+        `, [product_id]);
+
         if (pRows.length === 0) {
             return res.status(404).json({ success: false, message: `Product ID ${product_id} not found.` });
         }

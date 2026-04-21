@@ -191,7 +191,7 @@ export default function ProductDetailPage() {
                 </span>
                 <div className="flex items-center gap-1.5 bg-gray-50 text-gray-500 px-3 py-1 rounded-full border border-gray-100 shadow-sm">
                   <span className="text-[10px] sm:text-[11px] font-bold">
-                    Sold by: {product.seller_name || "PackagingBazaar Hub"}
+                    Sold by: {product.seller_name}
                   </span>
                   {product.is_verified ? (
                     <ShieldCheck
@@ -220,6 +220,7 @@ export default function ProductDetailPage() {
                 {[
                   ["Thickness", product.thickness || "N/A"],
                   ["Width", product.width || "N/A"],
+                  ["Color", product.color || "N/A"],
                   [
                     "Min. Order",
                     `${product.min_order || 0} ${product.unit || "units"}`,

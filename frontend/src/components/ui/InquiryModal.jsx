@@ -282,7 +282,7 @@
 //     document.body
 //   );
 // }
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, Send, Package, MessageSquare, ShieldCheck, Ruler, Phone, MapPin, User, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { submitInquiryAPI } from "../../services/inquiryServices";
@@ -306,6 +306,16 @@ export default function InquiryModal({ isOpen, onClose, product, customSubmit })
   const [loading, setLoading] = useState(false);
   const { notifySuccess, notifyError } = useNotification();
   const token = localStorage.getItem("token");
+
+  // Dynamic initialization
+  useEffect(() => {
+    if (isOpen && product) {
+        if (product.id !== "BULK") {
+            setThickness(product.selected_thickness || product.thickness || "");
+            setWidth(product.selected_width || product.width || "");
+        }
+    }
+  }, [isOpen, product]);
 
   if (!isOpen || !product) return null;
 
@@ -478,31 +488,35 @@ export default function InquiryModal({ isOpen, onClose, product, customSubmit })
               </div>
             </div>
 
-            {/* Thickness */}
-            <div className="col-span-2 sm:flex sm:items-center sm:gap-4">
-              <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest sm:w-28 sm:text-right mb-1 sm:mb-0 block shrink-0">Thickness</label>
-              <div className="relative flex-1">
-                <Ruler size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 rotate-90" />
-                <input
-                  type="text" placeholder="Micro/mm"
-                  className="w-full pl-8 pr-3 py-2.5 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:border-accent text-[12px] font-bold text-ink"
-                  value={thickness} onChange={(e) => setThickness(e.target.value)} required
-                />
-              </div>
-            </div>
+            {/* Thickness (Only for Single Product) */}
+            {product.id !== "BULK" && (
+                <div className="col-span-2 sm:flex sm:items-center sm:gap-4">
+                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest sm:w-28 sm:text-right mb-1 sm:mb-0 block shrink-0">Thickness</label>
+                <div className="relative flex-1">
+                    <Ruler size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 rotate-90" />
+                    <input
+                    type="text" placeholder="Micro/mm"
+                    className="w-full pl-8 pr-3 py-2.5 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:border-accent text-[12px] font-bold text-ink"
+                    value={thickness} onChange={(e) => setThickness(e.target.value)} required
+                    />
+                </div>
+                </div>
+            )}
 
-            {/* Width */}
-            <div className="col-span-2 sm:flex sm:items-center sm:gap-4">
-              <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest sm:w-28 sm:text-right mb-1 sm:mb-0 block shrink-0">Width</label>
-              <div className="relative flex-1">
-                <Ruler size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text" placeholder="e.g. 1000"
-                  className="w-full pl-8 pr-3 py-2.5 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:border-accent text-[12px] font-bold text-ink"
-                  value={width} onChange={(e) => setWidth(e.target.value)} required
-                />
-              </div>
-            </div>
+            {/* Width (Only for Single Product) */}
+            {product.id !== "BULK" && (
+                <div className="col-span-2 sm:flex sm:items-center sm:gap-4">
+                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest sm:w-28 sm:text-right mb-1 sm:mb-0 block shrink-0">Width</label>
+                <div className="relative flex-1">
+                    <Ruler size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                    type="text" placeholder="e.g. 1000"
+                    className="w-full pl-8 pr-3 py-2.5 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:border-accent text-[12px] font-bold text-ink"
+                    value={width} onChange={(e) => setWidth(e.target.value)} required
+                    />
+                </div>
+                </div>
+            )}
 
             {/* Pincode */}
             <div className="col-span-2 sm:flex sm:items-center sm:gap-4">

@@ -1,0 +1,193 @@
+import React, { useState, useEffect } from "react";
+import { 
+  Users, 
+  Store, 
+  TrendingUp, 
+  Clock, 
+  LayoutDashboard,
+  RefreshCcw,
+  Package,
+  ArrowRight
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { fetchDashboardStats, fetchAllProductsAdmin } from "../../services/adminServices";
+import { useNotification } from "../../context/NotificationContext";
+
+export default function AdminDashboard() {
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalSellers: 0,
+    pendingSellers: 0,
+    totalProducts: 0,
+    totalOrders: 0,
+    totalInquiries: 0,
+  });
+  const [recentProducts, setRecentProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { notifyError } = useNotification();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    setLoading(true);
+    try {
+      const [statsRes, productsRes] = await Promise.all([
+        fetchDashboardStats(),
+        fetchAllProductsAdmin(1, 5) // Fetch first 5 products
+      ]);
+      
+      if (statsRes.success) setStats(statsRes.stats);
+      if (productsRes.success) setRecentProducts(productsRes.products);
+    } catch (err) {
+      notifyError("Failed to load dashboard data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const statCards = [
+    {
+      label: "Total Users",
+      val: stats.totalUsers,
+      icon: <Users size={20} />,
+      color: "blue",
+      path: "/admin/users",
+    },
+    {
+      label: "Pending Sellers",
+      val: stats.pendingSellers,
+      icon: <Clock size={20} />,
+      color: "orange",
+      path: "/admin/pending-sellers",
+    },
+    {
+      label: "Active Sellers",
+      val: stats.totalSellers,
+      icon: <Store size={20} />,
+      color: "green",
+      path: "/admin/sellers",
+    },
+    {
+      label: "Live Products",
+      val: stats.totalProducts,
+      icon: <Package size={20} />,
+      color: "red",
+      path: "/admin/products",
+    },
+    {
+      label: "Leads",
+      val: stats.totalInquiries,
+      icon: <TrendingUp size={20} />,
+      color: "purple",
+      path: "/admin/inquiries",
+    },
+  ];
+
+  if (loading && recentProducts.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 bg-white rounded-[3rem] border border-gray-100 min-h-[400px]">
+        <RefreshCcw className="animate-spin text-accent mb-4" size={40} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="animate-fadeIn">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 bg-accent/10 text-accent rounded-2xl flex items-center justify-center">
+              <LayoutDashboard size={24} />
+            </div>
+            <h1 className="font-syne font-black text-3xl text-gray-900 uppercase tracking-tight">
+              Admin Control
+            </h1>
+          </div>
+          <p className="text-gray-500 text-sm font-medium">Manage marketplace operations, users, and business leads.</p>
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6 mb-10">
+        {statCards.map((stat) => (
+          <div
+            key={stat.label}
+            onClick={() => navigate(stat.path)}
+            className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm cursor-pointer relative overflow-hidden group hover:shadow-md transition-all"
+          >
+            <div
+              className={`w-12 h-12 flex items-center justify-center mb-4 rounded-2xl ${
+                stat.color === 'blue' ? 'bg-blue-50 text-blue-600' :
+                stat.color === 'orange' ? 'bg-orange-50 text-orange-600' :
+                stat.color === 'green' ? 'bg-green-50 text-green-600' :
+                stat.color === 'red' ? 'bg-red-50 text-red-600' :
+                'bg-purple-50 text-purple-600'
+              }`}
+            >
+              {stat.icon}
+            </div>
+            <p className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1">
+              {stat.label}
+            </p>
+            <h3 className="text-3xl font-syne font-black text-gray-900">
+              {stat.val}
+            </h3>
+          </div>
+        ))}
+      </div>
+
+      {/* Recent Products Section */}
+      <section className="space-y-6">
+         <div className="flex items-center justify-between px-2">
+            <div className="flex items-center gap-3">
+               <div className="w-8 h-8 bg-black text-white rounded-xl flex items-center justify-center">
+                  <Package size={16} />
+               </div>
+               <h2 className="font-syne font-black text-xl uppercase tracking-tight">Recently Added Products</h2>
+            </div>
+            <button 
+               onClick={() => navigate("/admin/products")}
+               className="flex items-center gap-2 text-xs font-black uppercase text-accent hover:gap-3 transition-all"
+            >
+               View All <ArrowRight size={14} />
+            </button>
+         </div>
+
+         <div className="bg-white rounded-[3rem] border border-gray-100 shadow-sm overflow-hidden">
+            <table className="w-full text-left">
+               <thead>
+                  <tr className="bg-slate-50/50 border-b border-gray-50">
+                     <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Product Info</th>
+                     <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Seller</th>
+                     <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Pricing</th>
+                  </tr>
+               </thead>
+               <tbody className="divide-y divide-gray-50">
+                  {recentProducts.map((p) => (
+                     <tr key={p.id} className="hover:bg-gray-50/30 transition-all">
+                        <td className="px-8 py-5">
+                           <div className="font-bold text-gray-900">{p.name || "Untitled Product"}</div>
+                           <div className="text-[10px] text-gray-400 font-black uppercase tracking-tighter mt-0.5">
+                              {p.category_name} • {p.thickness ? `${p.thickness}mic` : "N/A"} • {p.color || "Standard"}
+                           </div>
+                        </td>
+                        <td className="px-8 py-5 text-sm font-semibold text-gray-600 italic">
+                           {p.seller_name}
+                        </td>
+                        <td className="px-8 py-5 text-right">
+                           <div className="font-black text-accent">₹{p.price_min} – ₹{p.price_max}</div>
+                           <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">per {p.unit || "kg"}</div>
+                        </td>
+                     </tr>
+                  ))}
+               </tbody>
+            </table>
+         </div>
+      </section>
+    </div>
+  );
+}

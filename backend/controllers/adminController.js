@@ -165,12 +165,30 @@ export const getAllUsers = async (req, res) => {
     const role = req.query.role || '';
     const offset = (page - 1) * limit;
 
-    let query = "SELECT id, name, email, role, is_verified, created_at FROM users WHERE id != ? AND role = 'user'";
-    let countQuery = "SELECT COUNT(*) as total FROM users WHERE id != ? AND role = 'user'";
+    let query = `
+      SELECT u.id, u.name, u.email, u.mobile, u.role, u.is_verified, u.created_at,
+             s.company_name, s.seller_uid, s.city, s.state, s.business_type
+      FROM users u
+      LEFT JOIN sellers s ON u.id = s.user_id
+      WHERE u.id != ?
+    `;
+    let countQuery = "SELECT COUNT(*) as total FROM users WHERE id != ?";
     const params = [req.user.id];
     const countParams = [req.user.id];
 
-    query += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+    if (role) {
+      if (role === 'seller') {
+        query += " AND u.role = ? AND u.is_verified = 1";
+        countQuery += " AND role = ? AND is_verified = 1";
+      } else {
+        query += " AND u.role = ?";
+        countQuery += " AND role = ?";
+      }
+      params.push(role);
+      countParams.push(role);
+    }
+
+    query += " ORDER BY u.created_at DESC LIMIT ? OFFSET ?";
     params.push(limit, offset);
 
     const [rows] = await pool.query(query, params);
@@ -223,7 +241,7 @@ export const getAllProductsAdmin = async (req, res) => {
 
     const query = `
       SELECT 
-        sp.id, p.id as product_id, p.name, p.group_key, p.thickness, p.color, p.type, p.unit, p.image_url,
+        sp.id, p.id as product_id, p.name, p.group_key, p.product_code, p.thickness, p.color, p.product_type, p.unit, p.image_url, p.is_hot_deal,
         sp.price_min, sp.price_max, sp.moq, sp.stock, sp.stock_qty,
         s.company_name as seller_name, s.seller_uid,
         c.name as category_name
@@ -643,12 +661,12 @@ export const getRecommendedSellers = async (req, res) => {
         -- Smart Matching Scores (from seller_products)
         COALESCE((
           SELECT MAX(
-            CASE WHEN sp.stock_qty >= ? THEN 60 ELSE 0 END +
-            CASE WHEN sp.moq <= ? THEN 40 ELSE 0 END +
+            CASE WHEN sp.stock_qty >= ? THEN 70 ELSE 0 END +
+            CASE WHEN sp.moq <= ? THEN 50 ELSE 0 END +
             CASE WHEN LOWER(sp.width) = LOWER(?) THEN 30 ELSE 0 END +
-            -- Compare Price (Best value gets points - simplified)
-            CASE WHEN sp.price_min <= (SELECT AVG(price_min) FROM seller_products WHERE product_id = sp.product_id) THEN 20 ELSE 0 END +
-            -- Check thickness from master product as well
+            -- Price Match (Below Average = points)
+            CASE WHEN sp.price_min <= (SELECT COALESCE(AVG(price_min), sp.price_min) FROM seller_products WHERE product_id = sp.product_id) THEN 40 ELSE 0 END +
+            -- Thickness Match
             CASE WHEN EXISTS (SELECT 1 FROM products p3 WHERE p3.id = sp.product_id AND LOWER(p3.thickness) = LOWER(?)) THEN 50 ELSE 0 END
           )
           FROM seller_products sp
@@ -656,8 +674,10 @@ export const getRecommendedSellers = async (req, res) => {
         ), 0)
       ) as match_score,
       -- Fetch match breakdown for UI
+      (s.pincode = ?) as pincode_match,
       EXISTS (SELECT 1 FROM seller_products sp2 WHERE sp2.seller_id = s.id AND sp2.stock_qty >= ? ) as has_stock,
-      EXISTS (SELECT 1 FROM seller_products sp3 WHERE sp3.seller_id = s.id AND sp3.moq <= ? ) as moq_fit
+      EXISTS (SELECT 1 FROM seller_products sp3 WHERE sp3.seller_id = s.id AND sp3.moq <= ? ) as moq_fit,
+      EXISTS (SELECT 1 FROM seller_products sp4 WHERE sp4.seller_id = s.id AND sp4.price_min <= (SELECT COALESCE(AVG(price_min), sp4.price_min) FROM seller_products WHERE product_id = sp4.product_id) ) as price_match
       FROM sellers s
       JOIN users u ON s.user_id = u.id
       WHERE u.role = 'seller' AND u.is_verified = 1
@@ -673,8 +693,10 @@ export const getRecommendedSellers = async (req, res) => {
       leadQty, // for moq score
       leadWidth,
       leadThickness,
+      lead.pincode, // pincode_match
       leadQty, // for breakdown has_stock
-      leadQty  // for breakdown moq_fit
+      leadQty, // for breakdown moq_fit
+      // price_match subquery uses its own logic
     ]);
 
     res.status(200).json({ 
@@ -736,7 +758,7 @@ export const addProductForSeller = async (req, res) => {
   const { 
     name, display_name, product_group_id, category, subcategory, tag, thickness, width, 
     minPrice, maxPrice, unit, description, img, stock, minOrder, applications,
-    delivery_days, payment_terms, color, type
+    delivery_days, payment_terms, color, productType, productCode
   } = req.body;
 
   const connection = await pool.getConnection();
@@ -775,7 +797,7 @@ export const addProductForSeller = async (req, res) => {
       const catPart = category ? category.toString().toUpperCase().replace(/\s+/g, '_') : 'PRD';
       const colorPart = color ? color.toString().toUpperCase().replace(/\s+/g, '_') : 'NA';
       const thickPart = (thickness || "X").toString().replace(/\s+/g, '');
-      const typePart = (type || color || "NA").toString().substring(0, 3).toUpperCase();
+      const typePart = (productType || color || "NA").toString().substring(0, 3).toUpperCase();
       finalGroupKey = `${catPart}_${colorPart}_${thickPart}_${typePart}`;
     }
 
@@ -794,12 +816,13 @@ export const addProductForSeller = async (req, res) => {
       }
     } else {
       // Create new Master Product
+      console.log(`🚀 Executing Master Product Insert on DB: ${process.env.DB_NAME}`);
       const [productResult] = await connection.query(
         `INSERT INTO products 
-         (product_group_id, sub_category_id, tag_id, name, display_name, group_key, thickness, width, color, type, unit, description, image_url, applications) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (product_group_id, sub_category_id, tag_id, seller_id, name, display_name, group_key, product_code, thickness, width, color, product_type, unit, description, image_url, applications) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          product_group_id || null, subCategoryId, resolvedTagId || null, name, display_name, finalGroupKey, thickness, width, color, type,
+          product_group_id || null, subCategoryId, resolvedTagId || null, sellerId, name, display_name, finalGroupKey, productCode, thickness, width, color, productType,
           unit || 'kg', description, img, JSON.stringify(applications || [])
         ]
       );

@@ -90,6 +90,11 @@ export default function ProductCard({ product, onInquiry }) {
           <span className="text-[10px] text-ink3 bg-surface px-2 py-0.5 rounded">
             {product.width}
           </span>
+          {product.color && product.color !== 'N/A' && (
+            <span className="text-[10px] text-ink3 bg-surface px-2 py-0.5 rounded uppercase font-bold">
+              {product.color}
+            </span>
+          )}
         </div>
         
         <StarRating 
@@ -101,7 +106,7 @@ export default function ProductCard({ product, onInquiry }) {
           <span className="text-[9px] text-ink3 uppercase font-black tracking-[1px]">Manufacturer:</span>
           <div className="flex items-center gap-1 min-w-0">
             <span className="text-[11px] font-bold text-gray-900 truncate">
-              {product.seller_name || "PackagingBazaar Hub"}
+              {product.seller_name}
             </span>
             {product.is_verified ? <ShieldCheck size={10} className="text-green-500 flex-shrink-0" /> : null}
           </div>

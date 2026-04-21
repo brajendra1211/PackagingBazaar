@@ -47,7 +47,7 @@ export const getSellerProfile = async (req, res) => {
       monthlyCapacity: seller.monthly_capacity || "",
       priceRange: seller.price_range || "",
       description: seller.description || "",
-      status: seller.is_verified ? "active" : "pending",
+      status: seller.status || "pending",
       joinedDate: seller.joinedDate,
       avatar: seller.company_name
         ? seller.company_name.substring(0, 2).toUpperCase()
@@ -84,24 +84,37 @@ export const getSellerProducts = async (req, res) => {
     const sellerId = sellerRows[0].id;
 
     const query = `
-      SELECT p.*, t.tag_name, sc.name as subcategory_name, c.name as category_name,
-             ps.quantity as stock, ps.min_order
+      SELECT 
+        p.id, 
+        p.name, 
+        p.thickness, 
+        p.width, 
+        p.image_url,
+        COALESCE(sp.price_min, p.price) as price,
+        COALESCE(sp.stock_qty, ps.quantity) as stock,
+        COALESCE(sp.moq, ps.min_order) as min_order,
+        COALESCE(sp.status, 'active') as status,
+        sc.name as subcategory_name, 
+        c.name as category_name
       FROM products p
-      LEFT JOIN tags t ON p.tag_id = t.id
+      LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.seller_id = ?
+      LEFT JOIN product_stocks ps ON p.id = ps.product_id
       LEFT JOIN sub_categories sc ON p.sub_category_id = sc.id
       LEFT JOIN categories c ON sc.category_id = c.id
-      LEFT JOIN product_stocks ps ON p.id = ps.product_id
-      WHERE p.seller_id = ?
+      WHERE p.seller_id = ? OR sp.seller_id = ?
       ORDER BY p.id DESC
       LIMIT ? OFFSET ?
     `;
 
-    const [rows] = await pool.query(query, [sellerId, limit, offset]);
+    const [rows] = await pool.query(query, [sellerId, sellerId, sellerId, limit, offset]);
 
     // Total count for pagination
     const [[{ total }]] = await pool.query(
-      "SELECT COUNT(*) as total FROM products WHERE seller_id = ?",
-      [sellerId],
+      `SELECT COUNT(DISTINCT p.id) as total 
+       FROM products p
+       LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.seller_id = ?
+       WHERE p.seller_id = ? OR sp.seller_id = ?`,
+      [sellerId, sellerId, sellerId]
     );
 
     res.status(200).json({
@@ -154,19 +167,21 @@ export const getSellerOrders = async (req, res) => {
               ) 
               FROM order_items oi 
               JOIN products p ON oi.product_id = p.id 
-              WHERE oi.order_id = o.id AND p.seller_id = s.id) as items
+              LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.seller_id = ?
+              WHERE oi.order_id = o.id AND (p.seller_id = ? OR sp.seller_id = ?)) as items
       FROM orders o
-      JOIN order_items oi ON o.id = oi.order_id
-      JOIN products p ON oi.product_id = p.id
-      JOIN sellers s ON p.seller_id = s.id
       JOIN users u ON o.user_id = u.id
-      WHERE s.user_id = ?
-      GROUP BY o.id, s.id, u.name, u.email
+      WHERE EXISTS (
+        SELECT 1 FROM order_items oi 
+        JOIN products p ON oi.product_id = p.id 
+        LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.seller_id = ?
+        WHERE oi.order_id = o.id AND (p.seller_id = ? OR sp.seller_id = ?)
+      )
       ORDER BY o.order_date DESC
       LIMIT ? OFFSET ?
     `;
 
-    const [rows] = await pool.query(query, [userId, limit, offset]);
+    const [rows] = await pool.query(query, [sellerId, sellerId, sellerId, sellerId, sellerId, sellerId, limit, offset]);
 
     const [[{ total }]] = await pool.query(
       `
@@ -174,10 +189,10 @@ export const getSellerOrders = async (req, res) => {
       FROM orders o
       JOIN order_items oi ON o.id = oi.order_id
       JOIN products p ON oi.product_id = p.id
-      JOIN sellers s ON p.seller_id = s.id
-      WHERE s.user_id = ?
+      LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.seller_id = ?
+      WHERE p.seller_id = ? OR sp.seller_id = ?
     `,
-      [userId],
+      [sellerId, sellerId, sellerId],
     );
 
     res.status(200).json({
@@ -189,6 +204,81 @@ export const getSellerOrders = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in getSellerOrders:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+// Get dashboard stats for seller
+export const getSellerStats = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Get seller_id
+    const [sellerRows] = await pool.query(
+      "SELECT id FROM sellers WHERE user_id = ?",
+      [userId]
+    );
+
+    if (sellerRows.length === 0) {
+      return res.status(404).json({ success: false, message: "Seller not found" });
+    }
+
+    const sellerId = sellerRows[0].id;
+
+    // 1. Total Products
+    const [[{ totalProducts }]] = await pool.query(
+      `SELECT COUNT(DISTINCT p.id) as totalProducts 
+       FROM products p
+       LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.seller_id = ?
+       WHERE p.seller_id = ? OR sp.seller_id = ?`,
+      [sellerId, sellerId, sellerId]
+    );
+
+    // 2. Total Active Products
+    const [[{ activeProducts }]] = await pool.query(
+      `SELECT COUNT(DISTINCT p.id) as activeProducts 
+       FROM products p
+       LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.seller_id = ?
+       WHERE (p.seller_id = ? OR sp.seller_id = ?) AND (sp.status = 'active' OR sp.status IS NULL)`,
+      [sellerId, sellerId, sellerId]
+    );
+
+    // 3. Total Orders
+    const [[{ totalOrders }]] = await pool.query(
+      `SELECT COUNT(DISTINCT o.id) as totalOrders 
+       FROM orders o
+       JOIN order_items oi ON o.id = oi.order_id
+       JOIN products p ON oi.product_id = p.id
+       LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.seller_id = ?
+       WHERE p.seller_id = ? OR sp.seller_id = ?`,
+      [sellerId, sellerId, sellerId]
+    );
+
+    // 4. Avg Rating
+    const [[{ avgRating }]] = await pool.query(
+      `SELECT AVG(pr.rating) as avgRating 
+       FROM product_reviews pr
+       JOIN products p ON pr.product_id = p.id
+       LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.seller_id = ?
+       WHERE p.seller_id = ? OR sp.seller_id = ?`,
+      [sellerId, sellerId, sellerId]
+    );
+
+    // 5. Total Views (Mocked for now as we don't have views table)
+    // const totalViews = Math.floor(Math.random() * 1000); // Placeholder
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalProducts,
+        activeProducts,
+        totalOrders,
+        avgRating: parseFloat(avgRating || 0).toFixed(1),
+        totalViews
+      }
+    });
+  } catch (error) {
+    console.error("Error in getSellerStats:", error);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };

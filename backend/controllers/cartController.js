@@ -5,11 +5,14 @@ export const getCart = async (req, res) => {
   try {
     const userId = req.user.id;
     const [rows] = await pool.query(
-      `SELECT c.id as cart_id, c.product_id, c.quantity, p.name, p.min_price as price, p.seller_id, p.description, p.image_url as image,
-              p.thickness, p.width, p.unit,
+      `SELECT c.id as cart_id, c.product_id, c.quantity, p.name, p.min_price as price, 
+              COALESCE(p.seller_id, sp.seller_id) as seller_id, 
+              p.description, p.image_url as image,
+              p.thickness, p.width, p.unit, p.color,
               c.selected_thickness, c.selected_width, c.selected_brand
        FROM cart_items c 
        JOIN products p ON c.product_id = p.id 
+       LEFT JOIN seller_products sp ON p.id = sp.product_id
        WHERE c.user_id = ?`,
       [userId]
     );

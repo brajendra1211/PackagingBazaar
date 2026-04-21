@@ -8,7 +8,7 @@ import { TableSkeleton } from "../components/ui/SkeletonLoader";
 import { Mail, Phone, MessageSquare, Clock, ArrowRight, UserCheck } from "lucide-react";
 
 export function SellerDashboard() {
-  const { seller, PRODUCTS, ORDERS, icons, Icon, Badge, StatCard } = useOutletContext();
+  const { seller, PRODUCTS, ORDERS, stats, icons, Icon, Badge, StatCard } = useOutletContext();
   const navigate = useNavigate();
 
   return (
@@ -22,10 +22,10 @@ export function SellerDashboard() {
         <p className="text-sm text-gray-500 mt-0.5">Welcome back, {seller.ownerName.split(" ")[0]}!</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6 gap-4">
-        <StatCard icon="package" value={PRODUCTS.length} label="Total Products" sub={`${PRODUCTS.filter(p => p.status === "active").length} active`} color="orange" />
-        <StatCard icon="eye" value="659" label="Total Views" sub="Last 30 days" color="blue" />
-        <StatCard icon="orders" value={ORDERS.length} label="Total Orders" sub="Direct sales" color="green" />
-        <StatCard icon="star" value="4.8" label="Avg. Rating" sub="Seller score" color="purple" />
+        <StatCard icon="package" value={stats.totalProducts} label="Total Products" sub={`${stats.activeProducts} active`} color="orange" />
+        {/* <StatCard icon="eye" value={stats.totalViews} label="Total Views" sub="Last 30 days" color="blue" /> */}
+        <StatCard icon="orders" value={stats.totalOrders} label="Total Orders" sub="Direct sales" color="green" />
+        <StatCard icon="star" value={stats.avgRating} label="Avg. Rating" sub="Seller score" color="purple" />
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
@@ -33,21 +33,23 @@ export function SellerDashboard() {
           <h3 className="font-bold text-gray-800 text-sm">Recent Products</h3>
           <button className="text-xs text-[#e8511a] font-semibold" onClick={() => navigate("/seller/products")}>View All</button>
         </div>
-        {PRODUCTS.slice(0, 2).map(p => (
+        {PRODUCTS.length > 0 ? PRODUCTS.slice(0, 3).map(p => (
           <div key={p.id} className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-50 last:border-0">
             <div className="w-9 h-9 bg-orange-100 rounded-xl flex items-center justify-center shrink-0">
               <Icon d={icons.package} size={16} stroke="#e8511a" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-semibold text-sm text-gray-800 truncate">{p.name}</div>
-              <div className="text-xs text-gray-400">{p.category_name} · {p.thickness} {p.thickness ? "mic" : ""}</div>
+              <div className="text-xs text-gray-400">{p.category_name} · {p.thickness || "N/A"}{p.thickness ? " mic" : ""}</div>
             </div>
             <div className="text-right shrink-0">
               <div className="text-sm font-bold text-gray-800">₹{p.price}/kg</div>
               <Badge color={p.status === "active" ? "green" : "gray"}>{p.status}</Badge>
             </div>
           </div>
-        ))}
+        )) : (
+          <div className="px-5 py-8 text-center text-sm text-gray-400 italic">No products yet.</div>
+        )}
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -55,18 +57,33 @@ export function SellerDashboard() {
           <h3 className="font-bold text-gray-800 text-sm">Recent Direct Orders</h3>
           <button className="text-xs text-[#e8511a] font-semibold" onClick={() => navigate("/seller/orders")}>View All</button>
         </div>
-        {ORDERS.slice(0, 3).map(o => (
-          <div key={o.id} className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-50 last:border-0">
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-sm text-gray-800 truncate">{o.buyer}</div>
-              <div className="text-xs text-gray-400 truncate">{o.product} · {o.qty}</div>
+        {ORDERS.length > 0 ? ORDERS.slice(0, 3).map(o => {
+          const firstItem = o.items?.[0] || {};
+          const itemCount = o.items?.length || 0;
+          return (
+            <div key={o.id} className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-50 last:border-0">
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-sm text-gray-800 truncate">{o.customer_name}</div>
+                <div className="text-xs text-gray-400 truncate">
+                  {firstItem.name || "Unknown Product"} 
+                  {itemCount > 1 ? ` + ${itemCount - 1} more` : ""} 
+                  {firstItem.qty ? ` · ${firstItem.qty} qty` : ""}
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <div className="text-sm font-bold text-gray-800">₹{o.total_price}</div>
+                <Badge color={
+                  o.status === "Delivered" ? "green" : 
+                  o.status === "Shipped" ? "blue" : 
+                  o.status === "Cancelled" ? "red" : 
+                  "orange"
+                }>{o.status}</Badge>
+              </div>
             </div>
-            <div className="text-right shrink-0">
-              <div className="text-sm font-bold text-gray-800">{o.amount}</div>
-              <Badge color={o.status === "delivered" ? "green" : o.status === "shipped" ? "blue" : "orange"}>{o.status}</Badge>
-            </div>
-          </div>
-        ))}
+          );
+        }) : (
+          <div className="px-5 py-8 text-center text-sm text-gray-400 italic">No orders received yet.</div>
+        )}
       </div>
     </div>
   );
@@ -230,7 +247,12 @@ export function SellerOrders() {
                       <div className="font-bold text-sm text-gray-900">{o.customer_name}</div>
                       <div className="text-xs text-gray-400 mt-0.5">Order #{o.id}</div>
                     </div>
-                    <Badge color={o.status === "Delivered" ? "green" : o.status === "Cancelled" ? "red" : "blue"}>{o.status}</Badge>
+                    <Badge color={
+                      o.status === "Delivered" ? "green" : 
+                      o.status === "Shipped" ? "blue" : 
+                      o.status === "Cancelled" ? "red" : 
+                      "orange"
+                    }>{o.status}</Badge>
                   </div>
                   <div className="flex items-center justify-between text-xs text-gray-500">
                     <span>{new Date(o.order_date).toLocaleDateString()}</span>
@@ -257,7 +279,12 @@ export function SellerOrders() {
                       <td className="px-5 py-3.5 font-bold text-gray-900">₹{o.total_price}</td>
                       <td className="px-5 py-3.5 text-gray-400 text-xs">{new Date(o.order_date).toLocaleDateString()}</td>
                       <td className="px-5 py-3.5">
-                        <Badge color={o.status === "Delivered" ? "green" : o.status === "Cancelled" ? "red" : "blue"}>{o.status}</Badge>
+                        <Badge color={
+                          o.status === "Delivered" ? "green" : 
+                          o.status === "Shipped" ? "blue" : 
+                          o.status === "Cancelled" ? "red" : 
+                          "orange"
+                        }>{o.status}</Badge>
                       </td>
                     </tr>
                   ))}

@@ -16,8 +16,7 @@ export default function AdminLayout() {
   
   const navigate = useNavigate();
   const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
-  const activeTab = searchParams.get("tab") || "overview";
+  const currentPath = location.pathname;
 
   useEffect(() => {
     loadStats();
@@ -45,8 +44,8 @@ export default function AdminLayout() {
     {
       id: "general",
       links: [
-        { to: "/admin/dashboard?tab=overview", icon: <LayoutDashboard size={18} />, label: "Overview", tab: "overview" },
-        { to: "/admin/dashboard?tab=inquiries", icon: <MessageSquare size={18} />, label: `Leads (${stats.totalInquiries})`, tab: "inquiries" },
+        { to: "/admin/dashboard", icon: <LayoutDashboard size={18} />, label: "Overview" },
+        { to: "/admin/inquiries", icon: <MessageSquare size={18} />, label: `Leads (${stats.totalInquiries})` },
       ]
     },
     {
@@ -54,9 +53,9 @@ export default function AdminLayout() {
       label: "User Control",
       icon: <Users size={18} />,
       links: [
-        { to: "/admin/dashboard?tab=users", icon: <Users size={16} />, label: "All Users", tab: "users" },
-        { to: "/admin/dashboard?tab=orders", icon: <ShoppingBag size={16} />, label: "All Orders", tab: "orders" },
-        { to: "/admin/dashboard?tab=products", icon: <Package size={16} />, label: "All Products", tab: "products" },
+        { to: "/admin/users", icon: <Users size={16} />, label: "All Users" },
+        { to: "/admin/orders", icon: <ShoppingBag size={16} />, label: "All Orders" },
+        { to: "/admin/products", icon: <Package size={16} />, label: "All Products" },
       ]
     },
     {
@@ -64,10 +63,10 @@ export default function AdminLayout() {
       label: "Seller Hub",
       icon: <Store size={18} />,
       links: [
-        { to: "/admin/dashboard?tab=sellers", icon: <CheckCircle size={16} />, label: "Active Businesses", tab: "sellers" },
-        { to: "/admin/dashboard?tab=pending", icon: <ClipboardList size={16} />, label: `Pending Sellers (${stats.pendingSellers})`, tab: "pending" },
-        { to: "/admin/dashboard?tab=seller-hub", icon: <ShoppingBag size={16} />, label: "Seller Sales Hub", tab: "seller-hub" },
-        { to: "/admin/dashboard?tab=add-product", icon: <Plus size={16} />, label: "Add Seller Product", tab: "add-product" },
+        { to: "/admin/sellers", icon: <CheckCircle size={16} />, label: "Active Businesses" },
+        { to: "/admin/pending-sellers", icon: <ClipboardList size={16} />, label: `Pending Sellers (${stats.pendingSellers})` },
+        { to: "/admin/seller-hub", icon: <ShoppingBag size={16} />, label: "Seller Sales Hub" },
+        { to: "/admin/add-product", icon: <Plus size={16} />, label: "Add Seller Product" },
       ]
     }
   ];
@@ -126,10 +125,10 @@ export default function AdminLayout() {
                     <div className="pl-4 space-y-1 mt-1 animate-fadeIn">
                        {group.links.map(link => (
                          <NavLink 
-                           key={link.tab}
+                           key={link.to}
                            to={link.to}
                            onClick={() => setMobileOpen(false)}
-                           className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === link.tab ? "bg-gray-900 text-white shadow-lg" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"}`}
+                           className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${currentPath === link.to ? "bg-gray-900 text-white shadow-lg" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"}`}
                          >
                            {link.icon}
                            {link.label}
@@ -141,10 +140,10 @@ export default function AdminLayout() {
               ) : (
                 group.links.map(link => (
                   <NavLink 
-                    key={link.tab}
+                    key={link.to}
                     to={link.to}
                     onClick={() => setMobileOpen(false)}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === link.tab ? "bg-gradient-to-r from-[#e8511a] to-[#ff7a45] text-white shadow-[0_8px_16px_rgba(232,81,26,0.25)]" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"}`}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${currentPath === link.to ? "bg-gradient-to-r from-[#e8511a] to-[#ff7a45] text-white shadow-[0_8px_16px_rgba(232,81,26,0.25)]" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"}`}
                   >
                     {link.icon}
                     {link.label}
@@ -157,7 +156,7 @@ export default function AdminLayout() {
 
         <div className="p-4 border-t border-black/[0.04] space-y-1.5">
           <button 
-             onClick={() => { navigate("/"); setMobileOpen(false); }}
+             onClick={() => { window.location.href = "/"; }}
              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-ink3 hover:bg-surface hover:text-ink transition-colors"
           >
              <Package size={18} /> Back to Website
@@ -193,7 +192,7 @@ export default function AdminLayout() {
           <div className="py-6 px-4 sm:px-6 md:py-8 lg:px-10 max-w-6xl mx-auto pb-20">
             <AnimatePresence mode="wait">
               <motion.div
-                key={activeTab}
+                key={currentPath}
                 initial={{ opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}

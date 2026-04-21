@@ -21,7 +21,6 @@ export default function FeaturedProducts() {
     const getFeaturedData = async () => {
       try {
         const response = await fetchProducts({ 
-          tag: "featured", 
           limit: 8, 
           page: 1 
         });

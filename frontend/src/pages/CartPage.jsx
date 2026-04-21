@@ -41,11 +41,13 @@ export default function CartPage() {
           product_id: item.id,
           message: `Bulk Inquiry: ${formData.message}`,
           quantity: `${item.qty} ${item.unit || 'kg'}`,
-          thickness: formData.thickness,
-          width: formData.width,
+          thickness: item.selected_thickness || "Standard", 
+          width: item.selected_width || "Standard",
           phone: formData.phone,
           pincode: formData.pincode,
           address: formData.address,
+          city: formData.city,
+          state: formData.state,
           buyer_name: formData.buyer_name,
           buyer_email: formData.buyer_email
         })
@@ -104,6 +106,12 @@ export default function CartPage() {
                         )}
                         {item.selected_width && (
                           <span className="text-[9px] xs:text-[10px] text-gray-500 font-bold">{item.selected_width}</span>
+                        )}
+                        {item.color && (
+                          <>
+                            <span className="text-gray-300">•</span>
+                            <span className="text-[9px] xs:text-[10px] text-gray-500 font-bold uppercase">{item.color}</span>
+                          </>
                         )}
                       </div>
                     </div>

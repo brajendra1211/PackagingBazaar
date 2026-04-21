@@ -6,6 +6,11 @@ export const fetchSellerProfile = async () => {
   return response.data;
 };
 
+export const fetchSellerStats = async () => {
+  const response = await API.get("/seller/stats");
+  return response.data;
+};
+
 // 2. Fetch Seller Products
 export const fetchSellerProducts = async (page = 1, limit = 10) => {
   const response = await API.get(`/seller/products?page=${page}&limit=${limit}`);

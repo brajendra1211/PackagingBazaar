@@ -9,12 +9,25 @@ const API = axios.create({
 export const API_BASE_URL = API_URL;
 
 // Interceptor: Har request ke sath token bhejne ke liye
-API.interceptors.request.use((req) => {
+API.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {
-    req.headers.Authorization = `Bearer ${token}`;
+    config.headers.Authorization = `Bearer ${token}`;
   }
-  return req;
-});
+  return config;
+}, (error) => Promise.reject(error));
+
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+      localStorage.removeItem("token");
+      if (!window.location.pathname.includes("/login")) {
+        window.location.href = "/login";
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default API;

@@ -22,21 +22,22 @@ export default function SellerPage() {
         // Fetch a large chunk of products to extract sellers
         const res = await fetchProducts({ limit: 100 });
         if (res.success) {
-          // Group products by seller
-          const grouped = res.data.reduce((acc, product) => {
-            const sellerId = product.seller_id;
-            if (!acc[sellerId]) {
-              acc[sellerId] = {
-                id: sellerId,
-                name: product.seller_name || "Verified Manufacturer",
+          // Group products by seller, ignoring those without real seller info
+          const validProducts = res.data.filter(p => p.seller_uid && p.seller_name);
+          const grouped = validProducts.reduce((acc, product) => {
+            const sid = product.seller_id;
+            if (!acc[sid]) {
+              acc[sid] = {
+                id: sid,
+                name: product.seller_name,
                 city: product.city,
                 state: product.state,
                 seller_uid: product.seller_uid,
-                is_verified: true, // Publicly visible products are from verified sellers
+                is_verified: true,
                 products: []
               };
             }
-            acc[sellerId].products.push(product);
+            acc[sid].products.push(product);
             return acc;
           }, {});
           

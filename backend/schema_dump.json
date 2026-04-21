@@ -1,0 +1,1172 @@
+{
+  "applications": [
+    {
+      "name": "id",
+      "type": "bigint unsigned",
+      "null": "NO",
+      "key": "PRI",
+      "default": null,
+      "extra": "auto_increment"
+    },
+    {
+      "name": "app_name",
+      "type": "varchar(100)",
+      "null": "NO",
+      "key": "UNI",
+      "default": null,
+      "extra": ""
+    }
+  ],
+  "cart_items": [
+    {
+      "name": "id",
+      "type": "int",
+      "null": "NO",
+      "key": "PRI",
+      "default": null,
+      "extra": "auto_increment"
+    },
+    {
+      "name": "user_id",
+      "type": "int",
+      "null": "NO",
+      "key": "MUL",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "product_id",
+      "type": "bigint unsigned",
+      "null": "NO",
+      "key": "MUL",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "quantity",
+      "type": "int",
+      "null": "NO",
+      "key": "",
+      "default": "1",
+      "extra": ""
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp",
+      "null": "YES",
+      "key": "",
+      "default": "CURRENT_TIMESTAMP",
+      "extra": "DEFAULT_GENERATED"
+    },
+    {
+      "name": "selected_thickness",
+      "type": "varchar(50)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "selected_width",
+      "type": "varchar(50)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "selected_brand",
+      "type": "varchar(50)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    }
+  ],
+  "categories": [
+    {
+      "name": "id",
+      "type": "bigint unsigned",
+      "null": "NO",
+      "key": "PRI",
+      "default": null,
+      "extra": "auto_increment"
+    },
+    {
+      "name": "name",
+      "type": "varchar(50)",
+      "null": "NO",
+      "key": "UNI",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "code_prefix",
+      "type": "varchar(10)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    }
+  ],
+  "inquiries": [
+    {
+      "name": "id",
+      "type": "int",
+      "null": "NO",
+      "key": "PRI",
+      "default": null,
+      "extra": "auto_increment"
+    },
+    {
+      "name": "buyer_id",
+      "type": "int",
+      "null": "YES",
+      "key": "MUL",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "product_id",
+      "type": "bigint unsigned",
+      "null": "NO",
+      "key": "MUL",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "seller_id",
+      "type": "int",
+      "null": "NO",
+      "key": "MUL",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "message",
+      "type": "text",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "quantity_required",
+      "type": "varchar(50)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "status",
+      "type": "enum('pending','replied')",
+      "null": "YES",
+      "key": "",
+      "default": "pending",
+      "extra": ""
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp",
+      "null": "YES",
+      "key": "",
+      "default": "CURRENT_TIMESTAMP",
+      "extra": "DEFAULT_GENERATED"
+    },
+    {
+      "name": "thickness",
+      "type": "varchar(255)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "width",
+      "type": "varchar(255)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "phone",
+      "type": "varchar(20)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "pincode",
+      "type": "varchar(20)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "city",
+      "type": "varchar(255)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "state",
+      "type": "varchar(255)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "address",
+      "type": "text",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "buyer_name",
+      "type": "varchar(255)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "buyer_email",
+      "type": "varchar(255)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    }
+  ],
+  "order_items": [
+    {
+      "name": "id",
+      "type": "int",
+      "null": "NO",
+      "key": "PRI",
+      "default": null,
+      "extra": "auto_increment"
+    },
+    {
+      "name": "order_id",
+      "type": "int",
+      "null": "NO",
+      "key": "MUL",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "product_id",
+      "type": "bigint unsigned",
+      "null": "NO",
+      "key": "MUL",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "quantity",
+      "type": "int",
+      "null": "NO",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "price_at_time",
+      "type": "decimal(10,2)",
+      "null": "NO",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "thickness",
+      "type": "varchar(50)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "width",
+      "type": "varchar(50)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "brand",
+      "type": "varchar(50)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    }
+  ],
+  "orders": [
+    {
+      "name": "id",
+      "type": "int",
+      "null": "NO",
+      "key": "PRI",
+      "default": null,
+      "extra": "auto_increment"
+    },
+    {
+      "name": "user_id",
+      "type": "int",
+      "null": "NO",
+      "key": "MUL",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "address_id",
+      "type": "int",
+      "null": "NO",
+      "key": "MUL",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "status",
+      "type": "enum('Pending','Processing','Shipped','Delivered','Cancelled')",
+      "null": "YES",
+      "key": "",
+      "default": "Pending",
+      "extra": ""
+    },
+    {
+      "name": "total_price",
+      "type": "decimal(10,2)",
+      "null": "NO",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "payment_method",
+      "type": "varchar(50)",
+      "null": "YES",
+      "key": "",
+      "default": "COD",
+      "extra": ""
+    },
+    {
+      "name": "order_date",
+      "type": "timestamp",
+      "null": "YES",
+      "key": "",
+      "default": "CURRENT_TIMESTAMP",
+      "extra": "DEFAULT_GENERATED"
+    }
+  ],
+  "product_application_mapping": [
+    {
+      "name": "product_id",
+      "type": "bigint unsigned",
+      "null": "NO",
+      "key": "PRI",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "app_id",
+      "type": "bigint unsigned",
+      "null": "NO",
+      "key": "PRI",
+      "default": null,
+      "extra": ""
+    }
+  ],
+  "product_groups": [
+    {
+      "name": "id",
+      "type": "int",
+      "null": "NO",
+      "key": "PRI",
+      "default": null,
+      "extra": "auto_increment"
+    },
+    {
+      "name": "category_id",
+      "type": "bigint unsigned",
+      "null": "YES",
+      "key": "MUL",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "master_id",
+      "type": "varchar(50)",
+      "null": "NO",
+      "key": "UNI",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "name",
+      "type": "varchar(255)",
+      "null": "NO",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "description",
+      "type": "text",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp",
+      "null": "YES",
+      "key": "",
+      "default": "CURRENT_TIMESTAMP",
+      "extra": "DEFAULT_GENERATED"
+    }
+  ],
+  "product_reviews": [
+    {
+      "name": "id",
+      "type": "bigint unsigned",
+      "null": "NO",
+      "key": "PRI",
+      "default": null,
+      "extra": "auto_increment"
+    },
+    {
+      "name": "product_id",
+      "type": "bigint unsigned",
+      "null": "YES",
+      "key": "MUL",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "user_id",
+      "type": "int",
+      "null": "YES",
+      "key": "MUL",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "rating",
+      "type": "decimal(2,1)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "comment",
+      "type": "text",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp",
+      "null": "YES",
+      "key": "",
+      "default": "CURRENT_TIMESTAMP",
+      "extra": "DEFAULT_GENERATED"
+    }
+  ],
+  "product_stocks": [
+    {
+      "name": "id",
+      "type": "bigint unsigned",
+      "null": "NO",
+      "key": "PRI",
+      "default": null,
+      "extra": "auto_increment"
+    },
+    {
+      "name": "product_id",
+      "type": "bigint unsigned",
+      "null": "YES",
+      "key": "UNI",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "quantity",
+      "type": "int",
+      "null": "YES",
+      "key": "",
+      "default": "0",
+      "extra": ""
+    },
+    {
+      "name": "min_order",
+      "type": "int",
+      "null": "YES",
+      "key": "",
+      "default": "1",
+      "extra": ""
+    },
+    {
+      "name": "last_updated",
+      "type": "timestamp",
+      "null": "YES",
+      "key": "",
+      "default": "CURRENT_TIMESTAMP",
+      "extra": "DEFAULT_GENERATED"
+    }
+  ],
+  "products": [
+    {
+      "name": "id",
+      "type": "bigint unsigned",
+      "null": "NO",
+      "key": "PRI",
+      "default": null,
+      "extra": "auto_increment"
+    },
+    {
+      "name": "sub_category_id",
+      "type": "bigint unsigned",
+      "null": "YES",
+      "key": "MUL",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "product_group_id",
+      "type": "int",
+      "null": "YES",
+      "key": "MUL",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "tag_id",
+      "type": "bigint unsigned",
+      "null": "YES",
+      "key": "MUL",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "group_id",
+      "type": "int",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "product_code",
+      "type": "varchar(50)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "seller_id",
+      "type": "int",
+      "null": "YES",
+      "key": "MUL",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "name",
+      "type": "varchar(255)",
+      "null": "NO",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "display_name",
+      "type": "varchar(255)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "group_key",
+      "type": "varchar(100)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "thickness",
+      "type": "varchar(50)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "color",
+      "type": "varchar(50)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "product_type",
+      "type": "varchar(100)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "min_price",
+      "type": "decimal(10,2)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "max_price",
+      "type": "decimal(10,2)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "width",
+      "type": "varchar(50)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "price",
+      "type": "decimal(10,2)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "unit",
+      "type": "varchar(10)",
+      "null": "YES",
+      "key": "",
+      "default": "kg",
+      "extra": ""
+    },
+    {
+      "name": "description",
+      "type": "text",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "image_url",
+      "type": "text",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "delivery_time",
+      "type": "varchar(100)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "applications",
+      "type": "json",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "is_hot_deal",
+      "type": "tinyint(1)",
+      "null": "YES",
+      "key": "",
+      "default": "0",
+      "extra": ""
+    }
+  ],
+  "seller_products": [
+    {
+      "name": "id",
+      "type": "int",
+      "null": "NO",
+      "key": "PRI",
+      "default": null,
+      "extra": "auto_increment"
+    },
+    {
+      "name": "product_id",
+      "type": "bigint unsigned",
+      "null": "NO",
+      "key": "MUL",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "seller_id",
+      "type": "int",
+      "null": "NO",
+      "key": "MUL",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "price_min",
+      "type": "decimal(10,2)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "price_max",
+      "type": "decimal(10,2)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "moq",
+      "type": "int",
+      "null": "YES",
+      "key": "",
+      "default": "100",
+      "extra": ""
+    },
+    {
+      "name": "stock",
+      "type": "varchar(20)",
+      "null": "YES",
+      "key": "",
+      "default": "Available",
+      "extra": ""
+    },
+    {
+      "name": "stock_qty",
+      "type": "int",
+      "null": "YES",
+      "key": "",
+      "default": "0",
+      "extra": ""
+    },
+    {
+      "name": "width",
+      "type": "varchar(50)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "delivery_days",
+      "type": "int",
+      "null": "YES",
+      "key": "",
+      "default": "48",
+      "extra": ""
+    },
+    {
+      "name": "payment_terms",
+      "type": "varchar(100)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "status",
+      "type": "enum('active','inactive')",
+      "null": "YES",
+      "key": "",
+      "default": "active",
+      "extra": ""
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp",
+      "null": "YES",
+      "key": "",
+      "default": "CURRENT_TIMESTAMP",
+      "extra": "DEFAULT_GENERATED"
+    }
+  ],
+  "sellers": [
+    {
+      "name": "id",
+      "type": "int",
+      "null": "NO",
+      "key": "PRI",
+      "default": null,
+      "extra": "auto_increment"
+    },
+    {
+      "name": "user_id",
+      "type": "int",
+      "null": "NO",
+      "key": "MUL",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "status",
+      "type": "enum('pending','hold','verified')",
+      "null": "YES",
+      "key": "",
+      "default": "pending",
+      "extra": ""
+    },
+    {
+      "name": "mobile",
+      "type": "varchar(15)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "seller_uid",
+      "type": "varchar(25)",
+      "null": "YES",
+      "key": "UNI",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "company_name",
+      "type": "varchar(255)",
+      "null": "NO",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "business_type",
+      "type": "varchar(255)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "gst_number",
+      "type": "varchar(15)",
+      "null": "YES",
+      "key": "UNI",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "year_established",
+      "type": "int",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "city",
+      "type": "varchar(100)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "state",
+      "type": "varchar(100)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "pincode",
+      "type": "varchar(6)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "business_address",
+      "type": "text",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "monthly_capacity",
+      "type": "varchar(100)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "price_range",
+      "type": "varchar(100)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "description",
+      "type": "text",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "products_offered",
+      "type": "varchar(255)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "is_verified",
+      "type": "tinyint(1)",
+      "null": "YES",
+      "key": "",
+      "default": "0",
+      "extra": ""
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp",
+      "null": "YES",
+      "key": "",
+      "default": "CURRENT_TIMESTAMP",
+      "extra": "DEFAULT_GENERATED"
+    },
+    {
+      "name": "gst_certificate",
+      "type": "varchar(255)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    }
+  ],
+  "sub_categories": [
+    {
+      "name": "id",
+      "type": "bigint unsigned",
+      "null": "NO",
+      "key": "PRI",
+      "default": null,
+      "extra": "auto_increment"
+    },
+    {
+      "name": "category_id",
+      "type": "bigint unsigned",
+      "null": "NO",
+      "key": "MUL",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "name",
+      "type": "varchar(50)",
+      "null": "NO",
+      "key": "",
+      "default": null,
+      "extra": ""
+    }
+  ],
+  "tags": [
+    {
+      "name": "id",
+      "type": "bigint unsigned",
+      "null": "NO",
+      "key": "PRI",
+      "default": null,
+      "extra": "auto_increment"
+    },
+    {
+      "name": "tag_name",
+      "type": "varchar(50)",
+      "null": "NO",
+      "key": "UNI",
+      "default": null,
+      "extra": ""
+    }
+  ],
+  "user_addresses": [
+    {
+      "name": "id",
+      "type": "int",
+      "null": "NO",
+      "key": "PRI",
+      "default": null,
+      "extra": "auto_increment"
+    },
+    {
+      "name": "user_id",
+      "type": "int",
+      "null": "NO",
+      "key": "MUL",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "tag",
+      "type": "varchar(50)",
+      "null": "YES",
+      "key": "",
+      "default": "Home",
+      "extra": ""
+    },
+    {
+      "name": "address_line",
+      "type": "text",
+      "null": "NO",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "city",
+      "type": "varchar(100)",
+      "null": "NO",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "state",
+      "type": "varchar(100)",
+      "null": "NO",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "pincode",
+      "type": "varchar(20)",
+      "null": "NO",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "is_default",
+      "type": "tinyint(1)",
+      "null": "YES",
+      "key": "",
+      "default": "0",
+      "extra": ""
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp",
+      "null": "YES",
+      "key": "",
+      "default": "CURRENT_TIMESTAMP",
+      "extra": "DEFAULT_GENERATED"
+    }
+  ],
+  "users": [
+    {
+      "name": "id",
+      "type": "int",
+      "null": "NO",
+      "key": "PRI",
+      "default": null,
+      "extra": "auto_increment"
+    },
+    {
+      "name": "name",
+      "type": "varchar(100)",
+      "null": "NO",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "email",
+      "type": "varchar(100)",
+      "null": "NO",
+      "key": "UNI",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "mobile",
+      "type": "varchar(15)",
+      "null": "YES",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "password",
+      "type": "varchar(255)",
+      "null": "NO",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "name": "role",
+      "type": "enum('user','seller','admin')",
+      "null": "YES",
+      "key": "",
+      "default": "user",
+      "extra": ""
+    },
+    {
+      "name": "is_verified",
+      "type": "tinyint(1)",
+      "null": "YES",
+      "key": "",
+      "default": "1",
+      "extra": ""
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp",
+      "null": "YES",
+      "key": "",
+      "default": "CURRENT_TIMESTAMP",
+      "extra": "DEFAULT_GENERATED"
+    }
+  ]
+}

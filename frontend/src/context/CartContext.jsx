@@ -24,11 +24,18 @@ const reducer = (state, action) => {
       return [...state, { ...action.product, qty: 1 }];
     }
     case "REMOVE": {
-      // In local state, we remove by the temporary unique composite key OR cart_id
-      return state.filter((i) => i.cart_id !== action.cart_id && i.local_id !== action.local_id);
+      return state.filter((i) => {
+        if (action.cart_id && i.cart_id === action.cart_id) return false;
+        if (action.local_id && i.local_id === action.local_id) return false;
+        return true;
+      });
     }
     case "UPDATE_QTY": {
-       return state.map((i) => (i.cart_id === action.cart_id || i.local_id === action.local_id) ? { ...i, qty: action.qty } : i).filter((i) => i.qty > 0);
+      return state.map((i) => {
+        const isMatch = (action.cart_id && i.cart_id === action.cart_id) || 
+                        (action.local_id && i.local_id === action.local_id);
+        return isMatch ? { ...i, qty: action.qty } : i;
+      }).filter((i) => i.qty > 0);
     }
     case "CLEAR": return [];
     case "SET_CART": return action.cart;
@@ -68,18 +75,17 @@ export const CartProvider = ({ children }) => {
           if (res.success) {
             // Transform backend products to context format
             const transformed = res.cart.map(i => ({
-              cart_id: i.cart_id, // Important for removal
+              cart_id: i.cart_id,
               id: i.product_id,
               name: i.name,
               price: i.price,
               qty: i.quantity,
               image: i.image,
-              thickness: i.thickness, // Original product thickness (base)
-              width: i.width,         // Original product width (base)
               selected_thickness: i.selected_thickness,
               selected_width: i.selected_width,
               selected_brand: i.selected_brand,
-              unit: i.unit
+              unit: i.unit,
+              color: i.color
             }));
             dispatch({ type: "SET_CART", cart: transformed });
           }
@@ -92,13 +98,19 @@ export const CartProvider = ({ children }) => {
   }, [token]);
 
   const addToCart = async (p) => {
-    // Generate a local_id for guest identification
-    const itemToAdd = { 
-      ...p, 
-      local_id: `${p.id}-${p.selected_thickness || ""}-${p.selected_width || ""}-${p.selected_brand || ""}` 
+    // Normalize product for consistency (Guest cart use case)
+    const normalizedItem = {
+      ...p,
+      id: p.id,
+      name: p.name,
+      price: p.price || p.min_price, // Ensure price field exists
+      image: p.image || p.image_url, // Ensure image field exists
+      unit: p.unit,
+      color: p.color,
+      local_id: `${p.id}-${p.selected_thickness || ""}-${p.selected_width || ""}-${p.selected_brand || ""}`
     };
     
-    dispatch({ type: "ADD", product: itemToAdd });
+    dispatch({ type: "ADD", product: normalizedItem });
     notifySuccess("Added to cart!");
     
     if (token) {
@@ -128,7 +140,8 @@ export const CartProvider = ({ children }) => {
               selected_thickness: i.selected_thickness,
               selected_width: i.selected_width,
               selected_brand: i.selected_brand,
-              unit: i.unit
+              unit: i.unit,
+              color: i.color
             }));
             dispatch({ type: "SET_CART", cart: transformed });
         }

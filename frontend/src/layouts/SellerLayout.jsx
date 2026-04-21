@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Outlet, NavLink, useLocation, Navigate } from "react-router-dom";
-import { fetchSellerProfile, fetchSellerProducts } from "../services/sellerServices";
+import { fetchSellerProfile, fetchSellerProducts, fetchSellerStats, fetchSellerOrders } from "../services/sellerServices";
 import { AnimatePresence, motion } from "framer-motion";
 
 
@@ -301,7 +301,8 @@ export default function SellerLayout() {
   const navigate = useNavigate();
   const [seller, setSeller] = useState(null);
   const [PRODUCTS, setProducts] = useState([]);
-  const [ORDERS, setOrders] = useState([]); // Removed mock order data
+  const [ORDERS, setOrders] = useState([]); 
+  const [stats, setStats] = useState({ totalProducts: 0, activeProducts: 0, totalOrders: 0, avgRating: 0, totalViews: 0 });
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -311,9 +312,11 @@ export default function SellerLayout() {
   useEffect(() => {
     const loadSellerData = async () => {
       try {
-        const [profileRes, productsRes] = await Promise.all([
+        const [profileRes, productsRes, statsRes, ordersRes] = await Promise.all([
           fetchSellerProfile(),
-          fetchSellerProducts()
+          fetchSellerProducts(1, 5),
+          fetchSellerStats(),
+          fetchSellerOrders(1, 5)
         ]);
         
         if(profileRes.success) {
@@ -322,9 +325,12 @@ export default function SellerLayout() {
         if(productsRes.success) {
           setProducts(productsRes.data);
         }
-
-        // Empty orders for now since Backend has no orders logic
-        setOrders([]);
+        if(statsRes.success) {
+          setStats(statsRes.data);
+        }
+        if(ordersRes.success) {
+          setOrders(ordersRes.data);
+        }
       } catch (error) {
         console.error("Failed to fetch seller data:", error);
         if (error.response && (error.response.status === 401 || error.response.status === 403)) {
@@ -458,7 +464,7 @@ export default function SellerLayout() {
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ type: "tween", ease: "easeOut", duration: 0.25 }}
               >
-                <Outlet context={{ seller, setSeller, PRODUCTS, ORDERS, icons, Icon, Badge, StatCard, EditableField, FilmTypesEditor, ALL_FILMS, BusinessTypesEditor, BUSINESS_TYPES }} />
+                <Outlet context={{ seller, setSeller, PRODUCTS, ORDERS, stats, icons, Icon, Badge, StatCard, EditableField, FilmTypesEditor, ALL_FILMS, BusinessTypesEditor, BUSINESS_TYPES }} />
               </motion.div>
             </AnimatePresence>
             <div className="h-10" />

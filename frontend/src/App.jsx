@@ -28,7 +28,19 @@ import HotDealsPage from "./pages/HotDealsPage";
 import SellerPage from "./pages/SellerPage";
 
 // Admin
-import AdminDashboard from "./Admin/AdminDashboard";
+import AdminDashboard from "./Admin/pages/AdminDashboard";
+import AdminSellers from "./Admin/pages/AdminSellers";
+import AdminPendingSellers from "./Admin/pages/AdminPendingSellers";
+import AdminUsers from "./Admin/pages/AdminUsers";
+import AdminProducts from "./Admin/pages/AdminProducts";
+import AdminOrders from "./Admin/pages/AdminOrders";
+import AdminInquiries from "./Admin/pages/AdminInquiries";
+import AdminSellerHub from "./Admin/pages/AdminSellerHub";
+import AdminAddProduct from "./Admin/pages/AdminAddProduct";
+import AdminAddSeller from "./Admin/pages/AdminAddSeller";
+import AdminEditSeller from "./Admin/pages/AdminEditSeller";
+
+import { Navigate } from "react-router-dom";
 
 // Seller
 import { SellerDashboard, SellerProducts, SellerOrders, SellerProfile } from "./Seller/SellerDashboard";
@@ -75,6 +87,16 @@ export default function App() {
             <Route element={<AdminRoute />}>
               <Route element={<AdminLayout />}>
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                <Route path="/admin/sellers" element={<AdminSellers />} />
+                <Route path="/admin/pending-sellers" element={<AdminPendingSellers />} />
+                <Route path="/admin/users" element={<AdminUsers />} />
+                <Route path="/admin/products" element={<AdminProducts />} />
+                <Route path="/admin/orders" element={<AdminOrders />} />
+                <Route path="/admin/inquiries" element={<AdminInquiries />} />
+                <Route path="/admin/seller-hub" element={<AdminSellerHub />} />
+                <Route path="/admin/add-product" element={<AdminAddProduct />} />
+                <Route path="/admin/add-seller" element={<AdminAddSeller />} />
+                <Route path="/admin/sellers/edit/:id" element={<AdminEditSeller />} />
               </Route>
             </Route>
 
