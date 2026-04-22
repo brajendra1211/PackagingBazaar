@@ -14,16 +14,21 @@ const API = axios.create({
 
 export const getImageUrl = (url) => {
   if (!url) return "";
+
+  // Handle cases where absolute localhost URLs might be stored in the database
+  if (url.includes('localhost:5000') || url.includes('127.0.0.1:5000')) {
+    const parts = url.split('/uploads/');
+    if (parts.length > 1) {
+      url = '/uploads/' + parts[1];
+    }
+  }
+  
   if (url.startsWith("http") || url.startsWith("data:image")) return url;
   
   const cleanUrl = url.startsWith("/") ? url : `/${url}`;
   
-  // If we are on a production domain but the API_URL still points to localhost,
-  // we use a relative path. This handles cases where the user builds for production
-  // without updating the .env file, or when frontend and backend are on the same domain.
-  if (typeof window !== 'undefined' && 
-      window.location.hostname !== 'localhost' && 
-      API_BASE_URL.includes('localhost')) {
+  // In production (non-localhost), always try to use relative paths for local uploads
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
     return cleanUrl;
   }
   
@@ -51,13 +56,15 @@ API.interceptors.request.use((config) => {
 API.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+    // Safer error handling to prevent 'payload' or 'undefined' crashes
+    const status = error?.response?.status;
+    if (status === 401 || status === 403) {
       localStorage.removeItem("token");
-      if (!window.location.pathname.includes("/login")) {
+      if (typeof window !== 'undefined' && !window.location.pathname.includes("/login")) {
         window.location.href = "/login";
       }
     }
-    return Promise.reject(error);
+    return Promise.reject(error?.response?.data || error);
   }
 );
 

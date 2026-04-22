@@ -19,10 +19,13 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 // Ensure upload directories exist
-const uploadDir = path.join(__dirname, 'uploads/gst_certificates');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+const folders = ['uploads/gst_certificates', 'uploads/product_images', 'uploads/others'];
+folders.forEach(folder => {
+  const dir = path.join(__dirname, folder);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
 
 // Middlewares
 app.use(cors({
@@ -30,7 +33,13 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Explicitly serve static files with CORS headers for images
+const uploadsPath = path.resolve(process.cwd(), 'uploads');
+app.use('/uploads', (req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  next();
+}, express.static(uploadsPath));
 
 // Routes
 app.use('/api', productRoutes);

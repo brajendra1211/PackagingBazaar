@@ -16,7 +16,7 @@ const storage = multer.diskStorage({
       folder = 'product_images';
     }
     
-    const dir = path.join(__dirname, '../uploads', folder);
+    const dir = path.resolve(process.cwd(), 'uploads', folder);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
