@@ -27,20 +27,17 @@ export const getImageUrl = (url) => {
   
   const cleanUrl = url.startsWith("/") ? url : `/${url}`;
   
-  // In production (non-localhost), always try to use relative paths for local uploads
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-    return cleanUrl;
+  // If API_BASE_URL is absolute (starts with http), use it
+  if (API_BASE_URL.startsWith('http')) {
+    let baseUrlForImages = API_BASE_URL;
+    if (baseUrlForImages.endsWith("/api")) {
+      baseUrlForImages = baseUrlForImages.slice(0, -4);
+    }
+    return `${baseUrlForImages}${cleanUrl}`;
   }
   
-  // The backend serves static files from the root domain (e.g., /uploads), NOT under /api
-  let baseUrlForImages = API_BASE_URL;
-  
-  if (baseUrlForImages.endsWith("/api")) {
-    baseUrlForImages = baseUrlForImages.slice(0, -4);
-  }
-  
-  // If API is relative (e.g., '/api'), baseUrlForImages might become empty. That is fine, it will use relative path.
-  return `${baseUrlForImages}${cleanUrl}`;
+  // Otherwise, use relative path (this works if frontend and backend are on same origin)
+  return cleanUrl;
 };
 
 

@@ -637,9 +637,16 @@ export const deleteProduct = async (req, res) => {
     }
 
     // Delete associated stock
-    await connection.query("DELETE FROM product_stocks WHERE product_id = ?", [
-      id,
-    ]);
+    await connection.query("DELETE FROM product_stocks WHERE product_id = ?", [id]);
+    
+    // Delete from seller_products
+    await connection.query("DELETE FROM seller_products WHERE product_id = ?", [id]);
+    
+    // Delete from product_application_mapping
+    await connection.query("DELETE FROM product_application_mapping WHERE product_id = ?", [id]);
+    
+    // Delete from product_reviews
+    await connection.query("DELETE FROM product_reviews WHERE product_id = ?", [id]);
 
     // Delete product
     const [result] = await connection.query(

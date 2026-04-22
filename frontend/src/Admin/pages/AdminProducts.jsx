@@ -195,7 +195,7 @@ export default function AdminProducts() {
                           <TrendingUp size={18} />
                         </button>
                         <button
-                          onClick={() => handleDeleteProduct(p.id)}
+                          onClick={() => handleDeleteProduct(p.product_id)}
                           className="p-2.5 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors"
                           title="Delete Product"
                         >

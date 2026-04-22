@@ -35,7 +35,8 @@ app.use(cors({
 app.use(express.json());
 
 // Explicitly serve static files with CORS headers for images
-const uploadsPath = path.resolve(process.cwd(), 'uploads');
+const uploadsPath = path.join(__dirname, 'uploads');
+console.log('Serving static files from:', uploadsPath);
 app.use('/uploads', (req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   next();

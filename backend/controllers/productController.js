@@ -535,28 +535,56 @@ export const deleteProduct = async (req, res) => {
   const userId = req.user.id;
   const role = req.user.role;
 
+  const connection = await pool.getConnection();
   try {
-    const [product] = await pool.query(
+    await connection.beginTransaction();
+
+    // 1. Fetch product to check ownership
+    const [productRows] = await connection.query(
       "SELECT seller_id FROM products WHERE id = ?",
-      [id],
+      [id]
     );
 
-    if (product.length === 0)
+    if (productRows.length === 0) {
+      await connection.rollback();
       return res.status(404).json({ message: "Product not found" });
+    }
 
+    const product = productRows[0];
+
+    // 2. Authorization check
     if (role !== "admin") {
-      const [sellerRows] = await pool.query("SELECT id FROM sellers WHERE user_id = ?", [userId]);
-      if (sellerRows.length === 0 || product[0].seller_id !== sellerRows[0].id) {
-        return res
-          .status(403)
-          .json({ message: "You can only delete your own products" });
+      const [sellerRows] = await connection.query("SELECT id FROM sellers WHERE user_id = ?", [userId]);
+      if (sellerRows.length === 0 || product.seller_id !== sellerRows[0].id) {
+        await connection.rollback();
+        return res.status(403).json({ message: "You can only delete your own products" });
       }
     }
 
-    await pool.query("DELETE FROM products WHERE id = ?", [id]);
-    res.json({ success: true, message: "Product deleted successfully!" });
+    // 3. Delete from dependent tables (Foreign Key Constraints)
+    // Delete from product_stocks
+    await connection.query("DELETE FROM product_stocks WHERE product_id = ?", [id]);
+    
+    // Delete from seller_products
+    await connection.query("DELETE FROM seller_products WHERE product_id = ?", [id]);
+    
+    // Delete from product_application_mapping
+    await connection.query("DELETE FROM product_application_mapping WHERE product_id = ?", [id]);
+    
+    // Delete from product_reviews
+    await connection.query("DELETE FROM product_reviews WHERE product_id = ?", [id]);
+
+    // 4. Finally delete the product
+    await connection.query("DELETE FROM products WHERE id = ?", [id]);
+
+    await connection.commit();
+    res.json({ success: true, message: "Product and related data deleted successfully!" });
   } catch (error) {
-    res.status(500).json({ message: "Server Error" });
+    await connection.rollback();
+    console.error("Error in deleteProduct:", error);
+    res.status(500).json({ message: "Server Error", error: error.message });
+  } finally {
+    connection.release();
   }
 };
 
