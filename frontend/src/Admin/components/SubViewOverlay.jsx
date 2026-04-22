@@ -14,6 +14,7 @@ import {
   fetchSellerProductsAdmin, 
   fetchLeadRecommendations 
 } from "../../services/adminServices";
+import { getImageUrl } from "../../services/api";
 
 export default function SubViewOverlay({ entity, onClose, notifyError }) {
   const [items, setItems] = useState([]);
@@ -66,7 +67,7 @@ export default function SubViewOverlay({ entity, onClose, notifyError }) {
                   <div key={prod.id} className="p-6 rounded-[2.5rem] bg-gray-50 border border-gray-100 shadow-sm flex items-center justify-between gap-6">
                     <div className="flex items-center gap-6">
                       <div className="w-16 h-16 bg-white rounded-2xl border flex items-center justify-center overflow-hidden">
-                        {prod.image_url ? <img src={prod.image_url} alt="" className="object-cover w-full h-full" /> : <Package className="text-gray-300" />}
+                        {prod.image_url ? <img src={getImageUrl(prod.image_url)} alt="" className="object-cover w-full h-full" /> : <Package className="text-gray-300" />}
                       </div>
                       <div>
                         <h4 className="font-syne font-black text-gray-900 uppercase tracking-tight">{prod.name}</h4>

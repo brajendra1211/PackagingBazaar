@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import InquiryModal from "../components/ui/InquiryModal";
 import { submitInquiryAPI } from "../services/inquiryServices";
 import { useNotification } from "../context/NotificationContext";
+import { getImageUrl } from "../services/api";
 
 export default function CartPage() {
   const { cart, removeFromCart, updateQty, total, clearCart, count } = useCart();
@@ -89,7 +90,7 @@ export default function CartPage() {
                 <div 
                   className="w-16 h-16 xs:w-20 xs:h-20 sm:w-24 sm:h-24 rounded-xl sm:rounded-2xl flex-shrink-0 flex items-center justify-center border border-gray-50 overflow-hidden bg-gray-50/50"
                 >
-                  <img src={item.image || item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                  <img src={getImageUrl(item.image || item.image_url)} alt={item.name} className="w-full h-full object-cover" />
                 </div>
 
                 {/* Product Details */}

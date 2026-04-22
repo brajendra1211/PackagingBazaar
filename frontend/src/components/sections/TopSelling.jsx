@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { fetchTopSelling } from "../../services/productServices"; 
 import { TrendingUp, Loader2 } from "lucide-react";
+import { getImageUrl } from "../../services/api";
 
 const catColors = {
   BOPP: "bg-green-100 text-green-800",
@@ -71,7 +72,7 @@ export default function TopSelling() {
                 </span>
                 <div className="w-12 h-12 rounded-xl flex-shrink-0 overflow-hidden bg-white border border-black/[0.05]">
                   <img
-                    src={p.image_url}
+                    src={getImageUrl(p.image_url)}
                     alt={p.name}
                     className="w-full h-full object-cover"
                   />

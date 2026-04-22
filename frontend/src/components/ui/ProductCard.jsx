@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
 import Badge from "./Badge";
 import StarRating from "./StarRating";
+import { getImageUrl } from "../../services/api";
 
 const categoryColors = {
   BOPP: "from-green-50 to-emerald-100",
@@ -59,7 +60,7 @@ export default function ProductCard({ product, onInquiry }) {
 
         {/* Database Image */}
         <img
-          src={product.image_url} 
+          src={getImageUrl(product.image_url)} 
           alt={product.name}
           className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 group-hover:scale-105 transition-all duration-300"
         />

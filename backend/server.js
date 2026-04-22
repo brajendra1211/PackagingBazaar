@@ -25,7 +25,10 @@ if (!fs.existsSync(uploadDir)) {
 }
 
 // Middlewares
-app.use(cors());
+app.use(cors({
+  origin: ["https://packagingbazaar.co.in", "http://localhost:5173", "http://localhost:5000", "http://localhost:3000"],
+  credentials: true
+}));
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

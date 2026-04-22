@@ -29,6 +29,7 @@ import {
 } from "../../services/adminServices";
 import { fetchUniqueProductNames } from "../../services/productServices";
 import { useNotification } from "../../context/NotificationContext";
+import { getImageUrl } from "../../services/api";
 
 const STEPS = ["Seller", "Basic Info", "Specifications", "Applications", "Preview"];
 const inputCls = "w-full px-4 py-2.5 text-sm border border-black/[0.1] rounded-xl bg-slate-50 focus:outline-none focus:bg-white focus:border-accent transition-colors text-ink placeholder:text-slate-400 font-medium";
@@ -679,7 +680,7 @@ export default function AdminAddProduct() {
               <div className="p-4">
                  <div className="aspect-square rounded-2xl bg-slate-100 mb-4 overflow-hidden relative group border">
                     {form.img ? (
-                      <img src={form.img} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="" />
+                      <img src={getImageUrl(form.img)} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="" />
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-slate-300 gap-2">
                         <ImageIcon size={32} strokeWidth={1} />

@@ -873,7 +873,7 @@ export const uploadImage = async (req, res) => {
       return res.status(400).json({ success: false, message: "No file uploaded" });
     }
 
-    const imageUrl = `${req.protocol}://${req.get('host')}/uploads/product_images/${req.file.filename}`;
+    const imageUrl = `/uploads/product_images/${req.file.filename}`;
     
     res.status(200).json({
       success: true,
@@ -919,7 +919,7 @@ export const addSellerAdmin = async (req, res) => {
 
     // 4. Create Seller Profile
     const sellerUID = `PB-S-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
-    const gstCertificate = req.file ? `uploads/gst_certificates/${req.file.filename}` : null;
+    const gstCertificate = req.file ? `/uploads/gst_certificates/${req.file.filename}` : null;
     
     await connection.query(
       `INSERT INTO sellers 
@@ -978,7 +978,7 @@ export const updateSellerDetailsAdmin = async (req, res) => {
           // We continue anyway so the update isn't blocked by a file system error
         }
       }
-      gstCertificate = `uploads/gst_certificates/${req.file.filename}`;
+      gstCertificate = `/uploads/gst_certificates/${req.file.filename}`;
     }
 
     // 3. Update Seller Table

@@ -7,6 +7,7 @@ import {
   fetchProductVariants,
   fetchSellersByGroupKey,
 } from "../services/productServices";
+import { getImageUrl } from "../services/api";
 import { useCart } from "../context/CartContext";
 import Badge from "../components/ui/Badge";
 import StarRating from "../components/ui/StarRating";
@@ -171,7 +172,7 @@ export default function ProductDetailPage() {
               className={`bg-gradient-to-br ${grad} rounded-3xl h-[280px] sm:h-[400px] lg:h-[520px] flex items-center justify-center relative overflow-hidden border border-black/[0.03] shadow-inner`}
             >
               <img
-                src={product.image_url}
+                src={getImageUrl(product.image_url)}
                 alt={product.name}
                 className="w-full h-full object-contain p-6 sm:p-10 lg:p-12 hover:scale-105 transition-transform duration-500"
               />
@@ -517,12 +518,12 @@ export default function ProductDetailPage() {
                 >
                   <div className="w-14 h-14 bg-gray-50 rounded-xl overflow-hidden flex-shrink-0 border border-gray-100 p-1.5">
                     <img
-                      src={v.image_url}
+                      src={getImageUrl(v.image_url)}
                       alt={v.name}
                       className="w-full h-full object-contain group-hover:scale-110 transition-transform"
                       onError={(e) => {
                         // Real path fallback
-                        e.target.src = product.image_url;
+                        e.target.src = getImageUrl(product.image_url);
                       }}
                     />
                   </div>
