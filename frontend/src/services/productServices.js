@@ -30,6 +30,11 @@ export const fetchHotDeals = async () => {
   return response.data;
 };
 
+export const fetchTrendingProducts = async () => {
+  const response = await API.get('/products/trending');
+  return response.data;
+};
+
 export const fetchUniqueProductNames = async () => {
   const response = await API.get('/products/names');
   return response.data;

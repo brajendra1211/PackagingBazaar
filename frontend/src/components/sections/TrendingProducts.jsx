@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { fetchProducts } from "../../services/productServices"; 
+import { fetchTrendingProducts } from "../../services/productServices"; 
 import ProductCard from "../ui/ProductCard";
 import InquiryModal from "../ui/InquiryModal";
 
@@ -20,12 +20,7 @@ export default function TrendingProducts() {
   useEffect(() => {
     const getTrendingData = async () => {
       try {
-        // Backend ko tag='trending' bhej rahe hain
-        const response = await fetchProducts({ 
-          tag: "trending", 
-          limit: 8,
-          page: 1 
-        });
+        const response = await fetchTrendingProducts();
 
         // ✅ Safe Data Setting: agar response.data hai toh wo, warna direct response
         // Aksar axios mein response.data array hota hai, ya fir pura response hi array hota hai

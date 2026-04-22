@@ -167,32 +167,27 @@ export const getSellerOrders = async (req, res) => {
               ) 
               FROM order_items oi 
               JOIN products p ON oi.product_id = p.id 
-              LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.seller_id = ?
-              WHERE oi.order_id = o.id AND (p.seller_id = ? OR sp.seller_id = ?)) as items
+              WHERE oi.order_id = o.id AND oi.seller_id = ?) as items
       FROM orders o
       JOIN users u ON o.user_id = u.id
       WHERE EXISTS (
         SELECT 1 FROM order_items oi 
-        JOIN products p ON oi.product_id = p.id 
-        LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.seller_id = ?
-        WHERE oi.order_id = o.id AND (p.seller_id = ? OR sp.seller_id = ?)
+        WHERE oi.order_id = o.id AND oi.seller_id = ?
       )
       ORDER BY o.order_date DESC
       LIMIT ? OFFSET ?
     `;
 
-    const [rows] = await pool.query(query, [sellerId, sellerId, sellerId, sellerId, sellerId, sellerId, limit, offset]);
+    const [rows] = await pool.query(query, [sellerId, sellerId, limit, offset]);
 
     const [[{ total }]] = await pool.query(
       `
       SELECT COUNT(DISTINCT o.id) as total 
       FROM orders o
       JOIN order_items oi ON o.id = oi.order_id
-      JOIN products p ON oi.product_id = p.id
-      LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.seller_id = ?
-      WHERE p.seller_id = ? OR sp.seller_id = ?
+      WHERE oi.seller_id = ?
     `,
-      [sellerId, sellerId, sellerId],
+      [sellerId],
     );
 
     res.status(200).json({
@@ -265,7 +260,7 @@ export const getSellerStats = async (req, res) => {
     );
 
     // 5. Total Views (Mocked for now as we don't have views table)
-    // const totalViews = Math.floor(Math.random() * 1000); // Placeholder
+    const totalViews = Math.floor(Math.random() * 1000); // Placeholder
 
     res.status(200).json({
       success: true,

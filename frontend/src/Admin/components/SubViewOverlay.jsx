@@ -4,10 +4,11 @@ import {
   Package, 
   ShoppingBag, 
   RefreshCcw, 
-  MapPin, 
+  MapPin as MapPinIcon, 
   Phone, 
   Zap, 
-  CheckCircle2 
+  CheckCircle2,
+  MessageCircle
 } from "lucide-react";
 import { 
   fetchSellerOrdersAdmin, 
@@ -19,6 +20,14 @@ import { getImageUrl } from "../../services/api";
 export default function SubViewOverlay({ entity, onClose, notifyError }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const handleWhatsAppForward = (seller) => {
+    if (!entity.inquiryData) return;
+    const inquiry = entity.inquiryData;
+    const text = `*New Lead Alert!*\nHello ${seller.company_name},\n\nWe have a new requirement matching your profile:\n\n*Product:* ${inquiry.product_name}\n*Quantity:* ${inquiry.quantity_required}\n*Buyer Location:* ${inquiry.city}\n*Requirement:* ${inquiry.message}\n\nPlease let us know if you can fulfill this!`;
+    const url = `https://wa.me/${seller.phone}?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
 
   useEffect(() => {
     const loadSubData = async () => {
@@ -123,7 +132,7 @@ export default function SubViewOverlay({ entity, onClose, notifyError }) {
                           {idx === 0 && <span className="bg-accent text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">Best Match 🥇</span>}
                         </div>
                         <div className="flex items-center gap-2 text-xs font-bold text-gray-400 mb-6 font-syne">
-                          <MapPin size={14} className="text-accent" /> {seller.city}, {seller.state}
+                          <MapPinIcon size={14} className="text-accent" /> {seller.city}, {seller.state}
                         </div>
                         <div className="bg-white/80 rounded-3xl p-6 border border-black/[0.03] space-y-3">
                            <p className="text-[10px] font-black text-ink uppercase tracking-widest mb-4 flex items-center justify-between">Match Breakdown <span className="text-accent">{seller.match_score} / 420 PTS</span></p>
@@ -135,12 +144,15 @@ export default function SubViewOverlay({ entity, onClose, notifyError }) {
                             </div>
                         </div>
                       </div>
-                      <div className="flex flex-col gap-2">
-                        <a href={`tel:${seller.phone}`} className="w-full px-8 py-4 bg-ink text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-black transition-all shadow-xl shadow-black/10">
-                          <Phone size={14} /> Call Seller
+                      <div className="flex flex-col gap-2 shrink-0 w-full md:w-48">
+                        <a href={`tel:${seller.phone}`} className="w-full px-8 py-3 bg-gray-100 text-gray-700 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-gray-200 transition-all">
+                          <Phone size={14} /> Call
                         </a>
-                        <button className="w-full px-8 py-4 bg-white border border-gray-100 text-ink rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-gray-50 transition-all shadow-sm">
-                          <Zap size={14} /> Notify WhatsApp
+                        <button 
+                          onClick={() => handleWhatsAppForward(seller)}
+                          className="w-full px-8 py-3 bg-[#25D366] text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-[#128C7E] transition-all shadow-xl shadow-[#25D366]/20"
+                        >
+                          <MessageCircle size={14} /> Forward Lead
                         </button>
                       </div>
                     </div>

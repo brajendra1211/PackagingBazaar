@@ -4,18 +4,20 @@ import pool from "../config/db.js";
 export const getCart = async (req, res) => {
   try {
     const userId = req.user.id;
-    const [rows] = await pool.query(
-      `SELECT c.id as cart_id, c.product_id, c.quantity, p.name, p.min_price as price, 
-              COALESCE(p.seller_id, sp.seller_id) as seller_id, 
-              p.description, p.image_url as image,
-              p.thickness, p.width, p.unit, p.color,
-              c.selected_thickness, c.selected_width, c.selected_brand
-       FROM cart_items c 
-       JOIN products p ON c.product_id = p.id 
-       LEFT JOIN seller_products sp ON p.id = sp.product_id
-       WHERE c.user_id = ?`,
-      [userId]
-    );
+     const [rows] = await pool.query(
+       `SELECT c.id as cart_id, c.product_id, c.seller_id, c.quantity, p.name, 
+               COALESCE(sp.price_min, p.min_price) as price, 
+               s.company_name as seller_name,
+               p.description, p.image_url as image,
+               p.thickness, p.width, p.unit, p.color,
+               c.selected_thickness, c.selected_width, c.selected_brand
+        FROM cart_items c 
+        JOIN products p ON c.product_id = p.id 
+        LEFT JOIN seller_products sp ON p.id = sp.product_id AND c.seller_id = sp.seller_id
+        LEFT JOIN sellers s ON c.seller_id = s.id
+        WHERE c.user_id = ?`,
+       [userId]
+     );
     res.status(200).json({ success: true, cart: rows });
   } catch (err) {
     console.error("Error in getCart:", err);
@@ -27,14 +29,14 @@ export const getCart = async (req, res) => {
 export const addToCart = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { productId, quantity, thickness, width, brand } = req.body;
+    const { productId, sellerId, quantity, thickness, width, brand } = req.body;
 
-    if (!productId || !quantity) return res.status(400).json({ success: false, message: "Product ID and quantity required" });
+    if (!productId || !quantity || !sellerId) return res.status(400).json({ success: false, message: "Product ID, Seller ID and quantity required" });
 
     // Check if item with SAME ATTRIBUTES already exists
     const [existing] = await pool.query(
-      "SELECT id, quantity FROM cart_items WHERE user_id = ? AND product_id = ? AND selected_thickness <=> ? AND selected_width <=> ? AND selected_brand <=> ?", 
-      [userId, productId, thickness || null, width || null, brand || null]
+      "SELECT id, quantity FROM cart_items WHERE user_id = ? AND product_id = ? AND seller_id = ? AND selected_thickness <=> ? AND selected_width <=> ? AND selected_brand <=> ?", 
+      [userId, productId, sellerId, thickness || null, width || null, brand || null]
     );
 
     if (existing.length > 0) {
@@ -45,8 +47,8 @@ export const addToCart = async (req, res) => {
       }
     } else if (quantity > 0) {
       await pool.query(
-        "INSERT INTO cart_items (user_id, product_id, quantity, selected_thickness, selected_width, selected_brand) VALUES (?, ?, ?, ?, ?, ?)", 
-        [userId, productId, quantity, thickness || null, width || null, brand || null]
+        "INSERT INTO cart_items (user_id, product_id, seller_id, quantity, selected_thickness, selected_width, selected_brand) VALUES (?, ?, ?, ?, ?, ?, ?)", 
+        [userId, productId, sellerId, quantity, thickness || null, width || null, brand || null]
       );
     }
 
@@ -83,8 +85,8 @@ export const syncCart = async (req, res) => {
 
     for (const item of localItems) {
       const [exists] = await connection.query(
-        "SELECT id, quantity FROM cart_items WHERE user_id = ? AND product_id = ? AND selected_thickness <=> ? AND selected_width <=> ? AND selected_brand <=> ?", 
-        [userId, item.id, item.thickness || null, item.width || null, item.brand || null]
+        "SELECT id, quantity FROM cart_items WHERE user_id = ? AND product_id = ? AND seller_id = ? AND selected_thickness <=> ? AND selected_width <=> ? AND selected_brand <=> ?", 
+        [userId, item.id, item.seller_id, item.thickness || null, item.width || null, item.brand || null]
       );
       
       if (exists.length > 0) {
@@ -92,8 +94,8 @@ export const syncCart = async (req, res) => {
         await connection.query("UPDATE cart_items SET quantity = ? WHERE id = ?", [newQty, exists[0].id]);
       } else {
         await connection.query(
-          "INSERT INTO cart_items (user_id, product_id, quantity, selected_thickness, selected_width, selected_brand) VALUES (?, ?, ?, ?, ?, ?)", 
-          [userId, item.id, item.qty, item.thickness || null, item.width || null, item.brand || null]
+          "INSERT INTO cart_items (user_id, product_id, seller_id, quantity, selected_thickness, selected_width, selected_brand) VALUES (?, ?, ?, ?, ?, ?, ?)", 
+          [userId, item.id, item.seller_id, item.qty, item.thickness || null, item.width || null, item.brand || null]
         );
       }
     }

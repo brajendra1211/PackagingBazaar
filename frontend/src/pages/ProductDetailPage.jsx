@@ -22,6 +22,7 @@ import {
   Send,
   ShieldCheck,
   MessageCircle,
+  MapPin,
 } from "lucide-react";
 
 const catColors = {
@@ -471,7 +472,7 @@ export default function ProductDetailPage() {
                         <td className="py-5 text-right">
                           <button 
                             onClick={() => {
-                              navigate(`/product/${s.product_id}`);
+                              navigate(`/products/${s.product_id}`);
                               window.scrollTo(0, 0);
                             }}
                             className="px-6 py-2.5 bg-white border border-black/10 text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white transition-all shadow-sm"
@@ -511,7 +512,7 @@ export default function ProductDetailPage() {
                 <div
                   key={v.id}
                   onClick={() => {
-                    navigate(`/product/${v.id}`);
+                    navigate(`/products/${v.id}`);
                     window.scrollTo(0, 0);
                   }}
                   className="bg-white p-3 rounded-2xl flex items-center gap-3 hover:shadow-lg hover:shadow-black/5 transition-all cursor-pointer group border border-transparent hover:border-accent/10"

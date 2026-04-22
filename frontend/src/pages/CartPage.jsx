@@ -108,13 +108,19 @@ export default function CartPage() {
                         {item.selected_width && (
                           <span className="text-[9px] xs:text-[10px] text-gray-500 font-bold">{item.selected_width}</span>
                         )}
-                        {item.color && (
+                         {item.color && (
                           <>
                             <span className="text-gray-300">•</span>
                             <span className="text-[9px] xs:text-[10px] text-gray-500 font-bold uppercase">{item.color}</span>
                           </>
                         )}
                       </div>
+                      {item.seller_name && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <span className="text-[9px] text-accent font-black uppercase tracking-widest">Seller:</span>
+                          <span className="text-[10px] text-gray-600 font-bold">{item.seller_name}</span>
+                        </div>
+                      )}
                     </div>
                     <button 
                       onClick={() => removeFromCart(item)} 

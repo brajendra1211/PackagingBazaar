@@ -8,16 +8,16 @@ const reducer = (state, action) => {
   switch (action.type) {
     case "ADD": {
       // Create a unique key for guest/local state
-      const attrKey = `${action.product.id}-${action.product.selected_thickness || ""}-${action.product.selected_width || ""}-${action.product.selected_brand || ""}`;
+      const attrKey = `${action.product.id}-${action.product.seller_id}-${action.product.selected_thickness || ""}-${action.product.selected_width || ""}-${action.product.selected_brand || ""}`;
       
       const exists = state.find((i) => {
-        const iKey = `${i.id}-${i.selected_thickness || ""}-${i.selected_width || ""}-${i.selected_brand || ""}`;
+        const iKey = `${i.id}-${i.seller_id}-${i.selected_thickness || ""}-${i.selected_width || ""}-${i.selected_brand || ""}`;
         return iKey === attrKey;
       });
 
       if (exists) {
         return state.map((i) => {
-          const iKey = `${i.id}-${i.selected_thickness || ""}-${i.selected_width || ""}-${i.selected_brand || ""}`;
+          const iKey = `${i.id}-${i.seller_id}-${i.selected_thickness || ""}-${i.selected_width || ""}-${i.selected_brand || ""}`;
           return iKey === attrKey ? { ...i, qty: i.qty + 1 } : i;
         });
       }
@@ -65,6 +65,7 @@ export const CartProvider = ({ children }) => {
             localStorage.removeItem("cart"); // Clear BEFORE sync to prevent React Strict Mode duplicate calls
             await syncCartAPI(localItems.map(i => ({ 
               id: i.id, 
+              seller_id: i.seller_id,
               qty: i.qty,
               thickness: i.selected_thickness,
               width: i.selected_width,
@@ -85,7 +86,8 @@ export const CartProvider = ({ children }) => {
               selected_width: i.selected_width,
               selected_brand: i.selected_brand,
               unit: i.unit,
-              color: i.color
+              color: i.color,
+              seller_id: i.seller_id
             }));
             dispatch({ type: "SET_CART", cart: transformed });
           }
@@ -107,7 +109,8 @@ export const CartProvider = ({ children }) => {
       image: p.image || p.image_url, // Ensure image field exists
       unit: p.unit,
       color: p.color,
-      local_id: `${p.id}-${p.selected_thickness || ""}-${p.selected_width || ""}-${p.selected_brand || ""}`
+      seller_id: p.seller_id,
+      local_id: `${p.id}-${p.seller_id}-${p.selected_thickness || ""}-${p.selected_width || ""}-${p.selected_brand || ""}`
     };
     
     dispatch({ type: "ADD", product: normalizedItem });
@@ -117,12 +120,14 @@ export const CartProvider = ({ children }) => {
       try {
         const existing = cart.find(i => 
           i.id === p.id && 
+          i.seller_id === p.seller_id &&
           i.selected_thickness === p.selected_thickness && 
           i.selected_width === p.selected_width && 
           i.selected_brand === p.selected_brand
         );
         const newQty = existing ? existing.qty + 1 : 1;
         await addToCartAPI(p.id, newQty, {
+          sellerId: p.seller_id,
           thickness: p.selected_thickness,
           width: p.selected_width,
           brand: p.selected_brand
@@ -141,7 +146,8 @@ export const CartProvider = ({ children }) => {
               selected_width: i.selected_width,
               selected_brand: i.selected_brand,
               unit: i.unit,
-              color: i.color
+              color: i.color,
+              seller_id: i.seller_id
             }));
             dispatch({ type: "SET_CART", cart: transformed });
         }
@@ -161,6 +167,7 @@ export const CartProvider = ({ children }) => {
     if (token && item.id) {
       try { 
         await addToCartAPI(item.id, qty, {
+          sellerId: item.seller_id,
           thickness: item.selected_thickness,
           width: item.selected_width,
           brand: item.selected_brand

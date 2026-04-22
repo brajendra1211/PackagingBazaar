@@ -12,7 +12,7 @@ import {
   ChevronLeft,
   ShieldCheck,
   Globe,
-  MapPin,
+  MapPin as MapPinIcon,
   UploadCloud,
   Search,
   RefreshCcw,

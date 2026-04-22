@@ -17,7 +17,8 @@ import {
   getUniqueProductNames,
   getSellersByGroupKey,
   getProductGroups,
-  createProductGroup
+  createProductGroup,
+  getTrendingProducts
 } from "../controllers/productController.js";
 import { verifyToken, isSeller, isAdmin } from "../middlewares/authMiddleware.js";
 
@@ -30,6 +31,7 @@ router.post("/product-groups", verifyToken, isAdmin, createProductGroup);
 router.get("/products", getAllProducts);
 router.get("/products/top-selling", getTopSellingProducts);
 router.get("/products/hot-deals", getHotDeals);
+router.get("/products/trending", getTrendingProducts);
 router.get("/products/names", getUniqueProductNames);
 router.get("/products/:id", getProductById);
 router.get("/products/:id/variants", getProductVariants);

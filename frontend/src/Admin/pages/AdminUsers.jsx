@@ -4,7 +4,7 @@ import {
   Search, 
   Mail, 
   Phone, 
-  MapPin,
+  MapPin as MapPinIcon,
   XCircle,
   RefreshCcw 
 } from "lucide-react";
@@ -153,7 +153,7 @@ export default function AdminUsers() {
                           <div className="text-[9px] text-accent font-bold uppercase tracking-widest mt-1">ID: {user.seller_uid || "PENDING"}</div>
                           {user.city && (
                             <div className="text-[9px] text-gray-400 font-bold mt-1 uppercase flex items-center gap-1">
-                               <MapPin size={10} /> {user.city}, {user.state}
+                               <MapPinIcon size={10} /> {user.city}, {user.state}
                             </div>
                           )}
                         </>

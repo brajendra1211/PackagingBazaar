@@ -6,9 +6,10 @@ import {
   RefreshCcw,
   Tag,
   Zap,
-  ZapOff
+  ZapOff,
+  TrendingUp
 } from "lucide-react";
-import { fetchAllProductsAdmin, deleteProductAdmin, toggleHotDealAdmin } from "../../services/adminServices";
+import { fetchAllProductsAdmin, deleteProductAdmin, toggleHotDealAdmin, toggleTrendingAdmin } from "../../services/adminServices";
 import { useNotification } from "../../context/NotificationContext";
 import Pagination from "../../components/ui/Pagination";
 
@@ -53,6 +54,21 @@ export default function AdminProducts() {
       }
     } catch (err) {
       notifyError("Failed to update Hot Deal status");
+    }
+  };
+
+  const handleToggleTrending = async (product) => {
+    const newStatus = !product.is_trending;
+    try {
+      const res = await toggleTrendingAdmin(product.product_id, newStatus);
+      if (res.success) {
+        notifySuccess(res.message);
+        setProducts(prev => prev.map(p => 
+          p.product_id === product.product_id ? { ...p, is_trending: newStatus } : p
+        ));
+      }
+    } catch (err) {
+      notifyError("Failed to update Trending status");
     }
   };
 
@@ -166,6 +182,17 @@ export default function AdminProducts() {
                           title={p.is_hot_deal ? "Remove from Hot Deals" : "Add to Hot Deals"}
                         >
                           {p.is_hot_deal ? <Zap size={18} fill="currentColor" /> : <ZapOff size={18} />}
+                        </button>
+                        <button
+                          onClick={() => handleToggleTrending(p)}
+                          className={`p-2.5 rounded-xl transition-colors ${
+                            p.is_trending 
+                              ? "bg-blue-100 text-blue-600 hover:bg-blue-200" 
+                              : "bg-slate-100 text-slate-400 hover:bg-slate-200"
+                          }`}
+                          title={p.is_trending ? "Remove from Trending" : "Mark as Trending"}
+                        >
+                          <TrendingUp size={18} />
                         </button>
                         <button
                           onClick={() => handleDeleteProduct(p.id)}

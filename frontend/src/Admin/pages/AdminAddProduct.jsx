@@ -3,7 +3,7 @@ import {
   Package, 
   Store, 
   Search, 
-  MapPin, 
+  MapPin as MapPinIcon, 
   CheckCircle2, 
   Layers, 
   Tag, 
@@ -333,7 +333,7 @@ export default function AdminAddProduct() {
                       <div className="relative z-10">
                         <div className="font-black text-ink uppercase text-[11px] tracking-widest mb-1 group-hover:text-accent transition-colors">{seller.company_name}</div>
                         <div className="text-[10px] text-slate-400 flex items-center gap-1.5 font-black uppercase">
-                          <MapPin size={12} className="text-accent/60" /> {seller.city}, {seller.state}
+                          <MapPinIcon size={12} className="text-accent/60" /> {seller.city}, {seller.state}
                         </div>
                       </div>
                       <div className={`absolute top-1/2 right-6 -translate-y-1/2 transition-all duration-500 ${selectedSeller?.user_id === seller.user_id ? "opacity-100 scale-100" : "opacity-0 scale-50"}`}>

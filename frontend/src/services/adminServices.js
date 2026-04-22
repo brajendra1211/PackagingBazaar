@@ -61,6 +61,11 @@ export const toggleHotDealAdmin = async (id, isHotDeal) => {
   return response.data;
 };
 
+export const toggleTrendingAdmin = async (id, isTrending) => {
+  const response = await API.patch(`/admin/products/${id}/trending`, { is_trending: isTrending });
+  return response.data;
+};
+
 // --- Sales Management ---
 export const fetchAllOrdersAdmin = async (page = 1, limit = 10) => {
   const response = await API.get(`/admin/orders?page=${page}&limit=${limit}`);
@@ -90,6 +95,11 @@ export const fetchSellersWithOrdersAdmin = async (page = 1, limit = 10) => {
 // --- Lead Management (Inquiries) ---
 export const fetchInquiriesAdmin = async (page = 1, limit = 10) => {
   const response = await API.get(`/admin/inquiries?page=${page}&limit=${limit}`);
+  return response.data;
+};
+
+export const updateInquiryAdmin = async (id, data) => {
+  const response = await API.patch(`/admin/inquiries/${id}`, data);
   return response.data;
 };
 

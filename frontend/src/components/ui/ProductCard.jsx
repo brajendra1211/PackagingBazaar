@@ -111,6 +111,11 @@ export default function ProductCard({ product, onInquiry }) {
             </span>
             {product.is_verified ? <ShieldCheck size={10} className="text-green-500 flex-shrink-0" /> : null}
           </div>
+          {product.seller_count > 1 && (
+            <span className="ml-auto text-[8px] font-black bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded border border-orange-100 uppercase tracking-tighter">
+              +{product.seller_count - 1} More Sellers
+            </span>
+          )}
         </div>
         
         <div className="mt-auto pt-3 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">

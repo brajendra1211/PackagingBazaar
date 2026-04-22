@@ -21,10 +21,10 @@ export const checkout = async (req, res) => {
     const orderId = orderResult.insertId;
 
     // Create Order Items with Specifications
-    for (const item of items) {
+     for (const item of items) {
       await connection.query(
-        "INSERT INTO order_items (order_id, product_id, quantity, price_at_time, thickness, width, brand) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [orderId, item.product_id, item.quantity, item.price, item.thickness || null, item.width || null, item.brand || null]
+        "INSERT INTO order_items (order_id, product_id, seller_id, quantity, price_at_time, thickness, width, brand) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        [orderId, item.product_id, item.seller_id, item.quantity, item.price, item.thickness || null, item.width || null, item.brand || null]
       );
     }
 
@@ -55,7 +55,8 @@ export const getMyOrders = async (req, res) => {
             'price', oi.price_at_time,
             'thickness', oi.thickness,
             'width', oi.width,
-            'brand', oi.brand
+            'brand', oi.brand,
+            'seller_id', oi.seller_id
           )
         ) 
         FROM order_items oi 

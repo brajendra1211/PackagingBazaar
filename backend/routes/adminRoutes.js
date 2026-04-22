@@ -4,7 +4,7 @@ import {
   getAllSellers, getAllUsers, updateUser, deleteUser,
   getAllProductsAdmin, getDashboardStats, getAllOrdersAdmin,
   getUserOrdersAdmin, getSellerOrdersAdmin, getSellerProductsAdmin,
-  getSellersWithOrdersAdmin, getAllInquiriesAdmin, toggleHotDeal,
+  getSellersWithOrdersAdmin, getAllInquiriesAdmin, updateInquiryStatus, toggleHotDeal, toggleTrending,
   getRecommendedSellers, addProductForSeller, uploadImage, updateSellerStatus,
   addSellerAdmin, updateSellerDetailsAdmin,
   createCategory, deleteCategory, createSubCategory, deleteSubCategory
@@ -36,6 +36,7 @@ router.delete("/sellers/:id/reject", verifyToken, isAdmin, rejectSeller);
 router.get("/products/all", verifyToken, isAdmin, getAllProductsAdmin);
 router.get("/products/seller/:sellerId", verifyToken, isAdmin, getSellerProductsAdmin);
 router.patch("/products/:id/hot-deal", verifyToken, isAdmin, toggleHotDeal);
+router.patch("/products/:id/trending", verifyToken, isAdmin, toggleTrending);
 router.post("/products/seller/:sellerUserId", verifyToken, isAdmin, addProductForSeller);
 router.post('/upload-image', verifyToken, isAdmin, upload.single('product_image'), uploadImage);
 router.delete("/products/:id", verifyToken, isAdmin, deleteProduct);
@@ -45,8 +46,9 @@ router.get("/orders", verifyToken, isAdmin, getAllOrdersAdmin);
 router.get("/orders/user/:userId", verifyToken, isAdmin, getUserOrdersAdmin);
 router.get("/orders/seller/:sellerId", verifyToken, isAdmin, getSellerOrdersAdmin);
 
-// --- Inquiry Management (Leads) ---
+// --- Inquiry Management ---
 router.get("/inquiries", verifyToken, isAdmin, getAllInquiriesAdmin);
+router.patch("/inquiries/:id", verifyToken, isAdmin, updateInquiryStatus);
 router.get("/inquiries/:id/recommendations", verifyToken, isAdmin, getRecommendedSellers);
 
 // --- Category & SubCategory Management ---

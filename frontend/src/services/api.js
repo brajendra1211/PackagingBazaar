@@ -14,12 +14,18 @@ const API = axios.create({
 
 export const getImageUrl = (url) => {
   if (!url) return "";
-  if (url.startsWith("http")) return url;
+  if (url.startsWith("http") || url.startsWith("data:image")) return url;
+  
   const cleanUrl = url.startsWith("/") ? url : `/${url}`;
   
-  // Make sure the base URL includes '/api' because the backend serves static files from the same route as the API (e.g. /api/uploads)
-  const baseUrlForImages = API_BASE_URL.endsWith("/api") ? API_BASE_URL : `${API_BASE_URL}/api`;
+  // The backend serves static files from the root domain (e.g., /uploads), NOT under /api
+  let baseUrlForImages = API_BASE_URL;
   
+  if (baseUrlForImages.endsWith("/api")) {
+    baseUrlForImages = baseUrlForImages.slice(0, -4);
+  }
+  
+  // If API is relative (e.g., '/api'), baseUrlForImages might become empty. That is fine, it will use relative path.
   return `${baseUrlForImages}${cleanUrl}`;
 };
 

@@ -241,7 +241,7 @@ export const getAllProductsAdmin = async (req, res) => {
 
     const query = `
       SELECT 
-        sp.id, p.id as product_id, p.name, p.group_key, p.product_code, p.thickness, p.color, p.product_type, p.unit, p.image_url, p.is_hot_deal,
+        sp.id, p.id as product_id, p.name, p.group_key, p.product_code, p.thickness, p.color, p.product_type, p.unit, p.image_url, p.is_hot_deal, p.is_trending,
         sp.price_min, sp.price_max, sp.moq, sp.stock, sp.stock_qty,
         s.company_name as seller_name, s.seller_uid,
         c.name as category_name
@@ -541,6 +541,40 @@ export const getAllInquiriesAdmin = async (req, res) => {
   }
 };
 
+export const updateInquiryStatus = async (req, res) => {
+  const { id } = req.params;
+  const { status, admin_notes } = req.body;
+  try {
+    const updateFields = [];
+    const updateValues = [];
+    
+    if (status !== undefined) {
+      updateFields.push("status = ?");
+      updateValues.push(status);
+    }
+    
+    if (admin_notes !== undefined) {
+      updateFields.push("admin_notes = ?");
+      updateValues.push(admin_notes);
+    }
+    
+    if (updateFields.length === 0) {
+      return res.status(400).json({ success: false, message: "No fields to update." });
+    }
+    
+    updateValues.push(id);
+    const query = `UPDATE inquiries SET ${updateFields.join(", ")} WHERE id = ?`;
+    
+    const [result] = await pool.query(query, updateValues);
+    if (result.affectedRows === 0) return res.status(404).json({ success: false, message: "Inquiry not found." });
+    
+    res.status(200).json({ success: true, message: "Inquiry updated successfully." });
+  } catch (error) {
+    console.error("Error updating inquiry:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
 
 // ── CATEGORY & SUBCATEGORY MANAGEMENT ──────────────────────────────────────
 
@@ -605,6 +639,19 @@ export const toggleHotDeal = async (req, res) => {
     res.status(200).json({ success: true, message: `Product ${is_hot_deal ? 'added to' : 'removed from'} Hot Deals.` });
   } catch (error) {
     console.error("Error toggling hot deal:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+export const toggleTrending = async (req, res) => {
+  const { id } = req.params;
+  const { is_trending } = req.body;
+  try {
+    const [result] = await pool.query("UPDATE products SET is_trending = ? WHERE id = ?", [is_trending ? 1 : 0, id]);
+    if (result.affectedRows === 0) return res.status(404).json({ success: false, message: "Product not found." });
+    res.status(200).json({ success: true, message: `Product ${is_trending ? 'marked as' : 'removed from'} Trending.` });
+  } catch (error) {
+    console.error("Error toggling trending:", error);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };

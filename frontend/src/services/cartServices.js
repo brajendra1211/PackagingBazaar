@@ -7,8 +7,8 @@ export const fetchCartAPI = async () => {
 
 // Updated to accept extra attributes
 export const addToCartAPI = async (productId, quantity, attributes = {}) => {
-  const { thickness, width, brand } = attributes;
-  const response = await API.post("/cart", { productId, quantity, thickness, width, brand });
+  const { thickness, width, brand, sellerId } = attributes;
+  const response = await API.post("/cart", { productId, sellerId, quantity, thickness, width, brand });
   return response.data;
 };
 

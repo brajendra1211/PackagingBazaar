@@ -167,10 +167,12 @@ export const getAllProducts = async (req, res) => {
              COALESCE(MAX(sp.price_max), p.max_price) as max_price,
              COALESCE(SUM(sp.stock_qty), 0) as stock, 
              COALESCE(MIN(sp.moq), 100) as min_order,
-             MAX(s.seller_uid) as seller_uid, MAX(s.company_name) as seller_name,
+             SUBSTRING_INDEX(GROUP_CONCAT(s.seller_uid ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_uid, SUBSTRING_INDEX(GROUP_CONCAT(s.company_name ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_name, SUBSTRING_INDEX(GROUP_CONCAT(s.id ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_id,
+             MAX(s.id) as seller_id,
              MAX(s.city) as city, MAX(s.state) as state,
              (SELECT AVG(rating) FROM product_reviews WHERE product_id = p.id) as avg_rating,
-             (SELECT COUNT(*) FROM product_reviews WHERE product_id = p.id) as review_count
+             (SELECT COUNT(*) FROM product_reviews WHERE product_id = p.id) as review_count,
+             COUNT(DISTINCT sp.seller_id) as seller_count
       FROM products p
       LEFT JOIN tags t ON p.tag_id = t.id
       LEFT JOIN sub_categories sc ON p.sub_category_id = sc.id
@@ -237,7 +239,7 @@ export const getProductById = async (req, res) => {
          COALESCE(MAX(sp.price_max), p.max_price) as max_price,
          COALESCE(SUM(sp.stock_qty), 0) as stock, 
          COALESCE(MIN(sp.moq), 100) as min_order,
-         MAX(s.seller_uid) as seller_uid, MAX(s.company_name) as seller_name,
+         SUBSTRING_INDEX(GROUP_CONCAT(s.seller_uid ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_uid, SUBSTRING_INDEX(GROUP_CONCAT(s.company_name ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_name, SUBSTRING_INDEX(GROUP_CONCAT(s.id ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_id,
          (SELECT AVG(rating) FROM product_reviews WHERE product_id = p.id) as avg_rating,
          (SELECT COUNT(*) FROM product_reviews WHERE product_id = p.id) as review_count,
          COALESCE(GROUP_CONCAT(DISTINCT a.app_name), '') as applications 
@@ -278,19 +280,47 @@ export const getProductVariants = async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Get subcategory of current product
-    const [[current]] = await pool.query("SELECT sub_category_id FROM products WHERE id = ?", [id]);
+    // Get group and subcategory of current product
+    const [[current]] = await pool.query(
+      "SELECT group_id, sub_category_id FROM products WHERE id = ?", 
+      [id]
+    );
     
     if (!current) return res.status(404).json({ success: false, message: "Product not found" });
 
-    // Fetch other products in same subcategory
-    const [variants] = await pool.query(
-      `SELECT id, name, thickness, width, min_price, max_price, image_url 
-       FROM products 
-       WHERE sub_category_id = ? AND id != ?
-       LIMIT 10`,
-      [current.sub_category_id, id]
-    );
+    let variants = [];
+    
+    // Priority 1: If product belongs to a group, show all other products in that group
+    if (current.group_id) {
+      [variants] = await pool.query(
+        `SELECT p.id, p.name, p.thickness, p.width, p.image_url, p.color, p.product_type,
+                COALESCE(MIN(sp.price_min), p.min_price) as min_price,
+                COALESCE(MAX(sp.price_max), p.max_price) as max_price,
+                COALESCE(SUM(sp.stock_qty), 0) as stock_qty
+         FROM products p
+         LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.status = 'active'
+         WHERE p.group_id = ? AND p.id != ?
+         GROUP BY p.id
+         LIMIT 20`,
+        [current.group_id, id]
+      );
+    }
+    
+    // Priority 2: If no group or no variants in group, fallback to same subcategory
+    if (variants.length === 0) {
+      [variants] = await pool.query(
+        `SELECT p.id, p.name, p.thickness, p.width, p.image_url, p.color, p.product_type,
+                COALESCE(MIN(sp.price_min), p.min_price) as min_price,
+                COALESCE(MAX(sp.price_max), p.max_price) as max_price,
+                COALESCE(SUM(sp.stock_qty), 0) as stock_qty
+         FROM products p
+         LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.status = 'active'
+         WHERE p.sub_category_id = ? AND p.id != ?
+         GROUP BY p.id
+         LIMIT 10`,
+        [current.sub_category_id, id]
+      );
+    }
 
     res.status(200).json({ success: true, variants });
   } catch (error) {
@@ -303,13 +333,14 @@ export const getProductVariants = async (req, res) => {
 export const getTopSellingProducts = async (req, res) => {
   try {
     const query = `
-      SELECT p.*, MAX(t.tag_name) as tag_name, MAX(c.name) as category_name, MAX(s.seller_uid) as seller_uid, MAX(s.company_name) as seller_name,
+      SELECT p.*, MAX(t.tag_name) as tag_name, MAX(c.name) as category_name, SUBSTRING_INDEX(GROUP_CONCAT(s.seller_uid ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_uid, SUBSTRING_INDEX(GROUP_CONCAT(s.company_name ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_name, SUBSTRING_INDEX(GROUP_CONCAT(s.id ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_id,
              COALESCE(MIN(sp.price_min), p.min_price) as min_price,
              COALESCE(MAX(sp.price_max), p.max_price) as max_price,
              COALESCE(SUM(sp.stock_qty), 0) as stock, 
              COALESCE(MIN(sp.moq), 100) as min_order,
              (SELECT AVG(rating) FROM product_reviews WHERE product_id = p.id) as avg_rating,
-             (SELECT COUNT(*) FROM product_reviews WHERE product_id = p.id) as review_count
+             (SELECT COUNT(*) FROM product_reviews WHERE product_id = p.id) as review_count,
+             COUNT(DISTINCT sp.seller_id) as seller_count
       FROM products p
       LEFT JOIN tags t ON p.tag_id = t.id
       LEFT JOIN sub_categories sc ON p.sub_category_id = sc.id
@@ -415,9 +446,9 @@ export const addProduct = async (req, res) => {
     // 1. Insert into products
     const [productResult] = await connection.query(
       `INSERT INTO products 
-      (name, sub_category_id, tag_id, seller_id, group_id, product_code, thickness, width, product_type, color, min_price, max_price, unit, description, image_url, delivery_time) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [name, resolvedSubCategoryId, resolvedTagId, seller_id, resolvedGroupId, req.body.productCode, thickness, width, req.body.productType, req.body.color, minPrice, maxPrice, unit, description, image_url, req.body.deliveryTime],
+      (name, sub_category_id, tag_id, seller_id, group_id, group_key, product_code, thickness, width, product_type, color, min_price, max_price, unit, description, image_url, delivery_time) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [name, resolvedSubCategoryId, resolvedTagId, seller_id, resolvedGroupId, groupKey === "NEW_GROUP" ? (newGroupId || `GP-${Date.now()}`) : groupKey, req.body.productCode, thickness, width, req.body.productType, req.body.color, minPrice, maxPrice, unit, description, image_url, req.body.deliveryTime],
     );
 
     const productId = productResult.insertId;
@@ -535,13 +566,14 @@ export const deleteProduct = async (req, res) => {
 export const getHotDeals = async (req, res) => {
   try {
     const query = `
-      SELECT p.*, MAX(t.tag_name) as tag_name, MAX(c.name) as category_name, MAX(s.seller_uid) as seller_uid, MAX(s.company_name) as seller_name,
+      SELECT p.*, MAX(t.tag_name) as tag_name, MAX(c.name) as category_name, SUBSTRING_INDEX(GROUP_CONCAT(s.seller_uid ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_uid, SUBSTRING_INDEX(GROUP_CONCAT(s.company_name ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_name, SUBSTRING_INDEX(GROUP_CONCAT(s.id ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_id,
              COALESCE(MIN(sp.price_min), p.min_price) as min_price,
              COALESCE(MAX(sp.price_max), p.max_price) as max_price,
              COALESCE(SUM(sp.stock_qty), 0) as stock, 
              COALESCE(MIN(sp.moq), 100) as min_order,
              (SELECT AVG(rating) FROM product_reviews WHERE product_id = p.id) as avg_rating,
-             (SELECT COUNT(*) FROM product_reviews WHERE product_id = p.id) as review_count
+             (SELECT COUNT(*) FROM product_reviews WHERE product_id = p.id) as review_count,
+             COUNT(DISTINCT sp.seller_id) as seller_count
       FROM products p
       LEFT JOIN tags t ON p.tag_id = t.id
       LEFT JOIN sub_categories sc ON p.sub_category_id = sc.id
@@ -562,6 +594,41 @@ export const getHotDeals = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in getHotDeals:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+export const getTrendingProducts = async (req, res) => {
+  try {
+    const query = `
+      SELECT p.*, MAX(t.tag_name) as tag_name, MAX(c.name) as category_name, SUBSTRING_INDEX(GROUP_CONCAT(s.seller_uid ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_uid, SUBSTRING_INDEX(GROUP_CONCAT(s.company_name ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_name, SUBSTRING_INDEX(GROUP_CONCAT(s.id ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_id,
+             COALESCE(MIN(sp.price_min), p.min_price) as min_price,
+             COALESCE(MAX(sp.price_max), p.max_price) as max_price,
+             COALESCE(SUM(sp.stock_qty), 0) as stock, 
+             COALESCE(MIN(sp.moq), 100) as min_order,
+             (SELECT AVG(rating) FROM product_reviews WHERE product_id = p.id) as avg_rating,
+             (SELECT COUNT(*) FROM product_reviews WHERE product_id = p.id) as review_count,
+             COUNT(DISTINCT sp.seller_id) as seller_count
+      FROM products p
+      LEFT JOIN tags t ON p.tag_id = t.id
+      LEFT JOIN sub_categories sc ON p.sub_category_id = sc.id
+      LEFT JOIN categories c ON sc.category_id = c.id
+      LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.status = 'active'
+      LEFT JOIN sellers s ON s.id = COALESCE(p.seller_id, sp.seller_id)
+      WHERE p.is_trending = 1
+      GROUP BY p.id
+      ORDER BY p.id DESC
+      LIMIT 12
+    `;
+
+    const [rows] = await pool.query(query);
+
+    res.status(200).json({
+      success: true,
+      data: rows,
+    });
+  } catch (error) {
+    console.error("Error in getTrendingProducts:", error);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
@@ -616,3 +683,4 @@ export const getSellersByGroupKey = async (req, res) => {
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
+
