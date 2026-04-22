@@ -18,6 +18,15 @@ export const getImageUrl = (url) => {
   
   const cleanUrl = url.startsWith("/") ? url : `/${url}`;
   
+  // If we are on a production domain but the API_URL still points to localhost,
+  // we use a relative path. This handles cases where the user builds for production
+  // without updating the .env file, or when frontend and backend are on the same domain.
+  if (typeof window !== 'undefined' && 
+      window.location.hostname !== 'localhost' && 
+      API_BASE_URL.includes('localhost')) {
+    return cleanUrl;
+  }
+  
   // The backend serves static files from the root domain (e.g., /uploads), NOT under /api
   let baseUrlForImages = API_BASE_URL;
   
