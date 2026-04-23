@@ -44,19 +44,39 @@ export default function AdminAddSeller() {
   const navigate = useNavigate();
   const { notifySuccess, notifyError } = useNotification();
 
+  const BUSINESS_TYPES = ["Manufacturer", "Trader", "Stockist", "Distributor", "Converter"];
+
   const [sellerForm, setSellerForm] = useState({
     ownerName: "", email: "", password: "", confirmPassword: "", mobile: "",
-    companyName: "", businessType: "Manufacturer", gstNumber: "", gstCertificate: null,
+    companyName: "", businessType: [], gstNumber: "", gstCertificate: null,
     city: "", state: "", pincode: "", businessAddress: "", yearEstablished: "", description: ""
   });
 
   const setSellerVal = (k, v) => setSellerForm(f => ({ ...f, [k]: v }));
+
+  const toggleBusinessType = (type) => {
+    setSellerVal("businessType", 
+      sellerForm.businessType.includes(type)
+        ? sellerForm.businessType.filter(t => t !== type)
+        : [...sellerForm.businessType, type]
+    );
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) return notifyError("File size exceeds 5MB limit.");
+      setSellerVal("gstCertificate", file);
+    }
+  };
 
   const handlePincodeChange = async (val) => {
     const cleaned = val.replace(/\D/g, "").slice(0, 6);
     setSellerVal("pincode", cleaned);
     if (cleaned.length < 6) {
       setPincodeStatus("idle");
+      setSellerVal("city", "");
+      setSellerVal("state", "");
       return;
     }
     setPincodeStatus("loading");
@@ -79,6 +99,10 @@ export default function AdminAddSeller() {
 
   const handleCreateSeller = async () => {
     if (!sellerForm.companyName || pincodeStatus !== "valid") return notifyError("Company name and valid pincode required");
+    if (sellerForm.businessType.length === 0) return notifyError("Please select at least one business type");
+    if (!sellerForm.gstNumber || sellerForm.gstNumber.length !== 15) return notifyError("Valid 15-digit GST number required");
+    if (!sellerForm.gstCertificate) return notifyError("GST Certificate is mandatory");
+    
     setLoading(true);
     try {
       const res = await addSellerAdmin(sellerForm);
@@ -87,7 +111,7 @@ export default function AdminAddSeller() {
         navigate("/admin/sellers");
       }
     } catch (err) {
-      notifyError("Failed to create seller");
+      notifyError(err?.response?.data?.message || "Failed to create seller");
     } finally {
       setLoading(false);
     }
@@ -152,17 +176,60 @@ export default function AdminAddSeller() {
              <Field label="Company Name" required>
                 <input className={inputCls} placeholder="Official business name" value={sellerForm.companyName} onChange={(e) => setSellerVal("companyName", e.target.value)} />
              </Field>
-             <div className="grid grid-cols-2 gap-6">
-                <Field label="Business Type">
-                  <select className={inputCls} value={sellerForm.businessType} onChange={(e) => setSellerVal("businessType", e.target.value)}>
-                    <option value="Manufacturer">Manufacturer</option>
-                    <option value="Trader">Trader</option>
-                  </select>
+
+             <Field label="Business Type" required hint="Select multiple if applicable">
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {BUSINESS_TYPES.map(t => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => toggleBusinessType(t)}
+                      className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase border transition-all ${
+                        sellerForm.businessType.includes(t)
+                          ? "bg-accent text-white border-accent shadow-md shadow-orange-100"
+                          : "bg-slate-50 text-slate-400 border-black/[0.05] hover:border-accent"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+             </Field>
+
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <Field label="GST Number" required>
+                  <input 
+                    className={inputCls} 
+                    maxLength={15} 
+                    placeholder="15-digit GSTIN" 
+                    value={sellerForm.gstNumber} 
+                    onChange={(e) => setSellerVal("gstNumber", e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))} 
+                  />
                 </Field>
                 <Field label="Established Year">
                   <input className={inputCls} type="number" placeholder="e.g. 2015" value={sellerForm.yearEstablished} onChange={(e) => setSellerVal("yearEstablished", e.target.value)} />
                 </Field>
              </div>
+
+             <Field label="GST Certificate" required hint="Max 5MB (PDF/JPG/PNG)">
+                <div className="relative group/file">
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                  <div className={`p-6 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 transition-all ${sellerForm.gstCertificate ? "border-green-300 bg-green-50" : "border-slate-100 bg-slate-50 group-hover/file:border-accent/30"}`}>
+                    {sellerForm.gstCertificate ? (
+                      <>
+                        <CheckCircle2 className="text-green-500" size={24}/>
+                        <p className="text-xs font-bold text-green-700">{sellerForm.gstCertificate.name}</p>
+                      </>
+                    ) : (
+                      <>
+                        <UploadCloud size={24} className="text-slate-300 group-hover/file:text-accent"/>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Click to upload document</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+             </Field>
+
              <Field label="Pincode" required>
                 <div className="relative">
                   <input className={inputCls} maxLength={6} placeholder="6 Digit Pincode" value={sellerForm.pincode} onChange={(e) => handlePincodeChange(e.target.value)} />
@@ -170,9 +237,15 @@ export default function AdminAddSeller() {
                   {pincodeStatus === 'valid' && <CheckCircle2 size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-green-500"/>}
                 </div>
              </Field>
+
              <Field label="Business Address" required>
                 <textarea className={inputCls + " h-24"} placeholder="Full office address" value={sellerForm.businessAddress} onChange={(e) => setSellerVal("businessAddress", e.target.value)} />
              </Field>
+
+             <Field label="Business Description">
+                <textarea className={inputCls + " h-24"} placeholder="Tell us about the company..." value={sellerForm.description} onChange={(e) => setSellerVal("description", e.target.value)} />
+             </Field>
+
              <div className="flex gap-4">
                 <button onClick={() => setSellerPhase(1)} className="px-8 py-4 border rounded-2xl text-xs font-black uppercase flex items-center gap-2">
                   <ChevronLeft size={16}/> Back

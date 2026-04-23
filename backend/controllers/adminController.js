@@ -968,11 +968,18 @@ export const addSellerAdmin = async (req, res) => {
     const sellerUID = `PB-S-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
     const gstCertificate = req.file ? `/uploads/gst_certificates/${req.file.filename}` : null;
     
+    // Handle businessType if it's an array
+    const businessTypeString = Array.isArray(businessType) 
+      ? businessType.join(", ") 
+      : (typeof businessType === 'string' && businessType.startsWith('[') 
+          ? JSON.parse(businessType).join(", ") 
+          : businessType);
+
     await connection.query(
       `INSERT INTO sellers 
       (user_id, mobile, status, seller_uid, company_name, business_type, gst_number, gst_certificate, city, state, pincode, business_address, year_established, description, is_verified) 
       VALUES (?, ?, 'verified', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-      [userId, mobile, sellerUID, companyName, businessType, gstNumber, gstCertificate, city, state, pincode, businessAddress, yearEstablished || null, description || null]
+      [userId, mobile, sellerUID, companyName, businessTypeString, gstNumber, gstCertificate, city, state, pincode, businessAddress, yearEstablished || null, description || null]
     );
 
     await connection.commit();
