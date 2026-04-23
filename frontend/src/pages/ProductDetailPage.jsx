@@ -529,15 +529,15 @@ export default function ProductDetailPage() {
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-[13px] text-gray-900 truncate pr-4">
-                      {v.name}
+                    <h4 className="font-bold text-[14px] text-gray-900 pr-4">
+                      {v.name} {v.color && `(${v.color})`}
                     </h4>
-                    <div className="flex gap-2 mt-0.5">
-                      <span className="text-[8px] font-black text-gray-400 uppercase tracking-tighter">
-                        Micron: {v.thickness || "N/A"}
+                    <div className="flex gap-2 mt-1">
+                      <span className="text-[9px] font-black text-accent uppercase tracking-tighter bg-accent/5 px-2 py-0.5 rounded">
+                        {v.seller_name || "Verified Seller"}
                       </span>
-                      <span className="text-[8px] font-black text-gray-400 border-l border-gray-200 pl-2 uppercase tracking-tighter">
-                        Width: {v.width || "N/A"}
+                      <span className="text-[9px] font-black text-gray-400 border-l border-gray-200 pl-2 uppercase tracking-tighter">
+                        Micron: {v.thickness || "N/A"}
                       </span>
                     </div>
                   </div>

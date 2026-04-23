@@ -279,9 +279,10 @@ export default function AdminAddProduct() {
                 name: "", display_name: "", product_group_id: "", category: "", customCategory: "",
                 subcategory: "", customSubcategory: "", tag: "", customTag: "", thickness: "",
                 width: "", minPrice: "", maxPrice: "", unit: "kg", minOrder: "", stock: "",
+                deliveryTime: "", groupKey: "", newGroupName: "", newGroupId: "", productCode: "",
                 description: "", applications: [], customApplications: "", img: "",
-                delivery_days: "", payment_terms: "", color: "", type: "",
               });
+              loadInitialData(); // Re-fetch groups to show the one just created
             }}
             className="px-6 py-3 rounded-xl bg-accent text-white text-sm font-semibold hover:bg-orange-700 transition-colors"
           >

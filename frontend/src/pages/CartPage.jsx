@@ -41,7 +41,7 @@ export default function CartPage() {
         submitInquiryAPI({
           product_id: item.id,
           message: `Bulk Inquiry: ${formData.message}`,
-          quantity: `${item.qty} ${item.unit || 'kg'}`,
+          quantity: (formData.quantity && formData.quantity !== "Not specified") ? formData.quantity : `${item.qty} ${item.unit || 'kg'}`,
           thickness: item.selected_thickness || "Standard", 
           width: item.selected_width || "Standard",
           phone: formData.phone,
