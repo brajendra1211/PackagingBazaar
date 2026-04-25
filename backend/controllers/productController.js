@@ -701,13 +701,23 @@ export const getTrendingProducts = async (req, res) => {
 // 8. Get Unique Product Names for Suggestions
 export const getUniqueProductNames = async (req, res) => {
   try {
-    const query = "SELECT DISTINCT name FROM products WHERE name IS NOT NULL AND name != '' ORDER BY name ASC";
+    const query = `
+      SELECT name, 
+             ANY_VALUE(group_key) as group_key, 
+             ANY_VALUE(display_name) as display_name, 
+             ANY_VALUE(product_group_id) as product_group_id,
+             ANY_VALUE(category_id) as category_id,
+             ANY_VALUE(sub_category_id) as sub_category_id
+      FROM products 
+      WHERE name IS NOT NULL AND name != '' 
+      GROUP BY name 
+      ORDER BY name ASC
+    `;
     const [rows] = await pool.query(query);
-    const names = rows.map(row => row.name);
     
     res.status(200).json({
       success: true,
-      data: names,
+      data: rows,
     });
   } catch (error) {
     console.error("Error in getUniqueProductNames:", error);

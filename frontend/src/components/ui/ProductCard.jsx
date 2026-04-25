@@ -83,15 +83,14 @@ export default function ProductCard({ product, onInquiry }) {
         >
           {product.display_name || product.name}
         </h3>
-        <p className="text-[10px] sm:text-[11px] md:text-[13px] text-ink3 mb-3 md:mb-4 line-clamp-2 md:line-clamp-3 leading-relaxed h-8 sm:h-9 md:h-12 overflow-hidden">
+        <p className="text-[10px] sm:text-[11px] md:text-[13px] text-ink3 mb-1.5 line-clamp-2 md:line-clamp-3 leading-relaxed h-8 sm:h-9 md:h-12 overflow-hidden">
           {product.description}
         </p>
-        <div className="flex items-center gap-1.5 mb-3 flex-wrap">
-          {product.color && product.color !== 'N/A' && (
-            <span className="text-[10px] text-ink3 bg-surface px-2 py-0.5 rounded uppercase font-bold">
-              {product.color}
-            </span>
-          )}
+        <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t border-black/[0.02]">
+           {/* Thickness and Width hidden on home card as requested */}
+           {product.color && product.color !== 'N/A' && (
+             <span className="text-[7px] font-black bg-slate-900 text-white px-3 py-1 rounded uppercase tracking-tighter shadow-sm">{product.color}</span>
+           )}
         </div>
         
         <StarRating 
@@ -100,22 +99,15 @@ export default function ProductCard({ product, onInquiry }) {
         />
         
         <div className="flex items-center gap-2 mt-2 mb-1">
-          {product.seller_count > 1 ? (
+          {product.seller_count > 1 && (
             <span className="text-[10px] font-bold text-accent bg-accent/5 px-2 py-0.5 rounded border border-accent/10">
               {product.seller_count} Sellers Available
             </span>
-          ) : (
-            <div className="flex items-center gap-1">
-              <span className="text-[10px] font-bold text-gray-500 bg-gray-50 px-2 py-0.5 rounded border border-gray-100 truncate max-w-[120px]">
-                {product.seller_name}
-              </span>
-              {product.is_verified ? <ShieldCheck size={10} className="text-green-500 flex-shrink-0" /> : null}
-            </div>
           )}
           
           {product.variant_count > 1 && (
             <>
-              <span className="text-gray-300">•</span>
+              {product.seller_count > 1 && <span className="text-gray-300">•</span>}
               <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
                 {product.variant_count} Variants
               </span>

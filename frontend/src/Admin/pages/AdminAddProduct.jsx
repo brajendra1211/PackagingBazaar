@@ -117,26 +117,46 @@ export default function AdminAddProduct() {
 
   // Auto-generate Product ID (PB-xxx) and Variant Group ID
   useEffect(() => {
-     // For Variant Group (Category-Thickness-Color-Type)
+     // For Variant Group (Category_ProductType_ProductName)
      if (form.groupKey === "NEW_GROUP") {
+        const matched = existingNames.find(n => 
+          n.name.toLowerCase() === form.name.toLowerCase() && 
+          (n.category_id == form.category || n.sub_category_id == form.subcategory)
+        );
+
+        if (matched) {
+          setForm(prev => ({
+            ...prev,
+            groupKey: matched.group_key || "",
+            product_group_id: matched.product_group_id || "",
+            display_name: matched.display_name || matched.name
+          }));
+          return;
+        }
+
         const cat = form.category === "Other" ? form.customCategory : categories.find(c => c.id == form.category)?.name || "";
+        
+        // MAPPING: Category_ProductType_ProductName (Name is lowercase with underscores)
+        const typePart = form.productType ? `${form.productType}` : "";
+        const namePart = form.name ? form.name.toLowerCase().replace(/\s+/g, '_') : "";
+        const generatedName = `${cat}${typePart ? `_${typePart}` : ""}${namePart ? `_${namePart}` : ""}`.trim();
+        
+        // For ID: CAT_TYPE_NAME
         const parts = [
           cat,
-          form.thickness ? form.thickness + "mic" : "",
-          form.color,
-          form.productType
+          form.productType,
+          form.name
         ].filter(Boolean).map(s => s.replace(/\s+/g, ""));
-        
         const generatedId = parts.join("_").toUpperCase();
-        const generatedName = `${cat} ${form.thickness ? form.thickness + "Mic" : ""} ${form.productType || ""}`.trim();
         
         setForm(prev => ({ 
           ...prev, 
           newGroupId: prev.newGroupId || generatedId,
-          newGroupName: prev.newGroupName || generatedName 
+          newGroupName: generatedName,
+          display_name: generatedName
         }));
      }
-  }, [form.category, form.thickness, form.color, form.productType, form.groupKey]);
+  }, [form.category, form.productType, form.name, form.groupKey, form.subcategory]);
 
   useEffect(() => {
     // Generate PB-xxxx style ID (simplified for demo, usually fetched from server)
@@ -221,6 +241,8 @@ export default function AdminAddProduct() {
     try {
       const productData = {
         ...form,
+        display_name: form.display_name || form.newGroupName,
+        group_key: form.groupKey === "NEW_GROUP" ? form.newGroupId : form.groupKey,
         category: form.category === "Other" ? form.customCategory : categories.find((c) => c.id == form.category)?.name || form.category,
         subcategory: form.subcategory === "Other" ? form.customSubcategory : subCategories.find((s) => s.id == form.subcategory)?.name || form.subcategory,
         tag: form.tag === "Other" ? form.customTag : tags.find((t) => t.id == form.tag)?.tag_name || form.tag,
@@ -366,19 +388,28 @@ export default function AdminAddProduct() {
                       }} 
                       onFocus={() => setShowSuggestions(true)}
                     />
-                    {showSuggestions && existingNames.filter(n => n.toLowerCase().includes(form.name.toLowerCase()) && n.toLowerCase() !== form.name.toLowerCase()).length > 0 && (
+                    {showSuggestions && existingNames.filter(n => n.name.toLowerCase().includes(form.name.toLowerCase()) && n.name.toLowerCase() !== form.name.toLowerCase()).length > 0 && (
                       <div className="absolute z-50 w-full mt-2 bg-white border border-black/[0.08] rounded-[2rem] shadow-2xl max-h-64 overflow-y-auto py-3 animate-slideDown">
-                        {existingNames.filter(n => n.toLowerCase().includes(form.name.toLowerCase()) && n.toLowerCase() !== form.name.toLowerCase()).map((name, i) => (
+                        {existingNames.filter(n => n.name.toLowerCase().includes(form.name.toLowerCase()) && n.name.toLowerCase() !== form.name.toLowerCase()).map((item, i) => (
                           <button
                             key={i}
                             type="button"
                             onClick={() => {
-                              setFormVal("name", name);
+                              setForm(prev => ({
+                                ...prev,
+                                name: item.name,
+                                groupKey: item.group_key || "",
+                                product_group_id: item.product_group_id || "",
+                                display_name: item.display_name || item.name
+                              }));
                               setShowSuggestions(false);
                             }}
                             className="w-full px-6 py-3 text-left text-xs font-black text-ink hover:bg-slate-50 hover:text-accent transition-all uppercase tracking-widest"
                           >
-                            {name}
+                            <div className="flex flex-col">
+                              <span>{item.name}</span>
+                              {item.display_name && <span className="text-[8px] opacity-40 normal-case font-medium">{item.display_name}</span>}
+                            </div>
                           </button>
                         ))}
                       </div>
@@ -609,14 +640,42 @@ export default function AdminAddProduct() {
                         <input className={inputCls + " h-14 font-black text-blue-600 bg-white shadow-sm border-blue-100"} value={form.productCode} onChange={(e) => setFormVal("productCode", e.target.value)} placeholder="e.g. PB001" />
                      </Field>
                      <Field label="Finalize Variant Grouping" hint="Variant collection link">
-                        <select className={inputCls + " h-14 font-black uppercase text-xs tracking-wider shadow-sm border-white focus:bg-white"} value={form.groupKey} onChange={(e) => setFormVal("groupKey", e.target.value)}>
-                          <option value="">STANDALONE PRODUCT (NO GROUP)</option>
-                          {productGroups.map(g => (
-                            <option key={g.master_id} value={g.master_id}>{g.name} ({g.master_id})</option>
-                          ))}
-                          <option value="NEW_GROUP">+ CREATE NEW VARIANT GROUP</option>
-                        </select>
-                     </Field>
+                         {(() => {
+                            const matched = existingNames.find(n => 
+                              n.name.toLowerCase() === form.name.toLowerCase() && 
+                              (n.category_id == form.category || n.sub_category_id == form.subcategory)
+                            );
+
+                            return (
+                              <div className="space-y-4">
+                                <select 
+                                  className={`${inputCls} h-14 font-black uppercase text-xs tracking-wider shadow-sm border-white focus:bg-white ${matched ? 'bg-orange-50 border-orange-100' : ''}`} 
+                                  value={form.groupKey} 
+                                  onChange={(e) => setFormVal("groupKey", e.target.value)}
+                                  disabled={!!matched}
+                                >
+                                  {!matched && <option value="">STANDALONE PRODUCT (NO GROUP)</option>}
+                                  {productGroups.map(g => (
+                                    <option key={g.master_id} value={g.master_id}>{g.name} ({g.master_id})</option>
+                                  ))}
+                                  {!matched && <option value="NEW_GROUP">+ CREATE NEW VARIANT GROUP</option>}
+                                </select>
+
+                                {matched && (
+                                  <div className="bg-orange-50 border border-orange-100 p-4 rounded-2xl animate-pulse">
+                                    <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest flex items-center gap-2">
+                                      <ShieldCheck size={14} /> Existing Product Group Detected
+                                    </p>
+                                    <p className="text-[11px] text-orange-500 mt-1">
+                                      A product named "{matched.name}" already exists in this category. 
+                                      Linking to group "{matched.display_name}" automatically.
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                         })()}
+                      </Field>
                   </div>
 
                   {form.groupKey === "NEW_GROUP" && (
@@ -717,7 +776,9 @@ export default function AdminAddProduct() {
                          <span className="text-[7px] font-black bg-slate-900 text-white px-3 py-1 rounded uppercase tracking-tighter shadow-sm">{form.thickness || "--"} Mc</span>
                          <span className="text-[7px] font-black bg-slate-900 text-white px-3 py-1 rounded uppercase tracking-tighter shadow-sm">{form.width || "--"} MM</span>
                          <span className="text-[7px] font-black bg-slate-900 text-white px-3 py-1 rounded uppercase tracking-tighter shadow-sm">{form.productType || "TYPE"}</span>
-                         <span className="text-[7px] font-black bg-slate-900 text-white px-3 py-1 rounded uppercase tracking-tighter shadow-sm">{form.color || "COLOR"}</span>
+                         {form.color && (
+                           <span className="text-[7px] font-black bg-slate-900 text-white px-3 py-1 rounded uppercase tracking-tighter shadow-sm">{form.color}</span>
+                         )}
                       </div>
                     </div>
 
