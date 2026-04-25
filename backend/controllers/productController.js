@@ -250,10 +250,12 @@ export const getAllProducts = async (req, res) => {
         MAX(t.tag_name) as tag_name, 
         MAX(sc.name) as subcategory_name, 
         MAX(c.name) as category_name,
-        COALESCE(MIN(sp.price_min), ANY_VALUE(p.min_price)) as min_price,
-        COALESCE(MAX(sp.price_max), ANY_VALUE(p.max_price)) as max_price,
+        COALESCE(MIN(sp.price_min), 0) as min_price,
+        COALESCE(MAX(sp.price_max), 0) as max_price,
         COALESCE(SUM(sp.stock_qty), 0) as stock, 
         COALESCE(MIN(sp.moq), 100) as min_order,
+        (SELECT AVG(rating) FROM product_reviews WHERE product_id = ANY_VALUE(p.id)) as avg_rating,
+        (SELECT COUNT(*) FROM product_reviews WHERE product_id = ANY_VALUE(p.id)) as review_count,
         SUBSTRING_INDEX(GROUP_CONCAT(s.company_name ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_name, 
         SUBSTRING_INDEX(GROUP_CONCAT(s.id ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_id,
         MAX(s.city) as city, 
@@ -322,8 +324,8 @@ export const getProductById = async (req, res) => {
     // controllers/productController.js me sirf query wali string badal lo
     const query = `
   SELECT p.*, MAX(t.tag_name) as tag_name, MAX(sc.name) as subcategory_name, MAX(c.name) as category_name,
-         COALESCE(MIN(sp.price_min), p.min_price) as min_price,
-         COALESCE(MAX(sp.price_max), p.max_price) as max_price,
+         COALESCE(MIN(sp.price_min), 0) as min_price,
+         COALESCE(MAX(sp.price_max), 0) as max_price,
          COALESCE(SUM(sp.stock_qty), 0) as stock, 
          COALESCE(MIN(sp.moq), 100) as min_order,
          SUBSTRING_INDEX(GROUP_CONCAT(s.seller_uid ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_uid, SUBSTRING_INDEX(GROUP_CONCAT(s.company_name ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_name, SUBSTRING_INDEX(GROUP_CONCAT(s.id ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_id,
@@ -369,8 +371,8 @@ export const getTopSellingProducts = async (req, res) => {
   try {
     const query = `
       SELECT p.*, MAX(t.tag_name) as tag_name, MAX(c.name) as category_name, SUBSTRING_INDEX(GROUP_CONCAT(s.seller_uid ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_uid, SUBSTRING_INDEX(GROUP_CONCAT(s.company_name ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_name, SUBSTRING_INDEX(GROUP_CONCAT(s.id ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_id,
-             COALESCE(MIN(sp.price_min), p.min_price) as min_price,
-             COALESCE(MAX(sp.price_max), p.max_price) as max_price,
+             COALESCE(MIN(sp.price_min), 0) as min_price,
+             COALESCE(MAX(sp.price_max), 0) as max_price,
              COALESCE(SUM(sp.stock_qty), 0) as stock, 
              COALESCE(MIN(sp.moq), 100) as min_order,
              (SELECT AVG(rating) FROM product_reviews WHERE product_id = p.id) as avg_rating,
@@ -632,8 +634,8 @@ export const getHotDeals = async (req, res) => {
       SELECT p.*, MAX(t.tag_name) as tag_name, MAX(c.name) as category_name, 
              SUBSTRING_INDEX(GROUP_CONCAT(s.company_name ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_name, 
              SUBSTRING_INDEX(GROUP_CONCAT(s.id ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_id,
-             COALESCE(MIN(sp.price_min), p.min_price) as min_price,
-             COALESCE(MAX(sp.price_max), p.max_price) as max_price,
+             COALESCE(MIN(sp.price_min), 0) as min_price,
+             COALESCE(MAX(sp.price_max), 0) as max_price,
              COALESCE(SUM(sp.stock_qty), 0) as stock, 
              COALESCE(MIN(sp.moq), 100) as min_order,
              COUNT(DISTINCT sp.seller_id) as seller_count,
@@ -668,8 +670,8 @@ export const getTrendingProducts = async (req, res) => {
       SELECT p.*, MAX(t.tag_name) as tag_name, MAX(c.name) as category_name, 
              SUBSTRING_INDEX(GROUP_CONCAT(s.company_name ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_name, 
              SUBSTRING_INDEX(GROUP_CONCAT(s.id ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_id,
-             COALESCE(MIN(sp.price_min), p.min_price) as min_price,
-             COALESCE(MAX(sp.price_max), p.max_price) as max_price,
+             COALESCE(MIN(sp.price_min), 0) as min_price,
+             COALESCE(MAX(sp.price_max), 0) as max_price,
              COALESCE(SUM(sp.stock_qty), 0) as stock, 
              COALESCE(MIN(sp.moq), 100) as min_order,
              COUNT(DISTINCT sp.seller_id) as seller_count,
@@ -702,16 +704,17 @@ export const getTrendingProducts = async (req, res) => {
 export const getUniqueProductNames = async (req, res) => {
   try {
     const query = `
-      SELECT name, 
-             ANY_VALUE(group_key) as group_key, 
-             ANY_VALUE(display_name) as display_name, 
-             ANY_VALUE(product_group_id) as product_group_id,
-             ANY_VALUE(category_id) as category_id,
-             ANY_VALUE(sub_category_id) as sub_category_id
-      FROM products 
-      WHERE name IS NOT NULL AND name != '' 
-      GROUP BY name 
-      ORDER BY name ASC
+      SELECT p.name, 
+             ANY_VALUE(p.group_key) as group_key, 
+             ANY_VALUE(p.display_name) as display_name, 
+             ANY_VALUE(p.product_group_id) as product_group_id,
+             ANY_VALUE(sc.category_id) as category_id,
+             ANY_VALUE(p.sub_category_id) as sub_category_id
+      FROM products p
+      LEFT JOIN sub_categories sc ON p.sub_category_id = sc.id
+      WHERE p.name IS NOT NULL AND p.name != '' 
+      GROUP BY p.name 
+      ORDER BY p.name ASC
     `;
     const [rows] = await pool.query(query);
     

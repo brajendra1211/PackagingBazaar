@@ -81,7 +81,7 @@ export default function ProductCard({ product, onInquiry }) {
           className="font-syne font-black text-xs sm:text-sm md:text-base text-ink mb-1.5 line-clamp-1 cursor-pointer hover:text-accent transition-colors uppercase tracking-tight"
           onClick={handleImageClick}
         >
-          {product.display_name || product.name}
+          {product.name}
         </h3>
         <p className="text-[10px] sm:text-[11px] md:text-[13px] text-ink3 mb-1.5 line-clamp-2 md:line-clamp-3 leading-relaxed h-8 sm:h-9 md:h-12 overflow-hidden">
           {product.description}
