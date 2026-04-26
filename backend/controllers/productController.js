@@ -32,7 +32,7 @@ export const getProductVariants = async (req, res) => {
     
     // Get group_key and subcategory of current product
     const [[current]] = await pool.query(
-      "SELECT group_key, group_id, sub_category_id FROM products WHERE id = ?", 
+      "SELECT group_key, product_group_id, sub_category_id FROM products WHERE id = ?", 
       [id]
     );
     
@@ -40,42 +40,42 @@ export const getProductVariants = async (req, res) => {
 
     let variants = [];
     
-    // Priority 1: If product belongs to a group (via group_key or group_id)
-    if (current.group_key || current.group_id) {
+    // Priority 1: If product belongs to a group (via group_key or product_group_id)
+    if (current.group_key || current.product_group_id) {
       [variants] = await pool.query(
-        `SELECT ANY_VALUE(p.id) as id, 
-                ANY_VALUE(p.name) as name, 
-                ANY_VALUE(p.thickness) as thickness, 
-                ANY_VALUE(p.width) as width, 
-                ANY_VALUE(p.image_url) as image_url, 
-                ANY_VALUE(p.color) as color, 
-                ANY_VALUE(p.product_type) as product_type,
-                COALESCE(MIN(sp.price_min), ANY_VALUE(p.min_price)) as min_price,
-                COALESCE(MAX(sp.price_max), ANY_VALUE(p.max_price)) as max_price,
+        `SELECT p.id as id, 
+                MAX(p.name) as name, 
+                MAX(p.thickness) as thickness, 
+                MAX(p.width) as width, 
+                MAX(p.image_url) as image_url, 
+                MAX(p.color) as color, 
+                MAX(p.product_type) as product_type,
+                COALESCE(MIN(sp.price_min), MAX(p.min_price)) as min_price,
+                COALESCE(MAX(sp.price_max), MAX(p.max_price)) as max_price,
                 COALESCE(SUM(sp.stock_qty), 0) as stock_qty,
-                ANY_VALUE(s.company_name) as seller_name
+                MAX(s.company_name) as seller_name
          FROM products p
          LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.status = 'active'
          LEFT JOIN sellers s ON sp.seller_id = s.id
-         WHERE (p.group_key = ? OR (p.group_id IS NOT NULL AND p.group_id = ?)) AND p.id != ?
+         WHERE (p.group_key = ? OR (p.product_group_id IS NOT NULL AND p.product_group_id = ?)) AND p.id != ?
          GROUP BY p.id
          LIMIT 20`,
-        [current.group_key, current.group_id, id]
+        [current.group_key, current.product_group_id, id]
       );
     }
     
     // Priority 2: Fallback to same subcategory if no variants found in group
     if (variants.length === 0 && current.sub_category_id) {
       [variants] = await pool.query(
-        `SELECT ANY_VALUE(p.id) as id, 
-                ANY_VALUE(p.name) as name, 
-                ANY_VALUE(p.thickness) as thickness, 
-                ANY_VALUE(p.width) as width, 
-                ANY_VALUE(p.image_url) as image_url, 
-                ANY_VALUE(p.color) as color, 
-                ANY_VALUE(p.product_type) as product_type,
-                COALESCE(MIN(sp.price_min), ANY_VALUE(p.min_price)) as min_price,
-                COALESCE(MAX(sp.price_max), ANY_VALUE(p.max_price)) as max_price,
+        `SELECT p.id as id, 
+                MAX(p.name) as name, 
+                MAX(p.thickness) as thickness, 
+                MAX(p.width) as width, 
+                MAX(p.image_url) as image_url, 
+                MAX(p.color) as color, 
+                MAX(p.product_type) as product_type,
+                COALESCE(MIN(sp.price_min), MAX(p.min_price)) as min_price,
+                COALESCE(MAX(sp.price_max), MAX(p.max_price)) as max_price,
                 COALESCE(SUM(sp.stock_qty), 0) as stock_qty
          FROM products p
          LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.status = 'active'
@@ -215,8 +215,8 @@ export const getAllProducts = async (req, res) => {
     }
 
     if (search) {
-      whereClause += ` AND p.name LIKE ?`;
-      queryParams.push(`%${search}%`);
+      whereClause += ` AND (p.name LIKE ? OR s.company_name LIKE ?)`;
+      queryParams.push(`%${search}%`, `%${search}%`);
     }
 
     // Tag Filter logic
@@ -233,19 +233,19 @@ export const getAllProducts = async (req, res) => {
     // Main Data Query
     let dataQuery = `
       SELECT 
-        ANY_VALUE(p.id) as id,
-        ANY_VALUE(p.name) as name,
-        ANY_VALUE(p.display_name) as display_name,
-        ANY_VALUE(p.description) as description,
-        ANY_VALUE(p.image_url) as image_url,
-        ANY_VALUE(p.thickness) as thickness,
-        ANY_VALUE(p.width) as width,
-        ANY_VALUE(p.unit) as unit,
-        ANY_VALUE(p.color) as color,
-        ANY_VALUE(p.product_type) as product_type,
-        ANY_VALUE(p.group_key) as group_key,
-        ANY_VALUE(p.is_trending) as is_trending,
-        ANY_VALUE(p.is_hot_deal) as is_hot_deal,
+        MAX(p.id) as id,
+        MAX(p.name) as name,
+        MAX(p.display_name) as display_name,
+        MAX(p.description) as description,
+        MAX(p.image_url) as image_url,
+        MAX(p.thickness) as thickness,
+        MAX(p.width) as width,
+        MAX(p.unit) as unit,
+        MAX(p.color) as color,
+        MAX(p.product_type) as product_type,
+        MAX(p.group_key) as group_key,
+        MAX(p.is_trending) as is_trending,
+        MAX(p.is_hot_deal) as is_hot_deal,
         MAX(s.is_verified) as is_verified,
         MAX(t.tag_name) as tag_name, 
         MAX(sc.name) as subcategory_name, 
@@ -254,9 +254,10 @@ export const getAllProducts = async (req, res) => {
         COALESCE(MAX(sp.price_max), 0) as max_price,
         COALESCE(SUM(sp.stock_qty), 0) as stock, 
         COALESCE(MIN(sp.moq), 100) as min_order,
-        (SELECT AVG(rating) FROM product_reviews WHERE product_id = ANY_VALUE(p.id)) as avg_rating,
-        (SELECT COUNT(*) FROM product_reviews WHERE product_id = ANY_VALUE(p.id)) as review_count,
+        (SELECT AVG(rating) FROM product_reviews WHERE product_id = MAX(p.id)) as avg_rating,
+        (SELECT COUNT(*) FROM product_reviews WHERE product_id = MAX(p.id)) as review_count,
         SUBSTRING_INDEX(GROUP_CONCAT(s.company_name ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_name, 
+        SUBSTRING_INDEX(GROUP_CONCAT(s.seller_uid ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_uid,
         SUBSTRING_INDEX(GROUP_CONCAT(s.id ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_id,
         MAX(s.city) as city, 
         MAX(s.state) as state,
@@ -370,7 +371,10 @@ export const getProductById = async (req, res) => {
 export const getTopSellingProducts = async (req, res) => {
   try {
     const query = `
-      SELECT p.*, MAX(t.tag_name) as tag_name, MAX(c.name) as category_name, SUBSTRING_INDEX(GROUP_CONCAT(s.seller_uid ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_uid, SUBSTRING_INDEX(GROUP_CONCAT(s.company_name ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_name, SUBSTRING_INDEX(GROUP_CONCAT(s.id ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_id,
+      SELECT p.*, MAX(t.tag_name) as tag_name, MAX(c.name) as category_name, 
+             SUBSTRING_INDEX(GROUP_CONCAT(s.seller_uid ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_uid, 
+             SUBSTRING_INDEX(GROUP_CONCAT(s.company_name ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_name, 
+             SUBSTRING_INDEX(GROUP_CONCAT(s.id ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_id,
              COALESCE(MIN(sp.price_min), 0) as min_price,
              COALESCE(MAX(sp.price_max), 0) as max_price,
              COALESCE(SUM(sp.stock_qty), 0) as stock, 
@@ -483,7 +487,7 @@ export const addProduct = async (req, res) => {
     // 1. Insert into products
     const [productResult] = await connection.query(
       `INSERT INTO products 
-      (name, sub_category_id, tag_id, seller_id, group_id, group_key, product_code, thickness, width, product_type, color, min_price, max_price, unit, description, image_url, delivery_time) 
+      (name, sub_category_id, tag_id, seller_id, product_group_id, group_key, product_code, thickness, width, product_type, color, min_price, max_price, unit, description, image_url, delivery_time) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [name, resolvedSubCategoryId, resolvedTagId, seller_id, resolvedGroupId, groupKey === "NEW_GROUP" ? (newGroupId || `GP-${Date.now()}`) : groupKey, req.body.productCode, thickness, width, req.body.productType, req.body.color, minPrice, maxPrice, unit, description, image_url, req.body.deliveryTime],
     );
@@ -633,6 +637,7 @@ export const getHotDeals = async (req, res) => {
     const query = `
       SELECT p.*, MAX(t.tag_name) as tag_name, MAX(c.name) as category_name, 
              SUBSTRING_INDEX(GROUP_CONCAT(s.company_name ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_name, 
+             SUBSTRING_INDEX(GROUP_CONCAT(s.seller_uid ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_uid,
              SUBSTRING_INDEX(GROUP_CONCAT(s.id ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_id,
              COALESCE(MIN(sp.price_min), 0) as min_price,
              COALESCE(MAX(sp.price_max), 0) as max_price,
@@ -669,6 +674,7 @@ export const getTrendingProducts = async (req, res) => {
     const query = `
       SELECT p.*, MAX(t.tag_name) as tag_name, MAX(c.name) as category_name, 
              SUBSTRING_INDEX(GROUP_CONCAT(s.company_name ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_name, 
+             SUBSTRING_INDEX(GROUP_CONCAT(s.seller_uid ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_uid,
              SUBSTRING_INDEX(GROUP_CONCAT(s.id ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_id,
              COALESCE(MIN(sp.price_min), 0) as min_price,
              COALESCE(MAX(sp.price_max), 0) as max_price,
@@ -705,11 +711,11 @@ export const getUniqueProductNames = async (req, res) => {
   try {
     const query = `
       SELECT p.name, 
-             ANY_VALUE(p.group_key) as group_key, 
-             ANY_VALUE(p.display_name) as display_name, 
-             ANY_VALUE(p.product_group_id) as product_group_id,
-             ANY_VALUE(sc.category_id) as category_id,
-             ANY_VALUE(p.sub_category_id) as sub_category_id
+             MAX(p.group_key) as group_key, 
+             MAX(p.display_name) as display_name, 
+             MAX(p.product_group_id) as product_group_id,
+             MAX(sc.category_id) as category_id,
+             MAX(p.sub_category_id) as sub_category_id
       FROM products p
       LEFT JOIN sub_categories sc ON p.sub_category_id = sc.id
       WHERE p.name IS NOT NULL AND p.name != '' 
@@ -739,22 +745,22 @@ export const getSellersByGroupKey = async (req, res) => {
 
     const query = `
       SELECT 
-        ANY_VALUE(sp.id) as id,
-        ANY_VALUE(sp.product_id) as product_id,
+        MAX(sp.id) as id,
+        MAX(sp.product_id) as product_id,
         MIN(sp.price_min) as price_min,
         MAX(sp.price_max) as price_max,
-        ANY_VALUE(sp.moq) as moq,
-        ANY_VALUE(sp.stock_qty) as stock_qty,
+        MAX(sp.moq) as moq,
+        MAX(sp.stock_qty) as stock_qty,
         s.id as seller_id,
-        s.company_name, 
-        s.city, 
-        s.state, 
-        s.pincode,
-        ANY_VALUE(u.name) as owner_name, 
-        ANY_VALUE(u.mobile) as phone, 
-        ANY_VALUE(u.email) as email,
-        ANY_VALUE(p.display_name) as display_name, 
-        ANY_VALUE(p.name) as master_product_name
+        MAX(s.company_name) as company_name, 
+        MAX(s.city) as city, 
+        MAX(s.state) as state, 
+        MAX(s.pincode) as pincode,
+        MAX(u.name) as owner_name, 
+        MAX(u.mobile) as phone, 
+        MAX(u.email) as email,
+        MAX(p.display_name) as display_name, 
+        MAX(p.name) as master_product_name
       FROM seller_products sp
       JOIN sellers s ON sp.seller_id = s.id
       JOIN users u ON s.user_id = u.id

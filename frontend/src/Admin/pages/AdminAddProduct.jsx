@@ -13,7 +13,8 @@ import {
   X, 
   ChevronLeft, 
   ChevronRight,
-  RefreshCcw
+  RefreshCcw,
+  ShieldCheck
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -381,7 +382,7 @@ export default function AdminAddProduct() {
                     <input 
                       className={inputCls + " h-16 text-lg font-black uppercase tracking-tight shadow-inner shadow-black/[0.01]"} 
                       placeholder="PRODUCT NAME" 
-                      value={form.name} 
+                      value={form.name || ""} 
                       onChange={(e) => {
                         setFormVal("name", e.target.value);
                         setShowSuggestions(true);
@@ -420,27 +421,27 @@ export default function AdminAddProduct() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-2">
                   <div className="space-y-3">
                     <Field label="Primary Category" required>
-                      <select className={inputCls + " h-14 font-black uppercase text-xs tracking-wider"} value={form.category} onChange={(e) => setFormVal("category", e.target.value)}>
+                      <select className={inputCls + " h-14 font-black uppercase text-xs tracking-wider"} value={form.category || ""} onChange={(e) => setFormVal("category", e.target.value)}>
                         <option value="">SELECT CATEGORY</option>
                         {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         <option value="Other">+ ADD NEW</option>
                       </select>
                     </Field>
                     {form.category === "Other" && (
-                      <input className={inputCls + " animate-slideDown h-14 uppercase font-black text-xs tracking-widest"} placeholder="NEW CATEGORY NAME" value={form.customCategory} onChange={(e) => setFormVal("customCategory", e.target.value)} />
+                      <input className={inputCls + " animate-slideDown h-14 uppercase font-black text-xs tracking-widest"} placeholder="NEW CATEGORY NAME" value={form.customCategory || ""} onChange={(e) => setFormVal("customCategory", e.target.value)} />
                     )}
                   </div>
 
                   <div className="space-y-3">
                     <Field label="Market Subcategory" required>
-                      <select className={inputCls + " h-14 font-black uppercase text-xs tracking-wider"} value={form.subcategory} disabled={!form.category} onChange={(e) => setFormVal("subcategory", e.target.value)}>
+                      <select className={inputCls + " h-14 font-black uppercase text-xs tracking-wider"} value={form.subcategory || ""} disabled={!form.category} onChange={(e) => setFormVal("subcategory", e.target.value)}>
                         <option value="">SELECT SUBCATEGORY</option>
                         {subCategories.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         <option value="Other">+ ADD NEW</option>
                       </select>
                     </Field>
                     {form.subcategory === "Other" && (
-                      <input className={inputCls + " animate-slideDown h-14 uppercase font-black text-xs tracking-widest"} placeholder="NEW SUBCATEGORY NAME" value={form.customSubcategory} onChange={(e) => setFormVal("customSubcategory", e.target.value)} />
+                      <input className={inputCls + " animate-slideDown h-14 uppercase font-black text-xs tracking-widest"} placeholder="NEW SUBCATEGORY NAME" value={form.customSubcategory || ""} onChange={(e) => setFormVal("customSubcategory", e.target.value)} />
                     )}
                   </div>
                 </div>
@@ -478,7 +479,7 @@ export default function AdminAddProduct() {
                   </Field>
                   {form.tag === "Other" && (
                     <div className="mt-4 animate-slideDown">
-                       <input className={inputCls + " h-14 uppercase font-black text-xs tracking-widest"} placeholder="ENTER CUSTOM TAG" value={form.customTag} onChange={(e) => setFormVal("customTag", e.target.value)} />
+                       <input className={inputCls + " h-14 uppercase font-black text-xs tracking-widest"} placeholder="ENTER CUSTOM TAG" value={form.customTag || ""} onChange={(e) => setFormVal("customTag", e.target.value)} />
                     </div>
                   )}
                 </div>
@@ -494,34 +495,34 @@ export default function AdminAddProduct() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                    <Field label="Thickness (Micron)" hint="e.g. 12, 15, 23">
-                    <input className={inputCls + " h-14 font-black"} placeholder="25" value={form.thickness} onChange={(e) => setFormVal("thickness", e.target.value)} />
+                    <input className={inputCls + " h-14 font-black"} placeholder="25" value={form.thickness || ""} onChange={(e) => setFormVal("thickness", e.target.value)} />
                   </Field>
                   <Field label="Roll Width (MM)" hint="Standard width">
-                    <input className={inputCls + " h-14 font-black"} placeholder="1200" value={form.width} onChange={(e) => setFormVal("width", e.target.value)} />
+                    <input className={inputCls + " h-14 font-black"} placeholder="1200" value={form.width || ""} onChange={(e) => setFormVal("width", e.target.value)} />
                   </Field>
                   <Field label="Product Type" hint="e.g. Metallized, Plain">
-                    <input className={inputCls + " h-14 font-black"} placeholder="METALLIZED" value={form.productType} onChange={(e) => setFormVal("productType", e.target.value)} />
+                    <input className={inputCls + " h-14 font-black"} placeholder="METALLIZED" value={form.productType || ""} onChange={(e) => setFormVal("productType", e.target.value)} />
                   </Field>
                   <Field label="Primary Color" hint="e.g. Silver, Gold">
-                    <input className={inputCls + " h-14 font-black"} placeholder="SILVER" value={form.color} onChange={(e) => setFormVal("color", e.target.value)} />
+                    <input className={inputCls + " h-14 font-black"} placeholder="SILVER" value={form.color || ""} onChange={(e) => setFormVal("color", e.target.value)} />
                   </Field>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-6 border-t border-black/[0.04]">
                   <Field label="Min Price (₹)" required>
-                    <input className={inputCls + " h-14 font-black text-lg text-accent"} type="number" placeholder="180" value={form.minPrice} onChange={(e) => setFormVal("minPrice", e.target.value)} />
+                    <input className={inputCls + " h-14 font-black text-lg text-accent"} type="number" placeholder="180" value={form.minPrice || ""} onChange={(e) => setFormVal("minPrice", e.target.value)} />
                   </Field>
                   <Field label="Max Range (₹)" required>
-                    <input className={inputCls + " h-14 font-black text-lg"} type="number" placeholder="250" value={form.maxPrice} onChange={(e) => setFormVal("maxPrice", e.target.value)} />
+                    <input className={inputCls + " h-14 font-black text-lg"} type="number" placeholder="250" value={form.maxPrice || ""} onChange={(e) => setFormVal("maxPrice", e.target.value)} />
                   </Field>
                   <Field label="Min. Order (KG)" required>
-                    <input className={inputCls + " h-14 font-black"} type="number" placeholder="50" value={form.minOrder} onChange={(e) => setFormVal("minOrder", e.target.value)} />
+                    <input className={inputCls + " h-14 font-black"} type="number" placeholder="50" value={form.minOrder || ""} onChange={(e) => setFormVal("minOrder", e.target.value)} />
                   </Field>
                 </div>
 
                 <div className="pt-6 border-t border-black/[0.04]">
                    <Field label="Logistics & Delivery" hint="Shipping lead time">
                     <div className="relative">
-                      <input className={inputCls + " h-14 font-black pl-12 bg-green-50/30 border-green-100 focus:bg-white"} placeholder="e.g. 3-5 Business Days" value={form.deliveryTime} onChange={(e) => setFormVal("deliveryTime", e.target.value)} />
+                      <input className={inputCls + " h-14 font-black pl-12 bg-green-50/30 border-green-100 focus:bg-white"} placeholder="e.g. 3-5 Business Days" value={form.deliveryTime || ""} onChange={(e) => setFormVal("deliveryTime", e.target.value)} />
                       <div className="absolute left-4 top-1/2 -translate-y-1/2 text-green-500">
                          <Store size={18} />
                       </div>
@@ -531,7 +532,7 @@ export default function AdminAddProduct() {
                 <div className="pt-4">
                   <Field label="Visual Identity (Product Image)" required hint="High-res external link">
                     <div className="flex gap-4">
-                      <input className={inputCls + " h-14 flex-1"} placeholder="PASTE IMAGE URL HERE..." value={form.img} onChange={(e) => setFormVal("img", e.target.value)} />
+                      <input className={inputCls + " h-14 flex-1"} placeholder="PASTE IMAGE URL HERE..." value={form.img || ""} onChange={(e) => setFormVal("img", e.target.value)} />
                       <label className="shrink-0 flex items-center justify-center w-14 h-14 bg-slate-900 text-white rounded-2xl cursor-pointer hover:bg-black transition-all shadow-xl shadow-black/20 group">
                         <ImageIcon size={20} className="group-hover:scale-110 transition-transform" />
                         <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
@@ -541,7 +542,7 @@ export default function AdminAddProduct() {
                 </div>
                 <div className="pt-4">
                    <Field label="Inventory Level (KG)" required>
-                    <input className={inputCls + " h-14 font-black"} type="number" placeholder="STOCK QUANTITY" value={form.stock} onChange={(e) => setFormVal("stock", e.target.value)} />
+                    <input className={inputCls + " h-14 font-black"} type="number" placeholder="STOCK QUANTITY" value={form.stock || ""} onChange={(e) => setFormVal("stock", e.target.value)} />
                   </Field>
                 </div>
               </div>
@@ -556,11 +557,11 @@ export default function AdminAddProduct() {
                   <h3 className="font-syne font-black text-xl text-ink uppercase tracking-tight">Market Positioning</h3>
                 </div>
                 <Field label="Commercial Description" required>
-                  <textarea className={inputCls + " h-36 pt-4 text-xs font-bold leading-relaxed"} placeholder="Highlights, USPs, and technical usage..." value={form.description} onChange={(e) => setFormVal("description", e.target.value)} />
+                  <textarea className={inputCls + " h-36 pt-4 text-xs font-bold leading-relaxed"} placeholder="Highlights, USPs, and technical usage..." value={form.description || ""} onChange={(e) => setFormVal("description", e.target.value)} />
                 </Field>
                 <Field label="Target Applications" required hint="Press Enter to add multiple">
                    <div className="flex gap-2 mb-4">
-                    <input className={inputCls} placeholder="e.g. Food Packaging..." value={form.customApplications} onChange={(e) => setFormVal("customApplications", e.target.value)} 
+                    <input className={inputCls} placeholder="e.g. Food Packaging..." value={form.customApplications || ""} onChange={(e) => setFormVal("customApplications", e.target.value)} 
                       onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); addApp(form.customApplications); setFormVal("customApplications", ""); } }} />
                     <button type="button" onClick={() => { addApp(form.customApplications); setFormVal("customApplications", ""); }} className="w-14 h-14 bg-accent text-white rounded-xl shadow-lg shadow-accent/20 flex items-center justify-center"><Plus size={20}/></button>
                    </div>
@@ -637,7 +638,7 @@ export default function AdminAddProduct() {
                 <div className="p-8 rounded-[2.5rem] border-2 border-dashed border-black/5 bg-slate-50/50 space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                      <Field label="Product Listing ID" required hint="Marketplace SKU">
-                        <input className={inputCls + " h-14 font-black text-blue-600 bg-white shadow-sm border-blue-100"} value={form.productCode} onChange={(e) => setFormVal("productCode", e.target.value)} placeholder="e.g. PB001" />
+                        <input className={inputCls + " h-14 font-black text-blue-600 bg-white shadow-sm border-blue-100"} value={form.productCode || ""} onChange={(e) => setFormVal("productCode", e.target.value)} placeholder="e.g. PB001" />
                      </Field>
                      <Field label="Finalize Variant Grouping" hint="Variant collection link">
                          {(() => {
