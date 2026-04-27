@@ -63,26 +63,22 @@ function ProfileMenu({ user, onLogout }) {
                 <LayoutDashboard size={15} /> Dashboard
               </button>
             )}
-            <button onClick={() => { navigate("/cart"); setOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink2 hover:bg-surface hover:text-accent transition-colors">
-              <ShoppingCart size={15} /> My Cart
-            </button>
-            <button onClick={() => { navigate("/profile?tab=orders"); setOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink2 hover:bg-surface hover:text-accent transition-colors">
-              <Package size={15} /> My Orders
-            </button>
+
+            {user.role !== "admin" && (
+              <>
+                <button onClick={() => { navigate("/cart"); setOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink2 hover:bg-surface hover:text-accent transition-colors">
+                  <ShoppingCart size={15} /> My Cart
+                </button>
+                <button onClick={() => { navigate("/profile?tab=orders"); setOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink2 hover:bg-surface hover:text-accent transition-colors">
+                  <Package size={15} /> My Orders
+                </button>
+              </>
+            )}
+
             {user.role === "seller" && (
               <button onClick={() => { navigate("/seller/products"); setOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink2 hover:bg-surface hover:text-accent transition-colors">
                 <Store size={15} /> My Products
               </button>
-            )}
-            {user.role === "admin" && (
-              <>
-                <button onClick={() => { navigate("/admin/dashboard?tab=users"); setOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink2 hover:bg-surface hover:text-accent transition-colors">
-              <Users size={15} /> Manage Users
-            </button>
-            <button onClick={() => { navigate("/admin/dashboard?tab=pending"); setOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink2 hover:bg-surface hover:text-accent transition-colors">
-              <Store size={15} /> Manage Sellers
-            </button>
-              </>
             )}
           </div>
           <div className="border-t border-black/[0.06] py-1.5">
@@ -237,16 +233,18 @@ export default function Navbar() {
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-1 gap-2">
-                        {(user.role === "admin" || user.role === "seller") && (
-                          <button onClick={() => { navigate(user.role === "admin" ? "/admin/dashboard" : user.role === "seller" ? "/seller/dashboard" : "/account"); setOpen(false); }} className="w-full flex items-center gap-3 bg-white border border-black/[0.08] px-4 py-4 rounded-xl text-sm font-bold text-ink2 hover:bg-surface transition-colors">
-                            <LayoutDashboard size={18} className="text-accent" /> Dashboard Overview
-                          </button>
-                        )}
-                        <button onClick={() => { navigate("/profile?tab=orders"); setOpen(false); }} className="w-full flex items-center gap-3 bg-white border border-black/[0.08] px-4 py-4 rounded-xl text-sm font-bold text-ink2 hover:bg-surface transition-colors">
-                          <Package size={18} className="text-accent" /> My Orders
-                        </button>
-                      </div>
+                        <div className="grid grid-cols-1 gap-2">
+                          {(user.role === "admin" || user.role === "seller") && (
+                            <button onClick={() => { navigate(user.role === "admin" ? "/admin/dashboard" : user.role === "seller" ? "/seller/dashboard" : "/account"); setOpen(false); }} className="w-full flex items-center gap-3 bg-white border border-black/[0.08] px-4 py-4 rounded-xl text-sm font-bold text-ink2 hover:bg-surface transition-colors">
+                              <LayoutDashboard size={18} className="text-accent" /> Dashboard Overview
+                            </button>
+                          )}
+                          {user.role !== "admin" && (
+                            <button onClick={() => { navigate("/profile?tab=orders"); setOpen(false); }} className="w-full flex items-center gap-3 bg-white border border-black/[0.08] px-4 py-4 rounded-xl text-sm font-bold text-ink2 hover:bg-surface transition-colors">
+                              <Package size={18} className="text-accent" /> My Orders
+                            </button>
+                          )}
+                        </div>
 
                       <button onClick={() => { handleLogout(); setOpen(false); }} className="w-full flex items-center justify-center gap-2 text-sm font-black text-red-500 py-4 rounded-xl bg-red-50 hover:bg-red-100 transition-all uppercase tracking-widest">
                         <LogOut size={16} /> Logout Securely
