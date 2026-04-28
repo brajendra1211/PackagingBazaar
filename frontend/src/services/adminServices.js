@@ -113,6 +113,16 @@ export const addProductForSeller = async (sellerUserId, productData) => {
   return response.data;
 };
 
+export const updateProductAdmin = async (id, productData) => {
+  const response = await API.put(`/products/update/${id}`, productData);
+  return response.data;
+};
+
+export const fetchProductById = async (id) => {
+  const response = await API.get(`/products/${id}`);
+  return response.data;
+};
+
 export const addSellerAdmin = async (sellerData) => {
   const formData = new FormData();
   Object.keys(sellerData).forEach(key => {

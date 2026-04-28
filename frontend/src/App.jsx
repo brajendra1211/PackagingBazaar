@@ -39,6 +39,7 @@ import AdminSellerHub from "./Admin/pages/AdminSellerHub";
 import AdminAddProduct from "./Admin/pages/AdminAddProduct";
 import AdminAddSeller from "./Admin/pages/AdminAddSeller";
 import AdminEditSeller from "./Admin/pages/AdminEditSeller";
+import AdminEditProduct from "./Admin/pages/AdminEditProduct";
 
 import { Navigate } from "react-router-dom";
 
@@ -97,6 +98,7 @@ export default function App() {
                 <Route path="/admin/add-product" element={<AdminAddProduct />} />
                 <Route path="/admin/add-seller" element={<AdminAddSeller />} />
                 <Route path="/admin/sellers/edit/:id" element={<AdminEditSeller />} />
+                <Route path="/admin/products/edit/:id" element={<AdminEditProduct />} />
               </Route>
             </Route>
 

@@ -332,6 +332,7 @@ export const getProductById = async (req, res) => {
     // controllers/productController.js me sirf query wali string badal lo
     const query = `
   SELECT p.*, MAX(t.tag_name) as tag_name, MAX(sc.name) as subcategory_name, MAX(c.name) as category_name,
+         sc.category_id,
          COALESCE(MIN(sp.price_min), p.min_price, 0) as min_price,
          COALESCE(MAX(sp.price_max), p.max_price, 0) as max_price,
          COALESCE(SUM(sp.stock_qty), MAX(ps.quantity), 0) as stock, 
@@ -538,45 +539,131 @@ export const addProduct = async (req, res) => {
 // 5. Update Product (Seller/Admin Only)
 export const updateProduct = async (req, res) => {
   const { id } = req.params;
-  const { name, minPrice, maxPrice, stock, description, image_url } = req.body;
+  const {
+    name,
+    display_name,
+    sub_category_id,
+    product_group_id,
+    tag_id,
+    product_code,
+    thickness,
+    color,
+    productType, // from frontend form
+    minPrice,
+    maxPrice,
+    width,
+    unit,
+    description,
+    image_url,
+    deliveryTime, // from frontend form
+    stock,
+    minOrder,
+    applications, // Array of app names or IDs
+    is_hot_deal,
+    is_trending,
+  } = req.body;
+
   const userId = req.user.id;
   const role = req.user.role;
 
+  const connection = await pool.getConnection();
   try {
-    // Check karo ki product usi seller ka hai ya user admin hai
-    const [product] = await pool.query(
+    await connection.beginTransaction();
+
+    // 1. Check ownership
+    const [productRows] = await connection.query(
       "SELECT seller_id FROM products WHERE id = ?",
-      [id],
+      [id]
     );
 
-    if (product.length === 0)
-      return res.status(404).json({ message: "Product not found" });
+    if (productRows.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
 
     if (role !== "admin") {
-      const [sellerRows] = await pool.query("SELECT id FROM sellers WHERE user_id = ?", [userId]);
-      if (sellerRows.length === 0 || product[0].seller_id !== sellerRows[0].id) {
-        return res
-          .status(403)
-          .json({ message: "You can only update your own products" });
+      const [sellerRows] = await connection.query("SELECT id FROM sellers WHERE user_id = ?", [userId]);
+      if (sellerRows.length === 0 || productRows[0].seller_id !== sellerRows[0].id) {
+        await connection.rollback();
+        return res.status(403).json({ success: false, message: "Unauthorized to edit this product" });
       }
     }
 
-    await pool.query(
-      "UPDATE products SET name=?, min_price=?, max_price=?, description=?, image_url=? WHERE id=?",
-      [name, minPrice, maxPrice, description, image_url, id],
-    );
+    // 2. Update products table
+    const updateProductSql = `
+      UPDATE products SET 
+        name = ?, 
+        display_name = ?, 
+        sub_category_id = ?, 
+        product_group_id = ?, 
+        tag_id = ?, 
+        product_code = ?, 
+        thickness = ?, 
+        color = ?, 
+        product_type = ?, 
+        min_price = ?, 
+        max_price = ?, 
+        width = ?, 
+        unit = ?, 
+        description = ?, 
+        image_url = ?, 
+        delivery_time = ?,
+        is_hot_deal = ?,
+        is_trending = ?
+      WHERE id = ?
+    `;
+    
+    await connection.query(updateProductSql, [
+      name, display_name, sub_category_id, product_group_id, tag_id, product_code,
+      thickness, color, productType, minPrice, maxPrice, width, unit,
+      description, image_url, deliveryTime, is_hot_deal ? 1 : 0, is_trending ? 1 : 0, id
+    ]);
 
-    // Stock update (product_stocks table)
-    if (stock !== undefined) {
-      await pool.query(
-        "UPDATE product_stocks SET quantity=? WHERE product_id=?",
-        [stock, id],
+    // 3. Update product_stocks table
+    if (stock !== undefined || minOrder !== undefined) {
+      await connection.query(
+        "UPDATE product_stocks SET quantity = COALESCE(?, quantity), min_order = COALESCE(?, min_order) WHERE product_id = ?",
+        [stock, minOrder, id]
       );
     }
 
-    res.json({ success: true, message: "Product updated successfully!" });
+    // 4. Update Applications Mapping
+    if (applications) {
+      // Remove old mappings
+      await connection.query("DELETE FROM product_application_mapping WHERE product_id = ?", [id]);
+      
+      if (applications.length > 0) {
+        // Resolve IDs if names are provided (Helper logic similar to addProduct)
+        const appIds = [];
+        for (const app of applications) {
+          if (!isNaN(app)) {
+            appIds.push(app);
+          } else {
+            const [rows] = await connection.query("SELECT id FROM applications WHERE app_name = ?", [app]);
+            if (rows.length > 0) {
+              appIds.push(rows[0].id);
+            } else {
+              const [res] = await connection.query("INSERT INTO applications (app_name) VALUES (?)", [app]);
+              appIds.push(res.insertId);
+            }
+          }
+        }
+
+        if (appIds.length > 0) {
+          const mappingValues = appIds.map(aid => [id, aid]);
+          await connection.query("INSERT INTO product_application_mapping (product_id, app_id) VALUES ?", [mappingValues]);
+        }
+      }
+    }
+
+    await connection.commit();
+    res.status(200).json({ success: true, message: "Product updated successfully!" });
   } catch (error) {
-    res.status(500).json({ message: "Server Error" });
+    await connection.rollback();
+    console.error("Error in updateProduct:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  } finally {
+    connection.release();
   }
 };
 

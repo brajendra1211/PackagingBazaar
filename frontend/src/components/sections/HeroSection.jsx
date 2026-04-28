@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Search, MapPin, Package, Clock, Zap } from "lucide-react";
+import { ArrowRight, Search, MapPin, Package, Clock, Zap, X } from "lucide-react";
 import { fetchCategories } from "../../services/productServices";
 
 export default function HeroSection() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchCity, setSearchCity] = useState("");
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -29,10 +28,11 @@ export default function HeroSection() {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    const params = new URLSearchParams();
-    if (searchQuery) params.append("search", searchQuery);
-    if (searchCity) params.append("city", searchCity);
-    navigate(`/products?${params.toString()}`);
+    if (searchQuery) {
+      navigate(`/products?search=${encodeURIComponent(searchQuery)}`);
+    } else {
+      navigate("/products");
+    }
   };
 
   const getCategoryStyle = (name) => {
@@ -77,7 +77,7 @@ export default function HeroSection() {
 
           {/* Search Bar Integration */}
           <form onSubmit={handleSearch} className="relative z-20 w-full max-w-2xl bg-white border border-black/10 rounded-2xl sm:rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.08)] p-2 sm:p-2.5 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center mb-8 focus-within:border-accent transition-all">
-            <div className="flex-1 flex items-center gap-3 px-4 py-3 sm:py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
+            <div className="flex-1 flex items-center gap-3 px-4 py-3 sm:py-2">
                <Search size={20} className="text-accent shrink-0" />
                <input 
                  type="text"
@@ -86,16 +86,15 @@ export default function HeroSection() {
                  value={searchQuery}
                  onChange={(e) => setSearchQuery(e.target.value)}
                />
-            </div>
-            <div className="flex-1 sm:max-w-[180px] flex items-center gap-3 px-4 py-3 sm:py-2">
-               <MapPin size={20} className="text-gray-400 shrink-0" />
-               <input 
-                 type="text"
-                 placeholder="Select City"
-                 className="w-full bg-transparent outline-none text-sm sm:text-base font-bold text-ink placeholder:text-gray-400"
-                 value={searchCity}
-                 onChange={(e) => setSearchCity(e.target.value)}
-               />
+               {searchQuery && (
+                 <button 
+                   type="button"
+                   onClick={() => setSearchQuery("")}
+                   className="p-1 hover:bg-gray-100 rounded-full text-gray-400 hover:text-accent transition-all"
+                 >
+                   <X size={16} />
+                 </button>
+               )}
             </div>
             <button 
               type="submit"

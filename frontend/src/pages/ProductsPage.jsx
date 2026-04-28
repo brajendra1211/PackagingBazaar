@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { fetchProducts } from "../services/productServices"; 
 import ProductCard from "../components/ui/ProductCard";
 import TrendingProducts from "../components/sections/TrendingProducts";
 import TopSelling from "../components/sections/TopSelling";
 import ReviewSection from "../components/sections/ReviewSection";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, X } from "lucide-react";
 import Pagination from "../components/ui/Pagination";
 import { motion } from "framer-motion";
 import { ProductCardSkeleton } from "../components/ui/SkeletonLoader";
@@ -13,6 +13,7 @@ import InquiryModal from "../components/ui/InquiryModal";
 
 export default function ProductsPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -32,7 +33,6 @@ export default function ProductsPage() {
     const params = new URLSearchParams(location.search);
     const categoryFromUrl = params.get("category");
     const searchFromUrl = params.get("search");
-    const cityFromUrl = params.get("city");
     
     return {
       page: 1,
@@ -40,7 +40,6 @@ export default function ProductsPage() {
       category: categoryFromUrl && categories.includes(categoryFromUrl) ? categoryFromUrl : "All",
       sort: "default",
       search: searchFromUrl || "",
-      city: cityFromUrl || "",
     };
   });
 
@@ -48,20 +47,23 @@ export default function ProductsPage() {
   const [searchInput, setSearchInput] = useState("");
 
   // Sync url category changes
+  // Sync filters with URL changes
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const categoryFromUrl = params.get("category");
-    const searchFromUrl = params.get("search");
-    const cityFromUrl = params.get("city");
+    const searchFromUrl = params.get("search") || "";
+    const sortFromUrl = params.get("sort") || "default";
+    const pageFromUrl = parseInt(params.get("page")) || 1;
 
-    setFilters(prev => ({ 
-      ...prev, 
+    setFilters({ 
+      page: pageFromUrl,
+      limit: 8,
       category: categoryFromUrl && categories.includes(categoryFromUrl) ? categoryFromUrl : "All",
-      search: searchFromUrl || prev.search,
-      city: cityFromUrl || prev.city
-    }));
+      sort: sortFromUrl,
+      search: searchFromUrl,
+    });
     
-    if (searchFromUrl) setSearchInput(searchFromUrl);
+    setSearchInput(searchFromUrl);
   }, [location.search]);
 
   // 1. API Call Effect
@@ -84,26 +86,45 @@ export default function ProductsPage() {
     loadData();
   }, [filters]);
 
-  // 2. Debounce Search Effect
+  // 2. Debounce Search Effect - URL sync
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      setFilters((prev) => ({ ...prev, search: searchInput, page: 1 }));
+      const params = new URLSearchParams(location.search);
+      if (searchInput) {
+        params.set("search", searchInput);
+      } else {
+        params.delete("search");
+      }
+      params.set("page", "1");
+      
+      // Only navigate if the search param actually changed to avoid unnecessary re-renders
+      if (params.toString() !== location.search.substring(1)) {
+        navigate({ search: params.toString() }, { replace: true });
+      }
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [searchInput]);
+  }, [searchInput, navigate, location.search]);
 
-  // 3. Handlers
+  // 3. Handlers (Update URL instead of state)
   const handleCategoryChange = (cat) => {
-    setFilters((prev) => ({ ...prev, category: cat, page: 1 }));
+    const params = new URLSearchParams(location.search);
+    params.set("category", cat);
+    params.set("page", "1");
+    navigate({ search: params.toString() });
   };
 
   const handleSortChange = (e) => {
-    setFilters((prev) => ({ ...prev, sort: e.target.value, page: 1 }));
+    const params = new URLSearchParams(location.search);
+    params.set("sort", e.target.value);
+    params.set("page", "1");
+    navigate({ search: params.toString() });
   };
 
   const handlePageChange = (newPage) => {
-    setFilters((prev) => ({ ...prev, page: newPage }));
+    const params = new URLSearchParams(location.search);
+    params.set("page", newPage.toString());
+    navigate({ search: params.toString() });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -143,8 +164,17 @@ export default function ProductsPage() {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Search products..."
-                className="w-full pl-10 pr-4 py-3 text-sm font-medium border border-black/[0.1] rounded-2xl bg-surface focus:outline-none focus:border-accent transition-all shadow-sm"
+                className="w-full pl-10 pr-10 py-3 text-sm font-medium border border-black/[0.1] rounded-2xl bg-surface focus:outline-none focus:border-accent transition-all shadow-sm"
               />
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={() => setSearchInput("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-200 rounded-full text-ink3 hover:text-accent transition-all"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
             
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 flex-1">

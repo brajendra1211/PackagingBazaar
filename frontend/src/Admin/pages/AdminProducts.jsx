@@ -7,8 +7,10 @@ import {
   Tag,
   Zap,
   ZapOff,
-  TrendingUp
+  TrendingUp,
+  Pencil
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { fetchAllProductsAdmin, deleteProductAdmin, toggleHotDealAdmin, toggleTrendingAdmin } from "../../services/adminServices";
 import { useNotification } from "../../context/NotificationContext";
 import Pagination from "../../components/ui/Pagination";
@@ -20,6 +22,7 @@ export default function AdminProducts() {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
   const { notifyError, notifySuccess } = useNotification();
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadProducts(1);
@@ -193,6 +196,13 @@ export default function AdminProducts() {
                           title={p.is_trending ? "Remove from Trending" : "Mark as Trending"}
                         >
                           <TrendingUp size={18} />
+                        </button>
+                        <button
+                          onClick={() => navigate(`/admin/products/edit/${p.product_id}`)}
+                          className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors"
+                          title="Edit Product"
+                        >
+                          <Pencil size={18} />
                         </button>
                         <button
                           onClick={() => handleDeleteProduct(p.product_id)}
