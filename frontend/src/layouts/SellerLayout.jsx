@@ -417,45 +417,51 @@ export default function SellerLayout() {
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="bg-white border-b border-gray-100 px-4 sm:px-6 py-3.5 flex items-center justify-between shrink-0 shadow-sm z-10">
+        <header className="bg-white border-b border-gray-100 px-4 sm:px-6 h-16 flex items-center justify-between shrink-0 shadow-sm z-10 sticky top-0">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMobileOpen(true)}
-              className="lg:hidden text-gray-600 hover:text-gray-900 p-1"
+              className="lg:hidden text-gray-600 hover:text-gray-900 p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <Icon d={icons.menu} size={22} />
             </button>
-            <div>
-              <div className="flex items-center gap-2">
-                <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest hidden sm:block">Seller Panel</div>
-                {seller.uid && (
-                  <span className="text-[9px] bg-orange-50 text-orange-600 px-2 py-0.5 rounded font-black border border-orange-100 hidden sm:block">
-                    {seller.uid}
-                  </span>
-                )}
-              </div>
-              <div className="text-base sm:text-lg font-black text-gray-900 leading-tight truncate max-w-[200px] sm:max-w-none">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3">
+              <h1 className="text-sm sm:text-base font-black text-gray-900 uppercase tracking-tight">
+                {seller.ownerName.split(" ")[0]}'s <span className="text-orange-600">Dashboard</span>
+              </h1>
+              <div className="h-4 w-[1px] bg-gray-200 hidden sm:block" />
+              <div className="text-[10px] sm:text-xs font-bold text-gray-500 truncate max-w-[120px] sm:max-w-none">
                 {seller.businessName || seller.ownerName}
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className={`hidden sm:flex items-center gap-1.5 text-xs border px-3 py-1.5 rounded-full font-semibold ${
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className={`hidden md:flex items-center gap-1.5 text-[10px] border px-3 py-1.5 rounded-full font-bold tracking-widest uppercase ${
               seller.status === 'verified' ? 'text-green-600 bg-green-50 border-green-200' :
               seller.status === 'hold' ? 'text-orange-600 bg-orange-50 border-orange-200' :
               'text-gray-500 bg-gray-50 border-gray-200'
             }`}>
               {seller.status === 'verified' && <Icon d={icons.shield} size={11} stroke="#16a34a" />}
-              {seller.status === 'hold' && <Icon d={icons.star} size={11} stroke="#ea580c" />}
-              <span className="uppercase tracking-widest text-[10px]">{seller.status || 'pending'}</span>
+              {seller.status || 'pending'}
             </div>
+            
             <button
               onClick={() => window.open(`https://wa.me/919540248705?text=Hello%20Admin,%20I%20want%20to%20add%20a%20product%20on%20PackagingBazaar.`, "_blank")}
-              className="flex items-center gap-1.5 bg-[#25D366] text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-sm font-bold hover:bg-[#128C7E] transition-colors shadow-sm"
+              className="flex items-center gap-1.5 bg-[#25D366] text-white px-3 py-2 rounded-xl text-[11px] font-black hover:bg-[#128C7E] transition-all shadow-md shadow-green-200/50 uppercase tracking-tighter"
             >
-              <Icon d={icons.whatsapp} size={16} stroke="none" fill="white" />
-              <span className="hidden sm:block">Add Product (WhatsApp)</span>
+              <Icon d={icons.whatsapp} size={14} stroke="none" fill="white" />
+              <span className="hidden sm:block">Support</span>
+            </button>
+
+            <div className="h-6 w-[1px] bg-gray-200 mx-1 hidden sm:block" />
+            
+            <button 
+              onClick={() => { localStorage.removeItem("token"); window.location.href = "/"; }}
+              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all group"
+              title="Logout"
+            >
+              <Icon d={icons.logout} size={20} />
             </button>
           </div>
         </header>

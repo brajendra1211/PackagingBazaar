@@ -14,12 +14,12 @@ export function SellerDashboard() {
   return (
     <div className="">
         <div className="flex items-center gap-2">
-          <h2 className="text-xl font-black text-gray-900">Dashboard Overview</h2>
+          <h2 className="text-xl font-black text-gray-900">Hi, {seller.ownerName.split(" ")[0]}!</h2>
           {seller.status === 'hold' && (
             <span className="bg-orange-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded animate-pulse">Account On Hold</span>
           )}
         </div>
-        <p className="text-sm text-gray-500 mt-0.5">Welcome back, {seller.ownerName.split(" ")[0]}!</p>
+        <p className="text-sm text-gray-500 mt-0.5">Welcome back, <span className="font-bold text-gray-900">{seller.businessName} - {seller.ownerName}</span>!</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6 gap-4">
         <StatCard icon="package" value={stats.totalProducts} label="Total Products" sub={`${stats.activeProducts} active`} color="orange" onClick={() => navigate("/seller/products")} />

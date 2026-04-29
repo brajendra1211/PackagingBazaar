@@ -174,17 +174,38 @@ export default function AdminLayout() {
       {/* ── Main Layout Wrapper ── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         
-        {/* Mobile Header (Stored in Top, fixed for mobile, hidden for Desktop) */}
-        <header className="h-16 bg-white border-b border-black/[0.04] flex items-center px-4 lg:hidden shrink-0 z-10 sticky top-0">
-          <button 
-            className="p-2 text-ink2 hover:text-ink"
-            onClick={() => setMobileOpen(true)}
-          >
-            <Menu size={24} />
-          </button>
-          <div className="ml-3 font-syne font-black text-lg text-ink flex items-center gap-2">
-             <ShieldCheck size={18} className="text-red-500" />
-             Admin Panel
+        {/* ── Admin Header ── */}
+        <header className="h-16 bg-white border-b border-black/[0.04] flex items-center justify-between px-4 lg:px-8 shrink-0 z-10 sticky top-0">
+          <div className="flex items-center gap-3">
+            <button 
+              className="p-2 text-ink2 hover:text-ink lg:hidden"
+              onClick={() => setMobileOpen(true)}
+            >
+              <Menu size={24} />
+            </button>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <ShieldCheck size={20} className="text-red-500" />
+              <h1 className="text-sm sm:text-base font-black text-ink uppercase tracking-tight">
+                Control <span className="text-red-600">Center</span>
+              </h1>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-1.5 bg-red-50 text-red-600 px-3 py-1.5 rounded-full border border-red-100 text-[10px] font-black uppercase tracking-widest">
+              <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+              Live Admin System
+            </div>
+            
+            <div className="h-6 w-[1px] bg-gray-200 mx-1 hidden sm:block" />
+            
+            <button 
+              onClick={handleLogout}
+              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+              title="Logout Securely"
+            >
+              <LogOut size={20} />
+            </button>
           </div>
         </header>
 

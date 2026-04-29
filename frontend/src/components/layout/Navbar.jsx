@@ -44,7 +44,7 @@ function ProfileMenu({ user, onLogout }) {
           {initials}
         </div>
         <div className="flex items-center gap-1">
-          <span className="hidden lg:flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
+          <span className={`hidden lg:flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full ${role.color}`}>
             {role.icon} {role.label}
           </span>
           <ChevronDown size={14} className={`text-ink2 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />

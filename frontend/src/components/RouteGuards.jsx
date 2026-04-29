@@ -53,3 +53,20 @@ export const SellerRoute = () => {
   
   return <Outlet />;
 };
+
+/**
+ * UserLayoutGuard:
+ * Prevents logged-in Sellers and Admins from accessing the public UserLayout.
+ * They should be confined to their respective dashboards.
+ */
+export const UserLayoutGuard = () => {
+  const { token, role } = getAuthState();
+
+  if (token) {
+    if (role === 'admin') return <Navigate to="/admin/dashboard" replace />;
+    if (role === 'seller') return <Navigate to="/seller/dashboard" replace />;
+  }
+
+  return <Outlet />;
+};
+

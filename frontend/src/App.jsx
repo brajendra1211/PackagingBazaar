@@ -9,7 +9,7 @@ import AdminLayout from "./layouts/AdminLayout";
 import SellerLayout from "./layouts/SellerLayout";
 
 // Route Guards
-import { GuestRoute, ProtectedRoute, AdminRoute, SellerRoute } from "./components/RouteGuards";
+import { GuestRoute, ProtectedRoute, AdminRoute, SellerRoute, UserLayoutGuard } from "./components/RouteGuards";
 
 // Pages
 import HomePage from "./pages/HomePage";
@@ -62,20 +62,24 @@ export default function App() {
               </Route>
             </Route>
 
-            {/* Public / Standard Routes (Accessible to everyone) */}
-            <Route element={<UserLayout />}>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/products" element={<ProductsPage />} />
-              <Route path="/products/:id" element={<ProductDetailPage />} />
-              <Route path="/cart" element={<CartPage />} />
-              <Route path="/contact" element={<ContactPage />} />
-              <Route path="/about" element={<AboutPage />} />
-              <Route path="/policy" element={<PolicyPage />} />
-              <Route path="/hot-deals" element={<HotDealsPage />} />
-              <Route path="/seller" element={<SellerPage />} />
-              <Route path="/become-a-seller" element={<BecomeaSeller />} />
-              <Route path="*" element={<NotFound />} />
+            {/* Public / Standard Routes (Isolated from Professionals) */}
+            <Route element={<UserLayoutGuard />}>
+              <Route element={<UserLayout />}>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/products" element={<ProductsPage />} />
+                <Route path="/products/:id" element={<ProductDetailPage />} />
+                <Route path="/cart" element={<CartPage />} />
+                <Route path="/contact" element={<ContactPage />} />
+                <Route path="/about" element={<AboutPage />} />
+                <Route path="/policy" element={<PolicyPage />} />
+                <Route path="/hot-deals" element={<HotDealsPage />} />
+                <Route path="/seller" element={<SellerPage />} />
+                <Route path="/become-a-seller" element={<BecomeaSeller />} />
+              </Route>
             </Route>
+
+            {/* Global 404 - Handled outside to be role-aware or general */}
+            <Route path="*" element={<NotFound />} />
 
             {/* Protected User Routes (Must be logged in) */}
             <Route element={<ProtectedRoute />}>
