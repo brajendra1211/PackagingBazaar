@@ -23,6 +23,11 @@ export const fetchSellerOrders = async (page = 1, limit = 10) => {
   return response.data;
 };
 
+export const fetchSellerLeads = async () => {
+  const response = await API.get("/seller/leads");
+  return response.data;
+};
+
 export const createSellerProduct = async (productData) => {
   const response = await API.post("/seller/products", productData);
   return response.data;

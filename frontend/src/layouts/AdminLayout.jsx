@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { 
   Store, Menu, X, Package, LogOut, ShieldCheck, 
   ChevronDown, Users, LayoutDashboard, ClipboardList, 
-  CheckCircle, ShoppingBag, MessageSquare, Plus 
+  CheckCircle, ShoppingBag, MessageSquare, Plus, Mail
 } from "lucide-react";
 import { Toaster } from 'react-hot-toast';
 import { AnimatePresence, motion } from "framer-motion";
@@ -46,6 +46,7 @@ export default function AdminLayout() {
       links: [
         { to: "/admin/dashboard", icon: <LayoutDashboard size={18} />, label: "Overview" },
         { to: "/admin/inquiries", icon: <MessageSquare size={18} />, label: `Leads (${stats.totalInquiries})` },
+        { to: "/admin/contacts", icon: <Mail size={18} />, label: "Contact Messages" },
       ]
     },
     {

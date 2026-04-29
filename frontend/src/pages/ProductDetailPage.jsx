@@ -160,7 +160,7 @@ export default function ProductDetailPage() {
   const grad = catColors[product.category_name] || "from-gray-50 to-gray-100";
 
   return (
-    <>
+    <div key={`${id}-${sellerId}`} className="animate-fadeIn">
       <div className="max-w-7xl mx-auto px-4 py-4 md:py-6">
         <button
           onClick={() => navigate(-1)}
@@ -415,7 +415,8 @@ export default function ProductDetailPage() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-gray-100">
-                      <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Manufacturer</th>
+                      <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Seller ID</th>
+                      <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Spec</th>
                       <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Location</th>
                       <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Price Range</th>
                       <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">MOQ / Stock</th>
@@ -424,14 +425,14 @@ export default function ProductDetailPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {otherSellers.map((s) => (
-                      <tr key={s.id} className={`group hover:bg-gray-50/50 transition-all ${s.id === product.id ? 'bg-orange-50/30' : ''}`}>
+                      <tr key={s.id} className={`group hover:bg-gray-50/50 transition-all ${Number(s.seller_id) === Number(product.seller_id) && Number(s.product_id) === Number(product.id) ? 'bg-orange-50/30' : ''}`}>
                         <td className="py-5 pr-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gray-900 text-white rounded-xl flex items-center justify-center font-black text-xs shrink-0">
-                              {s.company_name[0]}
+                            <div className="w-10 h-10 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 border border-gray-50 p-1">
+                               <img src={getImageUrl(s.image_url)} alt="" className="w-full h-full object-contain" />
                             </div>
                             <div>
-                              <p className="font-black text-gray-900 text-sm leading-tight">{s.company_name}</p>
+                              <p className="font-black text-gray-900 text-sm leading-tight">{s.seller_uid || `Seller #${s.seller_id}`}</p>
                               <div className="flex items-center gap-1 mt-0.5">
                                 {s.is_verified ? (
                                   <>
@@ -443,10 +444,15 @@ export default function ProductDetailPage() {
                                 )}
                               </div>
                             </div>
-                            {s.product_id === product.id && (
+                            {Number(s.seller_id) === Number(product.seller_id) && Number(s.product_id) === Number(product.id) && (
                                 <span className="bg-accent/10 text-accent text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-tighter">Current</span>
                             )}
                           </div>
+                        </td>
+                        <td className="py-5 pr-4 text-center">
+                           <span className="text-[10px] font-black bg-slate-100 text-slate-600 px-2 py-1 rounded-md border border-slate-200">
+                              {s.thickness || "N/A"}
+                           </span>
                         </td>
                         <td className="py-5 pr-4">
                           <div className="flex items-center gap-1.5 text-xs font-bold text-gray-600">
@@ -469,6 +475,7 @@ export default function ProductDetailPage() {
                         <td className="py-5 text-right">
                           <button 
                             onClick={() => {
+                              // Use the specific product_id for this seller to get their unique image/specs
                               navigate(`/products/${s.product_id}?sellerId=${s.seller_id}`);
                               window.scrollTo(0, 0);
                             }}
@@ -594,6 +601,6 @@ export default function ProductDetailPage() {
         />
       </div>
       <WhyChooseUs />
-    </>
+    </div>
   );
 }

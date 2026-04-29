@@ -2,18 +2,51 @@ import { Mail, Phone, MapPin, Send } from "lucide-react";
 import WhyChooseUs from "../components/sections/WhyChooseUs";
 import { useNotification } from "../context/NotificationContext";
 import { useState } from "react";
-export default function ContactPage() {
-  const { notifySuccess } = useNotification();
-  const [submitting, setSubmitting] = useState(false);
+import { submitContactMessage } from "../services/contactServices";
 
-  const handleSubmit = (e) => {
+export default function ContactPage() {
+  const { notifySuccess, notifyError } = useNotification();
+  const [submitting, setSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    company_name: "",
+    email: "",
+    phone: "",
+    subject: "",
+    otherSubject: "",
+    message: ""
+  });
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.name || !formData.email || !formData.message) {
+      return notifyError("Please fill in all required fields.");
+    }
+
+    const finalSubject = formData.subject === "Other" ? formData.otherSubject : formData.subject;
+
     setSubmitting(true);
-    setTimeout(() => {
+    try {
+      await submitContactMessage({ ...formData, subject: finalSubject });
       notifySuccess("Message sent! We will contact you soon.");
+      setFormData({
+        name: "",
+        company_name: "",
+        email: "",
+        phone: "",
+        subject: "",
+        otherSubject: "",
+        message: ""
+      });
+    } catch (error) {
+      notifyError(error.message || "Failed to send message.");
+    } finally {
       setSubmitting(false);
-      e.target.reset(); // Correctly reset the form
-    }, 1000);
+    }
   };
   return (
     <>
@@ -40,31 +73,62 @@ export default function ContactPage() {
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <input
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
                   placeholder="Your Name"
                   className="border border-black/10 rounded-xl px-4 py-3 text-sm bg-surface focus:outline-none focus:border-accent w-full"
                 />
                 <input
+                  name="company_name"
+                  value={formData.company_name}
+                  onChange={handleChange}
                   placeholder="Company Name"
                   className="border border-black/10 rounded-xl px-4 py-3 text-sm bg-surface focus:outline-none focus:border-accent w-full"
                 />
               </div>
               <input
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
                 placeholder="Email Address"
                 type="email"
                 className="border border-black/10 rounded-xl px-4 py-3 text-sm bg-surface focus:outline-none focus:border-accent w-full"
               />
               <input
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
                 placeholder="Phone Number"
                 className="border border-black/10 rounded-xl px-4 py-3 text-sm bg-surface focus:outline-none focus:border-accent w-full"
               />
-              <select className="border border-black/10 rounded-xl px-4 py-3 text-sm bg-surface focus:outline-none focus:border-accent w-full text-ink2">
-                <option>Select Product Type</option>
-                <option>BOPP Films</option>
-                <option>PET Films</option>
-                <option>CPP Films</option>
-                <option>Become a Seller</option>
+              <select 
+                name="subject"
+                value={formData.subject}
+                onChange={handleChange}
+                className="border border-black/10 rounded-xl px-4 py-3 text-sm bg-surface focus:outline-none focus:border-accent w-full text-ink2"
+              >
+                <option value="">Select Product Type</option>
+                <option value="BOPP Films">BOPP Films</option>
+                <option value="PET Films">PET Films</option>
+                <option value="CPP Films">CPP Films</option>
+                <option value="Become a Seller">Become a Seller</option>
+                <option value="Other">Other</option>
               </select>
+
+              {formData.subject === "Other" && (
+                <input
+                  name="otherSubject"
+                  value={formData.otherSubject}
+                  onChange={handleChange}
+                  placeholder="Please specify subject"
+                  className="border border-black/10 rounded-xl px-4 py-3 text-sm bg-surface focus:outline-none focus:border-accent w-full animate-fadeIn"
+                />
+              )}
               <textarea
+                name="message"
+                value={formData.message}
+                onChange={handleChange}
                 placeholder="Your message or requirements..."
                 rows={4}
                 className="border border-black/10 rounded-xl px-4 py-3 text-sm bg-surface focus:outline-none focus:border-accent w-full resize-none"

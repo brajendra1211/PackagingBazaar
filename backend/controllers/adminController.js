@@ -241,21 +241,25 @@ export const getAllProductsAdmin = async (req, res) => {
 
     const query = `
       SELECT 
-        sp.id, p.id as product_id, p.name, p.group_key, p.product_code, p.thickness, p.color, p.product_type, p.unit, p.image_url, p.is_hot_deal, p.is_trending,
-        sp.price_min, sp.price_max, sp.moq, sp.stock, sp.stock_qty,
+        p.id as product_id, p.name, p.group_key, p.product_code, p.thickness, p.color, p.product_type, p.unit, p.image_url, p.is_hot_deal, p.is_trending,
+        COALESCE(sp.price_min, p.min_price) as price_min, 
+        COALESCE(sp.price_max, p.max_price) as price_max, 
+        COALESCE(sp.moq, ps.min_order) as moq, 
+        COALESCE(sp.stock_qty, ps.quantity) as stock_qty,
         s.company_name as seller_name, s.seller_uid,
         c.name as category_name
-      FROM seller_products sp
-      JOIN products p ON sp.product_id = p.id
-      JOIN sellers s ON sp.seller_id = s.id
+      FROM products p
+      LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.status = 'active'
+      LEFT JOIN sellers s ON p.seller_id = s.id
+      LEFT JOIN product_stocks ps ON p.id = ps.product_id
       LEFT JOIN sub_categories sc ON p.sub_category_id = sc.id
       LEFT JOIN categories c ON sc.category_id = c.id
-      ORDER BY sp.id DESC
+      ORDER BY p.id DESC
       LIMIT ? OFFSET ?
     `;
     const [rows] = await pool.query(query, [limit, offset]);
 
-    const [[{ total }]] = await pool.query("SELECT COUNT(*) as total FROM seller_products");
+    const [[{ total }]] = await pool.query("SELECT COUNT(*) as total FROM products");
 
     res.status(200).json({ 
       success: true, 
@@ -280,7 +284,8 @@ export const getDashboardStats = async (req, res) => {
       WHERE u.role = 'seller' AND (u.is_verified = 1 OR s.status IN ('verified', 'approved', 'active'))
     `);
     const [pending] = await pool.query("SELECT COUNT(*) as count FROM users WHERE role='seller' AND is_verified=0");
-    const [products] = await pool.query("SELECT COUNT(*) as count FROM products");
+    const [totalProducts] = await pool.query("SELECT COUNT(*) as count FROM products");
+    const [uniqueProducts] = await pool.query("SELECT COUNT(DISTINCT group_key) as count FROM products WHERE group_key IS NOT NULL");
     const [orders] = await pool.query("SELECT COUNT(*) as count FROM orders");
     const [inquiries] = await pool.query("SELECT COUNT(*) as count FROM inquiries");
     
@@ -290,7 +295,8 @@ export const getDashboardStats = async (req, res) => {
         totalUsers: users[0].count,
         totalSellers: sellers[0].count,
         pendingSellers: pending[0].count,
-        totalProducts: products[0].count,
+        totalProducts: totalProducts[0].count,
+        uniqueProducts: uniqueProducts[0].count,
         totalOrders: orders[0].count,
         totalInquiries: inquiries[0].count
       }
@@ -848,33 +854,18 @@ export const addProductForSeller = async (req, res) => {
       finalGroupKey = `${catPart}_${colorPart}_${thickPart}_${typePart}`;
     }
 
-    // 3. Check for existing Master Product (by group_key or spec match)
-    let productId = null;
-    const [existingMaster] = await connection.query(
-      "SELECT id FROM products WHERE (group_key = ? AND group_key IS NOT NULL) OR (name = ? AND thickness = ? AND width = ? AND sub_category_id = ?)",
-      [finalGroupKey, name, thickness, width, subCategoryId]
+    // 3. Create new Master Product (Always create new for unique specs/images)
+    console.log(`🚀 Creating New Product Record for Seller: ${sellerId}`);
+    const [productResult] = await connection.query(
+      `INSERT INTO products 
+       (product_group_id, sub_category_id, tag_id, seller_id, name, display_name, group_key, product_code, thickness, width, color, product_type, unit, description, image_url, applications) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        product_group_id || null, subCategoryId, resolvedTagId || null, sellerId, name, display_name, finalGroupKey, productCode, thickness, width, color, productType,
+        unit || 'kg', description, img, JSON.stringify(applications || [])
+      ]
     );
-
-    if (existingMaster.length > 0) {
-      productId = existingMaster[0].id;
-      // Update group if provided and not set
-      if (product_group_id) {
-         await connection.query("UPDATE products SET product_group_id = ? WHERE id = ?", [product_group_id, productId]);
-      }
-    } else {
-      // Create new Master Product
-      console.log(`🚀 Executing Master Product Insert on DB: ${process.env.DB_NAME}`);
-      const [productResult] = await connection.query(
-        `INSERT INTO products 
-         (product_group_id, sub_category_id, tag_id, seller_id, name, display_name, group_key, product_code, thickness, width, color, product_type, unit, description, image_url, applications) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          product_group_id || null, subCategoryId, resolvedTagId || null, sellerId, name, display_name, finalGroupKey, productCode, thickness, width, color, productType,
-          unit || 'kg', description, img, JSON.stringify(applications || [])
-        ]
-      );
-      productId = productResult.insertId;
-    }
+    let productId = productResult.insertId;
 
     // 4. Insert into seller_products (Seller Listing)
     await connection.query(

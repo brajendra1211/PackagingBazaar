@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { ShoppingCart, Eye, Send, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
@@ -15,22 +16,34 @@ const categoryColors = {
 export default function ProductCard({ product, onInquiry }) {
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const [showOptions, setShowOptions] = useState(false);
+  const [specs, setSpecs] = useState({
+    thickness: product.thickness || "",
+    width: product.width || ""
+  });
   
   const categoryName = product.category_name || "BOPP"; 
   const grad = categoryColors[categoryName] || "from-gray-50 to-gray-100";
 
   const handleImageClick = () => {
-    navigate(`/products/${product.id}`);
+    const sellerParam = product.seller_id ? `?sellerId=${product.seller_id}` : "";
+    navigate(`/products/${product.id}${sellerParam}`);
   };
 
   const handleAddToCart = (e) => {
     e.stopPropagation();
+    if (!showOptions) {
+      setShowOptions(true);
+      return;
+    }
+
     addToCart({
       ...product,
-      selected_thickness: product.thickness,
-      selected_width: product.width,
+      selected_thickness: specs.thickness,
+      selected_width: specs.width,
       selected_brand: product.brand || "Default"
     });
+    setShowOptions(false);
   };
 
   return (
@@ -49,7 +62,8 @@ export default function ProductCard({ product, onInquiry }) {
           <button
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/products/${product.id}`);
+              const sellerParam = product.seller_id ? `?sellerId=${product.seller_id}` : "";
+              navigate(`/products/${product.id}${sellerParam}`);
             }}
             className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow text-ink2 hover:text-accent border border-black/[0.05]"
             title="View Details"
@@ -61,11 +75,13 @@ export default function ProductCard({ product, onInquiry }) {
         {/* Removed Image Badges for a cleaner look as requested */}
 
         {/* Database Image */}
-        <img
-          src={getImageUrl(product.image_url)} 
-          alt={product.name}
-          className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 group-hover:scale-105 transition-all duration-300"
-        />
+        <div className="relative w-full h-full flex items-center justify-center p-4 z-10">
+          <img
+            src={getImageUrl(product.image_url)} 
+            alt={product.name}
+            className="max-w-full max-h-full object-contain group-hover:scale-105 transition-all duration-500"
+          />
+        </div>
 
         {/* Category chip */}
         <div className="absolute bottom-2 left-2 sm:bottom-3 sm:left-3 z-10">
@@ -115,11 +131,65 @@ export default function ProductCard({ product, onInquiry }) {
           )}
           
           {product.variant_count > 1 && (
-            <span className="w-full text-[11px] font-black text-blue-700 bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-200 shadow-sm animate-fadeIn">
+            <span className="w-full text-[11px] text-center font-black text-blue-700 bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-200 shadow-sm animate-fadeIn">
               {product.variant_count} Variants Available
             </span>
           )}
         </div>
+
+        {/* Quick Add Specs Popup Overlay (Bottom) */}
+        {showOptions && (
+          <div 
+            className="absolute inset-0 bg-black/40 z-30 flex items-end animate-fadeIn"
+            onClick={() => setShowOptions(false)}
+          >
+            <div 
+              className="w-full bg-white rounded-t-3xl p-5 pb-6 animate-slideInUp shadow-[0_-10px_40px_rgba(0,0,0,0.1)]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-12 h-1 bg-gray-100 rounded-full mx-auto mb-4" />
+              <h4 className="text-xs font-black uppercase tracking-widest text-ink mb-4 text-center">Select Specifications</h4>
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <div className="flex-1 relative">
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-black text-gray-400">MIC</span>
+                    <input
+                      type="text"
+                      placeholder="Thickness"
+                      value={specs.thickness}
+                      onChange={(e) => setSpecs({...specs, thickness: e.target.value})}
+                      className="w-full bg-slate-50 border border-black/5 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-accent font-bold"
+                    />
+                  </div>
+                  <div className="flex-1 relative">
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-black text-gray-400">MM</span>
+                    <input
+                      type="text"
+                      placeholder="Width"
+                      value={specs.width}
+                      onChange={(e) => setSpecs({...specs, width: e.target.value})}
+                      className="w-full bg-slate-50 border border-black/5 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-accent font-bold"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button 
+                    onClick={() => setShowOptions(false)}
+                    className="flex-1 py-3.5 rounded-xl text-[10px] font-black uppercase bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all active:scale-95"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handleAddToCart}
+                    className="flex-[2] py-3.5 rounded-xl text-[10px] font-black uppercase bg-accent text-white hover:bg-orange-600 shadow-lg shadow-orange-100 transition-all active:scale-95"
+                  >
+                    Add to Basket
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         
         <div className="mt-auto pt-3 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
           <div className="flex items-center justify-between mb-4">

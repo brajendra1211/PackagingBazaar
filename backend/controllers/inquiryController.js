@@ -107,3 +107,67 @@ export const getBuyerInquiries = async (req, res) => {
         res.status(500).json({ success: false, message: "Server Error" });
     }
 };
+
+// 4. Share Lead to Seller (Admin Only)
+export const shareLeadToSeller = async (req, res) => {
+    try {
+        const { id } = req.params; // inquiry_id
+        const { seller_id: providedSellerId } = req.body;
+
+        let seller_id = providedSellerId;
+
+        // If seller_id is not provided, use the original one from the inquiry
+        if (!seller_id) {
+            const [rows] = await pool.query("SELECT seller_id FROM inquiries WHERE id = ?", [id]);
+            if (rows.length === 0) return res.status(404).json({ success: false, message: "Inquiry not found" });
+            seller_id = rows[0].seller_id;
+        }
+
+        // Insert into lead_assignments (using IGNORE or ON DUPLICATE to avoid duplicates)
+        const query = "INSERT IGNORE INTO lead_assignments (inquiry_id, seller_id) VALUES (?, ?)";
+        await pool.query(query, [id, seller_id]);
+
+        // Also mark the inquiry as assigned (legacy support)
+        await pool.query("UPDATE inquiries SET is_assigned = 1, assigned_at = NOW() WHERE id = ?", [id]);
+
+        res.status(200).json({ success: true, message: "Lead shared successfully!" });
+    } catch (err) {
+        console.error("Error sharing lead:", err);
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+};
+
+// 5. Get Leads Assigned to a Seller (Seller Dashboard)
+export const getSellerLeads = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // Get seller_id from user_id
+        const [sellerRows] = await pool.query("SELECT id FROM sellers WHERE user_id = ?", [userId]);
+        if (sellerRows.length === 0) {
+            return res.status(404).json({ success: false, message: "Seller profile not found." });
+        }
+        const seller_id = sellerRows[0].id;
+        //console.log("DEBUG: getSellerLeads - Fetching leads for seller_id:", seller_id);
+
+        // Fetch from lead_assignments table
+        const query = `
+            SELECT i.*, p.name as product_name, p.image_url, la.assigned_at
+            FROM lead_assignments la
+            JOIN inquiries i ON la.inquiry_id = i.id
+            JOIN products p ON i.product_id = p.id
+            WHERE la.seller_id = ?
+            ORDER BY la.assigned_at DESC
+        `;
+
+        const [rows] = await pool.query(query, [seller_id]);
+        //console.log(`DEBUG: getSellerLeads - Found ${rows.length} leads.`);
+
+        res.status(200).json({ success: true, data: rows });
+    } catch (err) {
+        console.error("Error fetching seller leads:", err);
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+};
+
+

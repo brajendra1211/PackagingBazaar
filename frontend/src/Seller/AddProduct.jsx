@@ -199,7 +199,11 @@ export default function AddProduct() {
         : editProduct.applications
       : [],
     img: editProduct?.img || "",
-    color: editProduct?.color || "#e8f5e9",
+    color: editProduct?.color || "Transparent",
+    productType: editProduct?.productType || "Standard",
+    deliveryTime: editProduct?.deliveryTime || "3-5 Days",
+    groupKey: editProduct?.groupKey || "",
+    display_name: editProduct?.display_name || "",
   });
 
   const [existingNames, setExistingNames] = useState([]);
@@ -262,6 +266,7 @@ export default function AddProduct() {
       }
       const productData = {
         name: form.name,
+        display_name: form.display_name,
         category: form.category,
         subcategory: form.subcategory,
         tag: form.tag,
@@ -274,6 +279,10 @@ export default function AddProduct() {
         description: form.description,
         applications: form.applications,
         img: form.img,
+        color: form.color,
+        productType: form.productType,
+        deliveryTime: form.deliveryTime,
+        groupKey: form.groupKey
       };
 
       if (isEdit) {
@@ -479,17 +488,23 @@ export default function AddProduct() {
                         />
                         {showSuggestions && filteredSuggestions.length > 0 && (
                           <div className="absolute z-50 w-full mt-1 bg-white border border-black/[0.08] rounded-xl shadow-xl max-h-48 overflow-y-auto overflow-x-hidden py-2">
-                            {filteredSuggestions.map((name, i) => (
+                            {filteredSuggestions.map((suggestion, i) => (
                               <button
                                 key={i}
                                 type="button"
                                 onClick={() => {
-                                  set("name", name);
+                                  setForm(prev => ({
+                                    ...prev,
+                                    name: suggestion.name,
+                                    groupKey: suggestion.group_key,
+                                    category: suggestion.category_name || prev.category,
+                                    display_name: suggestion.display_name || suggestion.name
+                                  }));
                                   setShowSuggestions(false);
                                 }}
                                 className="w-full px-4 py-2 text-left text-sm text-ink hover:bg-surface hover:text-accent transition-colors"
                               >
-                                {name}
+                                {suggestion.name}
                               </button>
                             ))}
                           </div>
@@ -572,6 +587,25 @@ export default function AddProduct() {
                           placeholder="1000 mm"
                           value={form.width}
                           onChange={(e) => set("width", e.target.value)}
+                        />
+                      </Field>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <Field label="Color" hint="e.g. Silver, Transparent">
+                        <input
+                          className={inputCls}
+                          placeholder="Transparent"
+                          value={form.color}
+                          onChange={(e) => set("color", e.target.value)}
+                        />
+                      </Field>
+                      <Field label="Product Type" hint="e.g. Plain, Metalized">
+                        <input
+                          className={inputCls}
+                          placeholder="Standard"
+                          value={form.productType}
+                          onChange={(e) => set("productType", e.target.value)}
                         />
                       </Field>
                     </div>

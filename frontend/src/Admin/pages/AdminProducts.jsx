@@ -8,7 +8,8 @@ import {
   Zap,
   ZapOff,
   TrendingUp,
-  Pencil
+  Pencil,
+  Filter
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { fetchAllProductsAdmin, deleteProductAdmin, toggleHotDealAdmin, toggleTrendingAdmin } from "../../services/adminServices";
@@ -21,8 +22,17 @@ export default function AdminProducts() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState({
+    category: "",
+    seller: "",
+    status: "" // 'hot', 'trending'
+  });
   const { notifyError, notifySuccess } = useNotification();
   const navigate = useNavigate();
+
+  // Get unique categories and sellers for filters
+  const categories = [...new Set(products.map(p => p.category_name))].filter(Boolean);
+  const sellers = [...new Set(products.map(p => p.seller_name))].filter(Boolean);
 
   useEffect(() => {
     loadProducts(1);
@@ -91,10 +101,19 @@ export default function AdminProducts() {
 
   const filteredProducts = products.filter((item) => {
     const s = search.toLowerCase();
-    return (
+    const matchesSearch = (
       item.name?.toLowerCase().includes(s) ||
       item.seller_name?.toLowerCase().includes(s)
     );
+
+    const matchesCategory = !filters.category || item.category_name === filters.category;
+    const matchesSeller = !filters.seller || item.seller_name === filters.seller;
+    const matchesStatus = 
+      !filters.status || 
+      (filters.status === "hot" && item.is_hot_deal) || 
+      (filters.status === "trending" && item.is_trending);
+
+    return matchesSearch && matchesCategory && matchesSeller && matchesStatus;
   });
 
   if (loading && products.length === 0) {
@@ -108,7 +127,7 @@ export default function AdminProducts() {
   return (
     <div className="animate-fadeIn">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
         <div>
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 bg-accent/10 text-accent rounded-2xl flex items-center justify-center">
@@ -120,18 +139,63 @@ export default function AdminProducts() {
           </div>
           <p className="text-gray-500 text-sm font-medium">Inspect and manage all packaging film variants listed by sellers.</p>
         </div>
+      </div>
 
-        <div className="flex items-center gap-3">
-          <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input
-              type="text"
-              placeholder="Search products..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-12 pr-6 py-3.5 bg-white border border-gray-100 rounded-2xl text-sm w-full md:w-80 outline-none focus:border-accent"
-            />
+      {/* Filter & Search Row */}
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 w-full mb-8">
+        {/* Filters on Left */}
+        <div className="flex flex-wrap items-center gap-2 bg-white border border-gray-100 p-1.5 rounded-2xl shadow-sm">
+          <div className="pl-3 pr-1 text-gray-400">
+            <Filter size={16} />
           </div>
+          <select
+            value={filters.category}
+            onChange={(e) => setFilters({ ...filters, category: e.target.value })}
+            className="bg-transparent border-none text-[11px] font-bold text-gray-600 outline-none py-2 pr-4 cursor-pointer"
+          >
+            <option value="">All Categories</option>
+            {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+          </select>
+          <div className="w-px h-4 bg-gray-100" />
+          <select
+            value={filters.seller}
+            onChange={(e) => setFilters({ ...filters, seller: e.target.value })}
+            className="bg-transparent border-none text-[11px] font-bold text-gray-600 outline-none py-2 pr-4 cursor-pointer"
+          >
+            <option value="">All Sellers</option>
+            {sellers.map(sel => <option key={sel} value={sel}>{sel}</option>)}
+          </select>
+          <div className="w-px h-4 bg-gray-100" />
+          <select
+            value={filters.status}
+            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+            className="bg-transparent border-none text-[11px] font-bold text-gray-600 outline-none py-2 pr-4 cursor-pointer"
+          >
+            <option value="">Any Status</option>
+            <option value="hot">Hot Deals</option>
+            <option value="trending">Trending</option>
+          </select>
+
+          {(filters.category || filters.seller || filters.status) && (
+            <button 
+              onClick={() => setFilters({ category: "", seller: "", status: "" })}
+              className="text-[10px] font-black uppercase text-accent hover:underline px-3 border-l border-gray-100"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        {/* Search on Right */}
+        <div className="relative group w-full xl:w-80">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <input
+            type="text"
+            placeholder="Search catalog..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-12 pr-6 py-3.5 bg-white border border-gray-100 rounded-2xl text-sm w-full outline-none focus:border-accent shadow-sm"
+          />
         </div>
       </div>
 

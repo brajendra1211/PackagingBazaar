@@ -40,11 +40,12 @@ import AdminAddProduct from "./Admin/pages/AdminAddProduct";
 import AdminAddSeller from "./Admin/pages/AdminAddSeller";
 import AdminEditSeller from "./Admin/pages/AdminEditSeller";
 import AdminEditProduct from "./Admin/pages/AdminEditProduct";
+import AdminContacts from "./Admin/pages/AdminContacts";
 
 import { Navigate } from "react-router-dom";
 
 // Seller
-import { SellerDashboard, SellerProducts, SellerOrders, SellerProfile } from "./Seller/SellerDashboard";
+import { SellerDashboard, SellerProducts, SellerOrders, SellerLeads, SellerProfile } from "./Seller/SellerDashboard";
 import AddProduct from "./Seller/AddProduct";
 
 export default function App() {
@@ -94,6 +95,7 @@ export default function App() {
                 <Route path="/admin/products" element={<AdminProducts />} />
                 <Route path="/admin/orders" element={<AdminOrders />} />
                 <Route path="/admin/inquiries" element={<AdminInquiries />} />
+                <Route path="/admin/contacts" element={<AdminContacts />} />
                 <Route path="/admin/seller-hub" element={<AdminSellerHub />} />
                 <Route path="/admin/add-product" element={<AdminAddProduct />} />
                 <Route path="/admin/add-seller" element={<AdminAddSeller />} />
@@ -107,6 +109,7 @@ export default function App() {
               <Route element={<SellerLayout />}>
                 <Route path="/seller/dashboard" element={<SellerDashboard />} />
                 <Route path="/seller/products" element={<SellerProducts />} />
+                <Route path="/seller/leads" element={<SellerLeads />} />
                 <Route path="/seller/orders" element={<SellerOrders />} />
                 <Route path="/seller/profile" element={<SellerProfile />} />
                 <Route path="/seller/add-product" element={<AddProduct />} />

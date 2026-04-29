@@ -13,13 +13,17 @@ import {
 import { 
   fetchSellerOrdersAdmin, 
   fetchSellerProductsAdmin, 
-  fetchLeadRecommendations 
+  fetchLeadRecommendations,
+  shareLeadWithSellerAdmin 
 } from "../../services/adminServices";
+import { useNotification } from "../../context/NotificationContext";
 import { getImageUrl } from "../../services/api";
 
-export default function SubViewOverlay({ entity, onClose, notifyError }) {
+export default function SubViewOverlay({ entity, onClose }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const { notifySuccess, notifyError } = useNotification();
 
   const handleWhatsAppForward = (seller) => {
     if (!entity.inquiryData) return;
@@ -27,6 +31,17 @@ export default function SubViewOverlay({ entity, onClose, notifyError }) {
     const text = `*New Lead Alert!*\nHello ${seller.company_name},\n\nWe have a new requirement matching your profile:\n\n*Product:* ${inquiry.product_name}\n*Quantity:* ${inquiry.quantity_required}\n*Buyer Location:* ${inquiry.city}\n*Requirement:* ${inquiry.message}\n\nPlease let us know if you can fulfill this!`;
     const url = `https://wa.me/${seller.phone}?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
+  };
+
+  const handleSendToDashboard = async (seller) => {
+    try {
+      const res = await shareLeadWithSellerAdmin(entity.id, seller.id);
+      if (res.success) {
+        notifySuccess(`Lead shared with ${seller.company_name}!`);
+      }
+    } catch (err) {
+      notifyError("Failed to share lead");
+    }
   };
 
   useEffect(() => {
@@ -152,7 +167,13 @@ export default function SubViewOverlay({ entity, onClose, notifyError }) {
                           onClick={() => handleWhatsAppForward(seller)}
                           className="w-full px-8 py-3 bg-[#25D366] text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-[#128C7E] transition-all shadow-xl shadow-[#25D366]/20"
                         >
-                          <MessageCircle size={14} /> Forward Lead
+                          <MessageCircle size={14} /> WhatsApp Lead
+                        </button>
+                        <button 
+                          onClick={() => handleSendToDashboard(seller)}
+                          className="w-full px-8 py-3 bg-white border-2 border-accent text-accent rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-accent hover:text-white transition-all shadow-lg shadow-orange-100"
+                        >
+                          <Zap size={14} /> Send to Dash
                         </button>
                       </div>
                     </div>

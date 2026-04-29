@@ -5,9 +5,12 @@ import {
   Zap,
   RefreshCcw,
   MessageCircle,
-  Save
+  Save,
+  Filter,
+  Share2,
+  Send
 } from "lucide-react";
-import { fetchInquiriesAdmin, updateInquiryAdmin } from "../../services/adminServices";
+import { fetchInquiriesAdmin, updateInquiryAdmin, shareLeadWithSellerAdmin } from "../../services/adminServices";
 import { useNotification } from "../../context/NotificationContext";
 import Pagination from "../../components/ui/Pagination";
 import SubViewOverlay from "../components/SubViewOverlay";
@@ -19,7 +22,16 @@ export default function AdminInquiries() {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
   const [selectedLead, setSelectedLead] = useState(null);
+  const [filters, setFilters] = useState({
+    status: "",
+    product: "",
+    seller: ""
+  });
   const { notifyError, notifySuccess } = useNotification();
+
+  // Get unique lists for filters
+  const productNames = [...new Set(inquiries.map(i => i.product_name))].filter(Boolean);
+  const sellerNames = [...new Set(inquiries.map(i => i.seller_name))].filter(Boolean);
 
   useEffect(() => {
     loadInquiries(1);
@@ -43,10 +55,17 @@ export default function AdminInquiries() {
 
   const filteredInquiries = inquiries.filter((item) => {
     const s = search.toLowerCase();
-    return (
+    const matchesSearch = (
       item.buyer_display_name?.toLowerCase().includes(s) ||
-      item.product_name?.toLowerCase().includes(s)
+      item.product_name?.toLowerCase().includes(s) ||
+      item.seller_name?.toLowerCase().includes(s)
     );
+
+    const matchesStatus = !filters.status || item.status === filters.status;
+    const matchesProduct = !filters.product || item.product_name === filters.product;
+    const matchesSeller = !filters.seller || item.seller_name === filters.seller;
+
+    return matchesSearch && matchesStatus && matchesProduct && matchesSeller;
   });
 
   const handleStatusChange = async (id, newStatus) => {
@@ -73,6 +92,20 @@ export default function AdminInquiries() {
     }
   };
 
+  const handleShareWithSeller = async (inquiry) => {
+    if (window.confirm(`Share this lead with ${inquiry.seller_name}? It will appear in their dashboard.`)) {
+      try {
+        const res = await shareLeadWithSellerAdmin(inquiry.id);
+        if (res.success) {
+          notifySuccess("Lead shared with seller!");
+          setInquiries(prev => prev.map(i => i.id === inquiry.id ? { ...i, is_assigned: 1 } : i));
+        }
+      } catch (err) {
+        notifyError("Failed to share lead");
+      }
+    }
+  };
+
   const handleWhatsAppForward = (inquiry) => {
     const text = `*New Lead Alert!*\nBuyer: ${inquiry.buyer_display_name}\nMobile: ${inquiry.buyer_display_mobile}\nProduct: ${inquiry.product_name}\nQty: ${inquiry.quantity_required}\nCity: ${inquiry.city}\nMessage: ${inquiry.message}`;
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
@@ -90,7 +123,7 @@ export default function AdminInquiries() {
   return (
     <div className="animate-fadeIn">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
         <div>
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 bg-accent/10 text-accent rounded-2xl flex items-center justify-center">
@@ -102,18 +135,66 @@ export default function AdminInquiries() {
           </div>
           <p className="text-gray-500 text-sm font-medium">Tracking all buyer inquiries and procurement requests.</p>
         </div>
+      </div>
 
-        <div className="flex items-center gap-3">
-          <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input
-              type="text"
-              placeholder="Search leads..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-12 pr-6 py-3.5 bg-white border border-gray-100 rounded-2xl text-sm w-full md:w-80 outline-none focus:border-accent"
-            />
+      {/* Filter & Search Row */}
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 w-full mb-8">
+        {/* Filters on Left */}
+        <div className="flex flex-wrap items-center gap-2 bg-white border border-gray-100 p-1.5 rounded-2xl shadow-sm">
+          <div className="pl-3 pr-1 text-gray-400">
+            <Filter size={16} />
           </div>
+          <select
+            value={filters.status}
+            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+            className="bg-transparent border-none text-[11px] font-bold text-gray-600 outline-none py-2 pr-4 cursor-pointer"
+          >
+            <option value="">Any Status</option>
+            <option value="pending">New/Pending</option>
+            <option value="Contacted">Contacted</option>
+            <option value="Negotiating">Negotiating</option>
+            <option value="Closed">Closed</option>
+            <option value="Lost">Lost</option>
+          </select>
+          <div className="w-px h-4 bg-gray-100" />
+          <select
+            value={filters.product}
+            onChange={(e) => setFilters({ ...filters, product: e.target.value })}
+            className="bg-transparent border-none text-[11px] font-bold text-gray-600 outline-none py-2 pr-4 cursor-pointer"
+          >
+            <option value="">All Products</option>
+            {productNames.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+          <div className="w-px h-4 bg-gray-100" />
+          <select
+            value={filters.seller}
+            onChange={(e) => setFilters({ ...filters, seller: e.target.value })}
+            className="bg-transparent border-none text-[11px] font-bold text-gray-600 outline-none py-2 pr-4 cursor-pointer"
+          >
+            <option value="">All Sellers</option>
+            {sellerNames.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+
+          {(filters.status || filters.product || filters.seller) && (
+            <button 
+              onClick={() => setFilters({ status: "", product: "", seller: "" })}
+              className="text-[10px] font-black uppercase text-accent hover:underline px-3 border-l border-gray-100"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        {/* Search on Right */}
+        <div className="relative group w-full xl:w-80">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <input
+            type="text"
+            placeholder="Search leads..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-12 pr-6 py-3.5 bg-white border border-gray-100 rounded-2xl text-sm w-full outline-none focus:border-accent shadow-sm"
+          />
         </div>
       </div>
 
@@ -222,6 +303,10 @@ export default function AdminInquiries() {
                             <div>
                               <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest block mb-1">Buyer Email:</span>
                               <span className="text-xs font-medium text-gray-700">{inquiry.buyer_display_email}</span>
+                            </div>
+
+                            <div className="flex flex-col gap-2 w-full mt-4">
+                                {/* Buttons removed as per user request */}
                             </div>
                           </div>
                         </div>

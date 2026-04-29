@@ -19,6 +19,7 @@ export default function AdminDashboard() {
     totalSellers: 0,
     pendingSellers: 0,
     totalProducts: 0,
+    uniqueProducts: 0,
     totalOrders: 0,
     totalInquiries: 0,
   });
@@ -71,7 +72,7 @@ export default function AdminDashboard() {
       path: "/admin/sellers",
     },
     {
-      label: "Live Products",
+      label: "Total Products",
       val: stats.totalProducts,
       icon: <Package size={20} />,
       color: "red",
@@ -125,6 +126,7 @@ export default function AdminDashboard() {
                 stat.color === 'orange' ? 'bg-orange-50 text-orange-600' :
                 stat.color === 'green' ? 'bg-green-50 text-green-600' :
                 stat.color === 'red' ? 'bg-red-50 text-red-600' :
+                stat.color === 'indigo' ? 'bg-indigo-50 text-indigo-600' :
                 'bg-purple-50 text-purple-600'
               }`}
             >
@@ -136,6 +138,11 @@ export default function AdminDashboard() {
             <h3 className="text-3xl font-syne font-black text-gray-900">
               {stat.val}
             </h3>
+            {stat.subLabel && (
+              <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase">
+                {stat.subLabel}: <span className="text-accent">{stat.subVal}</span>
+              </p>
+            )}
           </div>
         ))}
       </div>

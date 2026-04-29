@@ -259,7 +259,13 @@ export const getSellerStats = async (req, res) => {
       [sellerId, sellerId, sellerId]
     );
 
-    // 5. Total Views (Mocked for now as we don't have views table)
+    // 5. Total Leads (Assigned Business Leads)
+    const [[{ totalLeads }]] = await pool.query(
+      `SELECT COUNT(*) as totalLeads FROM lead_assignments WHERE seller_id = ?`,
+      [sellerId]
+    );
+
+    // 6. Total Views (Mocked for now as we don't have views table)
     const totalViews = Math.floor(Math.random() * 1000); // Placeholder
 
     res.status(200).json({
@@ -269,6 +275,7 @@ export const getSellerStats = async (req, res) => {
         activeProducts,
         totalOrders,
         avgRating: parseFloat(avgRating || 0).toFixed(1),
+        totalLeads,
         totalViews
       }
     });
@@ -300,6 +307,7 @@ export const createProduct = async (req, res) => {
 
     const {
       name,
+      display_name,
       category,
       subcategory,
       tag,
@@ -312,7 +320,15 @@ export const createProduct = async (req, res) => {
       description,
       applications,
       img,
+      color,
+      productType,
+      deliveryTime,
+      groupKey
     } = req.body;
+
+    // Prices: Standardize to min_price and max_price for the listing page
+    const minPrice = parseFloat(price);
+    const maxPrice = parseFloat(price);
 
     // Get sub_category_id from subcategory name
     const [subCatRows] = await pool.query(
@@ -343,23 +359,38 @@ export const createProduct = async (req, res) => {
       }
     }
 
+    // Resolve Product Group (Variant Linking)
+    let resolvedGroupId = null;
+    if (groupKey && groupKey !== "NEW_GROUP") {
+       const [grpRows] = await pool.query("SELECT id FROM product_groups WHERE master_id = ?", [groupKey]);
+       if (grpRows.length > 0) resolvedGroupId = grpRows[0].id;
+    }
+
     // Insert product
     const [productResult] = await pool.query(
       `INSERT INTO products 
-       (seller_id, sub_category_id, tag_id, name, thickness, width, 
-        price, unit, description, image_url) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (seller_id, sub_category_id, tag_id, name, display_name, thickness, width, 
+        price, min_price, max_price, unit, description, image_url, color, product_type, delivery_time, group_key, product_group_id) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         sellerId,
         subCategoryId,
         tagId,
         name,
+        display_name || name,
         thickness,
         width,
         price,
+        minPrice,
+        maxPrice,
         unit,
         description,
         img,
+        color || null,
+        productType || null,
+        deliveryTime || null,
+        groupKey || null,
+        resolvedGroupId
       ],
     );
 
@@ -416,6 +447,7 @@ export const updateProduct = async (req, res) => {
 
     const {
       name,
+      display_name,
       category,
       subcategory,
       tag,
@@ -428,7 +460,14 @@ export const updateProduct = async (req, res) => {
       description,
       applications,
       img,
+      color,
+      productType,
+      deliveryTime,
+      groupKey
     } = req.body;
+
+    const minPrice = parseFloat(price);
+    const maxPrice = parseFloat(price);
 
     // Get sub_category_id
     const [subCatRows] = await pool.query(
@@ -450,22 +489,38 @@ export const updateProduct = async (req, res) => {
       tagId = tagRows[0]?.id || null;
     }
 
+    // Resolve Product Group
+    let resolvedGroupId = null;
+    if (groupKey && groupKey !== "NEW_GROUP") {
+       const [grpRows] = await pool.query("SELECT id FROM product_groups WHERE master_id = ?", [groupKey]);
+       if (grpRows.length > 0) resolvedGroupId = grpRows[0].id;
+    }
+
     // Update product
     await pool.query(
       `UPDATE products 
-       SET sub_category_id = ?, tag_id = ?, name = ?, thickness = ?, 
-           width = ?, price = ?, unit = ?, description = ?, image_url = ?
+       SET sub_category_id = ?, tag_id = ?, name = ?, display_name = ?, thickness = ?, 
+           width = ?, price = ?, min_price = ?, max_price = ?, unit = ?, description = ?, image_url = ?,
+           color = ?, product_type = ?, delivery_time = ?, group_key = ?, product_group_id = ?
        WHERE id = ?`,
       [
         subCategoryId,
         tagId,
         name,
+        display_name || name,
         thickness,
         width,
         price,
+        minPrice,
+        maxPrice,
         unit,
         description,
         img,
+        color || null,
+        productType || null,
+        deliveryTime || null,
+        groupKey || null,
+        resolvedGroupId,
         productId,
       ],
     );

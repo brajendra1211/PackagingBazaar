@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
-import { updateSellerProfileAPI, fetchSellerProducts, fetchSellerOrders, deleteSellerProductAPI } from "../services/sellerServices";
+import { updateSellerProfileAPI, fetchSellerProducts, fetchSellerOrders, fetchSellerLeads, deleteSellerProductAPI } from "../services/sellerServices";
 import { useNotification } from "../context/NotificationContext";
 import Pagination from "../components/ui/Pagination";
 import { motion } from "framer-motion";
 import { TableSkeleton } from "../components/ui/SkeletonLoader";
-import { Mail, Phone, MessageSquare, Clock, ArrowRight, UserCheck } from "lucide-react";
+import { Mail, Phone, MessageSquare, Clock, ArrowRight, UserCheck, Zap, MapPin, MessageCircle } from "lucide-react";
 
 export function SellerDashboard() {
   const { seller, PRODUCTS, ORDERS, stats, icons, Icon, Badge, StatCard } = useOutletContext();
@@ -22,9 +22,9 @@ export function SellerDashboard() {
         <p className="text-sm text-gray-500 mt-0.5">Welcome back, {seller.ownerName.split(" ")[0]}!</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6 gap-4">
-        <StatCard icon="package" value={stats.totalProducts} label="Total Products" sub={`${stats.activeProducts} active`} color="orange" />
-        {/* <StatCard icon="eye" value={stats.totalViews} label="Total Views" sub="Last 30 days" color="blue" /> */}
-        <StatCard icon="orders" value={stats.totalOrders} label="Total Orders" sub="Direct sales" color="green" />
+        <StatCard icon="package" value={stats.totalProducts} label="Total Products" sub={`${stats.activeProducts} active`} color="orange" onClick={() => navigate("/seller/products")} />
+        <StatCard icon="orders" value={stats.totalOrders} label="Total Orders" sub="Direct sales" color="green" onClick={() => navigate("/seller/orders")} />
+        <StatCard icon="leads" value={stats.totalLeads} label="Business Leads" sub="From admin" color="blue" onClick={() => navigate("/seller/leads")} />
         <StatCard icon="star" value={stats.avgRating} label="Avg. Rating" sub="Seller score" color="purple" />
       </div>
 
@@ -174,10 +174,10 @@ export function SellerProducts() {
                   <div className="flex gap-1.5">
                     <button 
                       onClick={() => window.open(`https://wa.me/919540248705?text=Hello%20Admin,%20I%20want%20to%20edit%20product:%20${p.name}%20(ID:%20${p.id})`, "_blank")} 
-                      className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:border-[#e8511a] hover:text-[#e8511a] transition-colors"
+                      className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:border-[#25D366] hover:text-[#25D366] transition-colors"
                       title="Edit Product (WhatsApp)"
                     >
-                      <Icon d={icons.phone} size={13} />
+                      <Icon d={icons.whatsapp} size={13} stroke="none" fill="currentColor" />
                     </button>
                     <button 
                       onClick={() => handleDelete(p.id, p.name)}
@@ -229,8 +229,8 @@ export function SellerOrders() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-xl font-black text-gray-900">Recent Orders</h2>
-        <p className="text-sm text-gray-500 mt-0.5">{totalOrders} orders</p>
+        <h2 className="text-xl font-black text-gray-900 uppercase tracking-tighter">Direct Orders</h2>
+        <p className="text-xs text-gray-500 mt-0.5">{totalOrders} total orders received</p>
       </div>
 
       {loading ? (
@@ -294,6 +294,143 @@ export function SellerOrders() {
           </div>
           <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
         </>
+      )}
+    </div>
+  );
+}
+
+export function SellerLeads() {
+  const { icons, Icon } = useOutletContext();
+  const [leads, setLeads] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadLeads();
+  }, []);
+
+  const loadLeads = async () => {
+    setLoading(true);
+    try {
+      const res = await fetchSellerLeads();
+      if (res.success) {
+        setLeads(res.data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-xl font-black text-gray-900 uppercase tracking-tighter">Business Leads</h2>
+        <p className="text-xs text-gray-500 mt-0.5">{leads.length} verified leads shared by admin</p>
+      </div>
+
+      {loading ? (
+        <div className="space-y-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-32 bg-gray-50 rounded-3xl animate-pulse" />
+          ))}
+        </div>
+      ) : leads.length === 0 ? (
+        <div className="bg-white rounded-[2.5rem] border border-gray-100 p-12 text-center">
+          <div className="w-16 h-16 bg-gray-50 rounded-3xl flex items-center justify-center mx-auto mb-4">
+            <MessageSquare className="text-gray-300" size={32} />
+          </div>
+          <h3 className="font-bold text-gray-900 mb-1">No Shared Leads Yet</h3>
+          <p className="text-xs text-gray-500">Inquiries matched by admin will appear here.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {leads.map((l, idx) => (
+            <motion.div
+              key={l.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.05 }}
+              className="bg-white rounded-[2rem] border border-gray-100 p-4 shadow-sm hover:border-accent/30 transition-all group"
+            >
+              {/* Top Row: Buyer info & Actions */}
+              <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+                <div className="flex gap-3">
+                  <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-accent shrink-0">
+                    <Zap size={18} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-black text-gray-900 text-sm uppercase tracking-tight">{l.buyer_name}</h4>
+                      <span className="text-[7px] bg-accent/10 text-accent px-1.5 py-0.5 rounded-full font-black uppercase tracking-widest">Verified</span>
+                    </div>
+                    <div className="text-[10px] font-bold text-gray-400 mt-0.5">
+                      {l.city}, {l.state} • {new Date(l.assigned_at || l.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
+                  <a 
+                    href={`tel:${l.phone}`}
+                    className="w-8 h-8 flex items-center justify-center bg-gray-50 text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-all"
+                    title="Call Buyer"
+                  >
+                    <Phone size={14} />
+                  </a>
+                  <a 
+                    href={`mailto:${l.buyer_email}`}
+                    className="w-8 h-8 flex items-center justify-center bg-gray-50 text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-all"
+                    title="Email Buyer"
+                  >
+                    <Mail size={14} />
+                  </a>
+                  <a 
+                    href={`https://wa.me/91${l.phone}?text=Hello ${l.buyer_name}, I am contacting you regarding your inquiry for ${l.product_name} on Packaging Bazaar.`}
+                    target="_blank"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#25D366] text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-[#128C7E] transition-all shadow-md shadow-green-100"
+                  >
+                    <Icon d={icons.whatsapp} size={13} stroke="none" fill="white" /> 
+                    <span className="hidden xs:block">WhatsApp</span>
+                  </a>
+                </div>
+              </div>
+
+              {/* Requirement & Specs Row */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-gray-50 pt-3">
+                <div className="min-w-0">
+                  <div className="text-[10px] font-black text-gray-400 uppercase tracking-tighter mb-1">Looking for:</div>
+                  <div className="text-xs font-bold text-gray-800 truncate">{l.product_name}</div>
+                </div>
+                
+                <div className="flex flex-wrap gap-2">
+                  {l.quantity_required && (
+                    <div className="text-[9px] font-black text-gray-600 bg-gray-50 px-2 py-1 rounded border border-gray-100">
+                      QTY: <span className="text-accent">{l.quantity_required}</span>
+                    </div>
+                  )}
+                  {l.thickness && (
+                    <div className="text-[9px] font-black text-gray-600 bg-gray-50 px-2 py-1 rounded border border-gray-100">
+                      THICK: <span className="text-accent">{l.thickness}</span>
+                    </div>
+                  )}
+                  {l.width && (
+                    <div className="text-[9px] font-black text-gray-600 bg-gray-50 px-2 py-1 rounded border border-gray-100">
+                      WIDTH: <span className="text-accent">{l.width}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Message Box */}
+              <div className="mt-3 p-3 bg-gray-50/50 rounded-xl border border-dashed border-gray-100">
+                <p className="text-[10px] text-gray-500 italic leading-relaxed line-clamp-2 group-hover:line-clamp-none transition-all">
+                  "{l.message}"
+                </p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
       )}
     </div>
   );

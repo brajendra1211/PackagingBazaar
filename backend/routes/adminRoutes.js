@@ -9,6 +9,8 @@ import {
   addSellerAdmin, updateSellerDetailsAdmin,
   createCategory, deleteCategory, createSubCategory, deleteSubCategory
 } from "../controllers/adminController.js";
+import { getAllContactMessages, updateContactStatus } from "../controllers/contactController.js";
+import { shareLeadToSeller } from "../controllers/inquiryController.js";
 import { deleteProduct } from "../controllers/productController.js";
 import { verifyToken, isAdmin } from "../middlewares/authMiddleware.js";
 import upload from "../middlewares/uploadMiddleware.js";
@@ -50,11 +52,16 @@ router.get("/orders/seller/:sellerId", verifyToken, isAdmin, getSellerOrdersAdmi
 router.get("/inquiries", verifyToken, isAdmin, getAllInquiriesAdmin);
 router.patch("/inquiries/:id", verifyToken, isAdmin, updateInquiryStatus);
 router.get("/inquiries/:id/recommendations", verifyToken, isAdmin, getRecommendedSellers);
+router.patch("/inquiries/:id/share", verifyToken, isAdmin, shareLeadToSeller);
 
 // --- Category & SubCategory Management ---
 router.post("/categories", verifyToken, isAdmin, createCategory);
 router.delete("/categories/:id", verifyToken, isAdmin, deleteCategory);
 router.post("/subcategories", verifyToken, isAdmin, createSubCategory);
 router.delete("/subcategories/:id", verifyToken, isAdmin, deleteSubCategory);
+
+// --- Contact Inquiries Management ---
+router.get("/contacts", verifyToken, isAdmin, getAllContactMessages);
+router.put("/contacts/:id", verifyToken, isAdmin, updateContactStatus);
 
 export default router;
