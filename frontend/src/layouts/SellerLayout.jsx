@@ -447,11 +447,17 @@ export default function SellerLayout() {
             </div>
             
             <button
-              onClick={() => window.open(`https://wa.me/919540248705?text=Hello%20Admin,%20I%20want%20to%20add%20a%20product%20on%20PackagingBazaar.`, "_blank")}
-              className="flex items-center gap-1.5 bg-[#25D366] text-white px-3 py-2 rounded-xl text-[11px] font-black hover:bg-[#128C7E] transition-all shadow-md shadow-green-200/50 uppercase tracking-tighter"
+              onClick={() => {
+                const name = (seller.ownerName || "").toUpperCase();
+                const bName = (seller.businessName || "").toUpperCase();
+                const uid = (seller.uid || "").toUpperCase();
+                const msg = `Hello Admin, I am *${name}* from *${bName}* (ID: *${uid}*). I want to add a product on PackagingBazaar.`;
+                window.open(`https://wa.me/919540248705?text=${encodeURIComponent(msg)}`, "_blank");
+              }}
+              className="flex flex-row items-center gap-1.5 bg-[#25D366] text-white px-3 py-2 rounded-xl text-[11px] font-black hover:bg-[#128C7E] transition-all shadow-md shadow-green-200/50 uppercase tracking-tighter whitespace-nowrap"
             >
-              <Icon d={icons.whatsapp} size={14} stroke="none" fill="white" />
-              <span className="hidden sm:block">Support</span>
+              <Icon d={icons.whatsapp} size={14} stroke="none" fill="white" className="shrink-0" />
+              <span className="leading-none">Add Product</span>
             </button>
 
             <div className="h-6 w-[1px] bg-gray-200 mx-1 hidden sm:block" />
