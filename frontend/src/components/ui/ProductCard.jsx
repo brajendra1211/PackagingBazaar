@@ -83,41 +83,47 @@ export default function ProductCard({ product, onInquiry }) {
         >
           {product.name}
         </h3>
-        <p className="text-[10px] sm:text-[11px] md:text-[13px] text-ink3 mb-1.5 line-clamp-2 md:line-clamp-3 leading-relaxed h-8 sm:h-9 md:h-12 overflow-hidden">
+        <p className="text-[10px] sm:text-[11px] md:text-[12px] text-slate-500 mb-1.5 line-clamp-2 leading-relaxed overflow-hidden h-[2.5rem] sm:h-[2.8rem]">
           {product.description}
         </p>
-        <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t border-black/[0.02]">
-           {/* Thickness and Width hidden on home card as requested */}
-           {product.color && product.color !== 'N/A' && (
-             <span className="text-[7px] font-black bg-slate-900 text-white px-3 py-1 rounded uppercase tracking-tighter shadow-sm">{product.color}</span>
+        <div className="flex items-center gap-3 mt-2.5 mb-1.5 animate-fadeIn">
+          <StarRating 
+            rating={Number(product.avg_rating) || 0} 
+            reviews={Number(product.review_count) || 0} 
+          />
+          
+          {product.color && product.color !== 'N/A' && (
+             <span className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-50 border border-black/[0.05] text-[9px] font-black text-slate-900 uppercase tracking-tight">
+               <div className={`w-1.5 h-1.5 rounded-full shadow-inner ${
+                 product.color.toLowerCase().includes('silver') ? 'bg-slate-300' :
+                 product.color.toLowerCase().includes('gold') ? 'bg-amber-400' :
+                 product.color.toLowerCase().includes('white') ? 'bg-white border border-gray-200' :
+                 product.color.toLowerCase().includes('black') ? 'bg-black' :
+                 product.color.toLowerCase().includes('transparent') ? 'bg-blue-50 border border-blue-100' :
+                 'bg-accent'
+               }`} />
+               {product.color}
+             </span>
            )}
         </div>
         
-        <StarRating 
-          rating={Number(product.avg_rating) || 0} 
-          reviews={Number(product.review_count) || 0} 
-        />
-        
-        <div className="flex items-center gap-2 mt-2 mb-1">
+        <div className="flex flex-col gap-1.5 mt-2 mb-1">
           {product.seller_count > 1 && (
-            <span className="text-[10px] font-bold text-accent bg-accent/5 px-2 py-0.5 rounded border border-accent/10">
-              {product.seller_count} Sellers Available
+            <span className="w-full text-[11px] text-center font-black text-orange-700 bg-orange-50 px-2.5 py-1.5 rounded-lg border border-orange-200 shadow-sm animate-fadeIn">
+             + {product.seller_count} Sellers Available
             </span>
           )}
           
           {product.variant_count > 1 && (
-            <>
-              {product.seller_count > 1 && <span className="text-gray-300">•</span>}
-              <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                {product.variant_count} Variants
-              </span>
-            </>
+            <span className="w-full text-[11px] font-black text-blue-700 bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-200 shadow-sm animate-fadeIn">
+              {product.variant_count} Variants Available
+            </span>
           )}
         </div>
         
         <div className="mt-auto pt-3 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex flex-col">
+            <div className="flex items-baseline gap-1.5">
               <div className="flex items-baseline gap-1">
                 <span className="font-syne font-black text-sm lg:text-base text-ink">
                   ₹{product.min_price}
@@ -127,7 +133,7 @@ export default function ProductCard({ product, onInquiry }) {
                   ₹{product.max_price}
                 </span>
               </div>
-              <span className="text-[9px] sm:text-[10px] text-gray-400 font-bold uppercase">
+              <span className="text-[9px] sm:text-[10px] text-gray-400 font-bold uppercase shrink-0">
                 /{product.unit}
               </span>
             </div>

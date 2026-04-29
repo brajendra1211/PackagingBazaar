@@ -9,9 +9,9 @@ export default function HomePage() {
   return (
     <>
       <HeroSection/>
-      <TrendingProducts/>
       <FeaturedProducts/>
       <TopSelling/>
+      <TrendingProducts/>
       <WhyChooseUs/>
       <ReviewSection/>
     </>

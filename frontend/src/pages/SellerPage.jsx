@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Store, ShieldCheck, MapPin, Send, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { fetchProducts } from "../services/productServices";
+import { fetchProductsForSellers } from "../services/productServices";
 import ProductCard from "../components/ui/ProductCard";
 import InquiryModal from "../components/ui/InquiryModal";
 import { motion } from "framer-motion";
@@ -19,25 +19,26 @@ export default function SellerPage() {
     const loadManufacturers = async () => {
       setLoading(true);
       try {
-        // Fetch a large chunk of products to extract sellers
-        const res = await fetchProducts({ limit: 100 });
+        // Fetch products using dedicated seller endpoint
+        const res = await fetchProductsForSellers({ limit: 300 });
         if (res.success) {
-          // Group products by seller, ignoring those without real seller info
-          const validProducts = res.data.filter(p => p.seller_uid && p.seller_name);
-          const grouped = validProducts.reduce((acc, product) => {
+          // Group products by seller in the frontend
+          const grouped = res.data.reduce((acc, product) => {
             const sid = product.seller_id;
-            if (!acc[sid]) {
-              acc[sid] = {
-                id: sid,
-                name: product.seller_name,
-                city: product.city,
-                state: product.state,
-                seller_uid: product.seller_uid,
-                is_verified: true,
-                products: []
-              };
+            if (sid && product.seller_name) {
+              if (!acc[sid]) {
+                acc[sid] = {
+                  id: sid,
+                  name: product.seller_name,
+                  city: product.city,
+                  state: product.state,
+                  seller_uid: product.seller_uid,
+                  is_verified: product.is_verified,
+                  products: []
+                };
+              }
+              acc[sid].products.push(product);
             }
-            acc[sid].products.push(product);
             return acc;
           }, {});
           

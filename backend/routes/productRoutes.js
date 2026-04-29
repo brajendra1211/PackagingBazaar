@@ -16,6 +16,7 @@ import {
   getHotDeals,
   getUniqueProductNames,
   getSellersByGroupKey,
+  getProductsBySellers, // NEW
   getProductGroups,
   createProductGroup,
   getTrendingProducts
@@ -28,14 +29,19 @@ router.get("/tags", getTags);
 router.get("/applications", getApplications);
 router.get("/product-groups", getProductGroups);
 router.post("/product-groups", verifyToken, isAdmin, createProductGroup);
+
+// Static product routes MUST come before dynamic :id routes
 router.get("/products", getAllProducts);
+router.get("/products/sellers-view", getProductsBySellers); // NEW
 router.get("/products/top-selling", getTopSellingProducts);
 router.get("/products/hot-deals", getHotDeals);
 router.get("/products/trending", getTrendingProducts);
 router.get("/products/names", getUniqueProductNames);
+router.get("/products/group/:groupKey/sellers", getSellersByGroupKey); // FIXED: moved before /:id
+
+// Dynamic routes (must be LAST)
 router.get("/products/:id", getProductById);
 router.get("/products/:id/variants", getProductVariants);
-router.get("/products/group/:groupKey/sellers", getSellersByGroupKey);
 
 // Protected Routes (Seller & Admin)
 router.post("/products/add", verifyToken, isSeller, addProduct);

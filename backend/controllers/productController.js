@@ -195,7 +195,7 @@ export const getApplications = async (req, res) => {
   }
 };
 
-// 1. Get All Products (With Filters & Pagination)
+// 1. Get All Products (With Filters & Pagination) - Grouped by Product Group
 export const getAllProducts = async (req, res) => {
   try {
     const {
@@ -288,7 +288,7 @@ export const getAllProducts = async (req, res) => {
     // Pagination
     dataQuery += ` LIMIT ? OFFSET ?`;
 
-    // Count Query - same JOIN chain as dataQuery to correctly filter by category
+    // Count Query
     const countQuery = `
       SELECT COUNT(DISTINCT p.id) as total 
       FROM products p
@@ -324,20 +324,87 @@ export const getAllProducts = async (req, res) => {
   }
 };
 
+// NEW: Get Products specifically for Seller Page (No group collapsing)
+export const getProductsBySellers = async (req, res) => {
+  try {
+    const { limit = 200 } = req.query;
+    
+    // Simple query to get all individual products with seller info
+    // We group by p.id to ensure every product variant is its own row
+    const query = `
+      SELECT 
+        p.id as id,
+        MAX(p.name) as name,
+        MAX(p.display_name) as display_name,
+        MAX(p.image_url) as image_url,
+        MAX(p.group_key) as group_key,
+        MAX(s.is_verified) as is_verified,
+        COALESCE(MIN(sp.price_min), MIN(p.min_price), 0) as min_price,
+        COALESCE(MAX(sp.price_max), MAX(p.max_price), 0) as max_price,
+        COALESCE(SUM(sp.stock_qty), MAX(ps.quantity), 0) as stock, 
+        COALESCE(MIN(sp.moq), MIN(ps.min_order), 100) as min_order,
+        MAX(s.company_name) as seller_name, 
+        MAX(s.seller_uid) as seller_uid,
+        MAX(s.id) as seller_id,
+        MAX(s.city) as city, 
+        MAX(s.state) as state
+      FROM products p
+      LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.status = 'active'
+      LEFT JOIN product_stocks ps ON p.id = ps.product_id
+      LEFT JOIN sellers s ON s.id = COALESCE(sp.seller_id, p.seller_id)
+      WHERE s.id IS NOT NULL
+      GROUP BY p.id, s.id
+      ORDER BY s.id ASC, p.id ASC
+      LIMIT ?
+    `;
+
+    const [rows] = await pool.query(query, [parseInt(limit)]);
+
+    res.status(200).json({
+      success: true,
+      data: rows,
+    });
+  } catch (error) {
+    console.error("Error in getProductsBySellers:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
 // 2. Get Single Product by ID (Corrected Export)
 export const getProductById = async (req, res) => {
   try {
     const { id } = req.params;
+    const { sellerId } = req.query;
 
-    // controllers/productController.js me sirf query wali string badal lo
     const query = `
   SELECT p.*, MAX(t.tag_name) as tag_name, MAX(sc.name) as subcategory_name, MAX(c.name) as category_name,
          sc.category_id,
-         COALESCE(MIN(sp.price_min), p.min_price, 0) as min_price,
-         COALESCE(MAX(sp.price_max), p.max_price, 0) as max_price,
-         COALESCE(SUM(sp.stock_qty), MAX(ps.quantity), 0) as stock, 
-         COALESCE(MIN(sp.moq), MIN(ps.min_order), 100) as min_order,
-         SUBSTRING_INDEX(GROUP_CONCAT(s.seller_uid ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_uid, SUBSTRING_INDEX(GROUP_CONCAT(s.company_name ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_name, SUBSTRING_INDEX(GROUP_CONCAT(s.id ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_id,
+         COALESCE(
+           MIN(CASE WHEN ? IS NULL OR s.id = ? THEN sp.price_min ELSE NULL END), 
+           MIN(sp.price_min),
+           p.min_price, 
+           0
+         ) as min_price,
+         COALESCE(
+           MAX(CASE WHEN ? IS NULL OR s.id = ? THEN sp.price_max ELSE NULL END), 
+           MAX(sp.price_max),
+           p.max_price, 
+           0
+         ) as max_price,
+         COALESCE(
+           SUM(CASE WHEN ? IS NULL OR s.id = ? THEN sp.stock_qty ELSE 0 END), 
+           MAX(ps.quantity), 
+           0
+         ) as stock, 
+         COALESCE(
+           MIN(CASE WHEN ? IS NULL OR s.id = ? THEN sp.moq ELSE NULL END), 
+           MIN(ps.min_order), 
+           100
+         ) as min_order,
+         SUBSTRING_INDEX(GROUP_CONCAT(s.seller_uid ORDER BY (s.id = ?) DESC, sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_uid, 
+         SUBSTRING_INDEX(GROUP_CONCAT(s.company_name ORDER BY (s.id = ?) DESC, sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_name, 
+         SUBSTRING_INDEX(GROUP_CONCAT(s.id ORDER BY (s.id = ?) DESC, sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_id,
+         MAX(CASE WHEN ? IS NULL OR s.id = ? THEN s.is_verified ELSE 0 END) as is_verified,
          (SELECT AVG(rating) FROM product_reviews WHERE product_id = p.id) as avg_rating,
          (SELECT COUNT(*) FROM product_reviews WHERE product_id = p.id) as review_count,
          COALESCE(GROUP_CONCAT(DISTINCT a.app_name), '') as applications 
@@ -354,7 +421,15 @@ export const getProductById = async (req, res) => {
   GROUP BY p.id
 `;
 
-    const [rows] = await pool.query(query, [id]);
+    const [rows] = await pool.query(query, [
+      sellerId || null, sellerId || null, 
+      sellerId || null, sellerId || null, 
+      sellerId || null, sellerId || null, 
+      sellerId || null, sellerId || null,
+      sellerId || null, sellerId || null, sellerId || null,
+      sellerId || null, sellerId || null,
+      id
+    ]);
 
     if (rows.length === 0) {
       return res
@@ -857,6 +932,7 @@ export const getSellersByGroupKey = async (req, res) => {
         MAX(s.city) as city, 
         MAX(s.state) as state, 
         MAX(s.pincode) as pincode,
+        MAX(s.is_verified) as is_verified,
         MAX(u.name) as owner_name, 
         MAX(u.mobile) as phone, 
         MAX(u.email) as email,

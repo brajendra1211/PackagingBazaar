@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 // FIX: Changed import path to productServices
 import {
@@ -35,6 +35,8 @@ const catColors = {
 export default function ProductDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const sellerId = searchParams.get("sellerId");
   const { addToCart } = useCart();
 
   const [product, setProduct] = useState(null);
@@ -62,7 +64,7 @@ export default function ProductDetailPage() {
       setLoading(true);
       try {
         // 1. Fetch main product details
-        const res = await fetchProductById(id);
+        const res = await fetchProductById(id, sellerId);
         // Safe data handling
         const productData = res.data || res;
         setProduct(productData);
@@ -108,7 +110,7 @@ export default function ProductDetailPage() {
 
     getDetails();
     window.scrollTo(0, 0);
-  }, [id]);
+  }, [id, sellerId]);
 
   const handleAdd = () => {
     if (product) {
@@ -191,17 +193,6 @@ export default function ProductDetailPage() {
                   {product.category_name}{" "}
                   {product.subcategory_name && `· ${product.subcategory_name}`}
                 </span>
-                <div className="flex items-center gap-1.5 bg-gray-50 text-gray-500 px-3 py-1 rounded-full border border-gray-100 shadow-sm">
-                  <span className="text-[10px] sm:text-[11px] font-bold">
-                    Sold by: {product.seller_name}
-                  </span>
-                  {product.is_verified ? (
-                    <ShieldCheck
-                      size={12}
-                      className="text-green-500 shrink-0"
-                    />
-                  ) : null}
-                </div>
               </div>
               <h1 className="font-syne font-black text-3xl sm:text-4xl lg:text-5xl text-ink mb-3 leading-tight uppercase tracking-tight">
                 {product.name}
@@ -442,8 +433,14 @@ export default function ProductDetailPage() {
                             <div>
                               <p className="font-black text-gray-900 text-sm leading-tight">{s.company_name}</p>
                               <div className="flex items-center gap-1 mt-0.5">
-                                <ShieldCheck size={10} className="text-green-500" />
-                                <span className="text-[9px] font-bold text-gray-400 uppercase">Verified Supplier</span>
+                                {s.is_verified ? (
+                                  <>
+                                    <ShieldCheck size={10} className="text-green-500" />
+                                    <span className="text-[9px] font-bold text-gray-400 uppercase">Verified Supplier</span>
+                                  </>
+                                ) : (
+                                  <span className="text-[9px] font-bold text-gray-400 uppercase">Standard Supplier</span>
+                                )}
                               </div>
                             </div>
                             {s.product_id === product.id && (
@@ -472,7 +469,7 @@ export default function ProductDetailPage() {
                         <td className="py-5 text-right">
                           <button 
                             onClick={() => {
-                              navigate(`/products/${s.product_id}`);
+                              navigate(`/products/${s.product_id}?sellerId=${s.seller_id}`);
                               window.scrollTo(0, 0);
                             }}
                             className="px-6 py-2.5 bg-white border border-black/10 text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white transition-all shadow-sm"
@@ -491,23 +488,25 @@ export default function ProductDetailPage() {
 
         {/* All Variants Reflection Section */}
         {variants?.length > 0 && (
-          <div className="mt-10 bg-gray-50 rounded-[2.5rem] p-6 md:p-8 border border-black/[0.03]">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-              <div>
-                <h3 className="font-syne font-black text-xl text-gray-900">
+          <div className="mt-12 bg-slate-50/50 rounded-[3rem] p-8 md:p-12 border border-slate-100">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+              <div className="space-y-1">
+                <h3 className="font-syne font-black text-2xl text-gray-900 uppercase tracking-tight">
                   Available Variations
                 </h3>
-                <p className="text-[11px] text-gray-500 font-medium">
-                  Explore different specifications and sizes for this material
+                <p className="text-[11px] text-gray-500 font-medium uppercase tracking-widest">
+                  Explore different specifications for this material
                 </p>
               </div>
-              <div className="h-px flex-1 bg-gray-200/50 mx-6 hidden md:block"></div>
-              <span className="text-[10px] font-black text-accent uppercase tracking-widest bg-white px-3 py-1.5 rounded-full border border-gray-100 shadow-xs">
-                {variants.length} Variations Available
-              </span>
+              <div className="flex items-center gap-4">
+                <div className="h-px w-24 bg-slate-200 hidden md:block"></div>
+                <span className="text-[10px] font-black text-accent uppercase tracking-widest bg-white px-5 py-2.5 rounded-full border border-slate-100 shadow-sm">
+                  {variants.length} Variations Found
+                </span>
+              </div>
             </div>
 
-            <div className="grid lg:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-4">
               {variants.map((v) => (
                 <div
                   key={v.id}
@@ -515,37 +514,48 @@ export default function ProductDetailPage() {
                     navigate(`/products/${v.id}`);
                     window.scrollTo(0, 0);
                   }}
-                  className="bg-white p-3 rounded-2xl flex items-center gap-3 hover:shadow-lg hover:shadow-black/5 transition-all cursor-pointer group border border-transparent hover:border-accent/10"
+                  className="bg-white p-4 rounded-[2rem] flex items-center gap-5 hover:shadow-xl hover:shadow-black/5 transition-all cursor-pointer group border border-transparent hover:border-accent/10 active:scale-[0.99]"
                 >
-                  <div className="w-14 h-14 bg-gray-50 rounded-xl overflow-hidden flex-shrink-0 border border-gray-100 p-1.5">
+                  <div className="w-20 h-20 bg-slate-50 rounded-2xl overflow-hidden flex-shrink-0 border border-slate-100 p-2 relative">
                     <img
                       src={getImageUrl(v.image_url)}
                       alt={v.name}
-                      className="w-full h-full object-contain group-hover:scale-110 transition-transform"
+                      className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
                       onError={(e) => {
-                        // Real path fallback
                         e.target.src = getImageUrl(product.image_url);
                       }}
                     />
+                    <div className="absolute inset-0 bg-accent/0 group-hover:bg-accent/5 transition-colors duration-500" />
                   </div>
+                  
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-[14px] text-gray-900 pr-4">
-                      {v.name} {v.color && `(${v.color})`}
-                    </h4>
-                    <div className="flex gap-2 mt-1">
-                      <span className="text-[9px] font-black text-accent uppercase tracking-tighter bg-accent/5 px-2 py-0.5 rounded">
-                        {v.seller_name || "Verified Seller"}
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="text-[8px] font-black bg-accent text-white px-2 py-0.5 rounded uppercase tracking-tighter shadow-sm shadow-accent/20">
+                        {v.thickness || "N/A"} Mc
                       </span>
-                      <span className="text-[9px] font-black text-gray-400 border-l border-gray-200 pl-2 uppercase tracking-tighter">
-                        Micron: {v.thickness || "N/A"}
+                      <span className="text-[8px] font-black bg-slate-900 text-white px-2 py-0.5 rounded uppercase tracking-tighter">
+                        {v.color || "Standard"}
                       </span>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-accent font-black text-xs">₹{v.min_price} - ₹{v.max_price}</p>
-                    <p className="text-[8px] text-gray-400 font-bold">
-                      In Stock
+                    <h4 className="font-black text-base text-gray-900 truncate leading-tight mb-1">
+                      {v.name}
+                    </h4>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">
+                       {v.seller_name || "Verified Manufacturer"}
                     </p>
+                  </div>
+
+                  <div className="text-right border-l border-slate-50 pl-5">
+                    <div className="text-accent font-black text-sm">
+                      ₹{v.min_price}
+                    </div>
+                    <div className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">
+                      Per {product.unit}
+                    </div>
+                    <div className="mt-2 text-[8px] font-black text-green-500 uppercase flex items-center justify-end gap-1">
+                      <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse" />
+                      In Stock
+                    </div>
                   </div>
                 </div>
               ))}

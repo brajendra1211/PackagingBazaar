@@ -5,13 +5,20 @@ export const fetchProducts = async (params) => {
   return response.data;
 };
 
+export const fetchProductsForSellers = async (params) => {
+  const response = await API.get("/products/sellers-view", { params });
+  return response.data;
+};
+
 export const fetchCategories = async () => {
   const response = await API.get("/categories");
   return response.data;
 };
 
-export const fetchProductById = async (id) => {
-  const response = await API.get(`/products/${id}`);
+export const fetchProductById = async (id, sellerId) => {
+  const response = await API.get(`/products/${id}`, { 
+    params: { sellerId } 
+  });
   return response.data;
 };
 
