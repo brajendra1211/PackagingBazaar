@@ -178,7 +178,7 @@ export default function ProductDetailPage() {
               <img
                 src={getImageUrl(product.image_url)}
                 alt={product.name}
-                className="w-full h-full object-contain p-6 sm:p-10 lg:p-12 hover:scale-105 transition-transform duration-500"
+                className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
               />
               <div className="absolute top-4 left-4">
                 <Badge tag={product.tag_name} />

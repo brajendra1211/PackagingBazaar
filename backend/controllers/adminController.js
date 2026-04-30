@@ -711,6 +711,15 @@ export const getRecommendedSellers = async (req, res) => {
           WHEN s.pincode = ? THEN 200
           WHEN LOWER(s.city) = LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(s.city), '%') THEN 100 
           WHEN LOWER(s.state) = LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(s.state), '%') THEN 50 
+          -- Regional Match (NCR Awareness - Delhi, Noida, Ghaziabad, Gurgaon etc)
+          WHEN (
+            (LOWER(?) LIKE '%delhi%' OR LOWER(?) LIKE '%ncr%') AND 
+            (LOWER(s.city) IN ('ghaziabad', 'noida', 'greater noida', 'gurgaon', 'gurugram', 'faridabad', 'sonepat', 'bahadurgarh'))
+          ) THEN 150
+          WHEN (
+            (LOWER(s.city) LIKE '%delhi%' OR LOWER(s.state) LIKE '%delhi%') AND 
+            (LOWER(?) IN ('ghaziabad', 'noida', 'greater noida', 'gurgaon', 'gurugram', 'faridabad', 'sonepat', 'bahadurgarh'))
+          ) THEN 150
           ELSE 0 
         END + 
         -- Category Match
@@ -762,6 +771,9 @@ export const getRecommendedSellers = async (req, res) => {
       lead.pincode,
       lead.city, lead.address, 
       lead.state, lead.address, 
+      // Parameters for NCR Matching
+      lead.state, lead.state,
+      lead.city,
       lead.category_id,
       leadQty, // for stock score
       leadQty, // for moq score

@@ -47,13 +47,13 @@ export default function ProductCard({ product, onInquiry }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-black/[0.07] overflow-hidden hover:-translate-y-1 hover:shadow-xl transition-all duration-200 group flex flex-col h-full">
+    <div className={`bg-white rounded-2xl border border-black/[0.07] overflow-hidden transition-all duration-200 group flex flex-col h-full relative ${!showOptions ? "hover:-translate-y-1 hover:shadow-xl" : "shadow-2xl"}`}>
       {/* Image area */}
       <div
         className={`bg-gradient-to-br ${grad} h-36 sm:h-48 md:h-52 flex items-center justify-center relative cursor-pointer overflow-hidden shrink-0`}
         onClick={handleImageClick}
       >
-        <div className="absolute top-2 left-2 sm:top-3 sm:left-3 z-10">
+        <div className="absolute top-2 left-2 sm:top-3 sm:left-3 z-20">
           <Badge tag={product.tag_name} /> 
         </div>
         
@@ -74,17 +74,16 @@ export default function ProductCard({ product, onInquiry }) {
         
         {/* Removed Image Badges for a cleaner look as requested */}
 
-        {/* Database Image */}
-        <div className="relative w-full h-full flex items-center justify-center p-4 z-10">
+        <div className="relative w-full h-full z-10">
           <img
             src={getImageUrl(product.image_url)} 
             alt={product.name}
-            className="max-w-full max-h-full object-contain group-hover:scale-105 transition-all duration-500"
+            className="w-full h-full object-cover group-hover:scale-105 transition-all duration-500"
           />
         </div>
 
         {/* Category chip */}
-        <div className="absolute bottom-2 left-2 sm:bottom-3 sm:left-3 z-10">
+        <div className="absolute bottom-2 left-2 sm:bottom-3 sm:left-3 z-20">
           <span className="text-[8px] sm:text-[10px] font-semibold px-1.5 sm:px-2 py-0.5 rounded-full bg-white/80 backdrop-blur-sm text-ink2 border border-black/[0.07]">
             {categoryName} · {product.subcategory_name} 
           </span>
