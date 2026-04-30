@@ -108,8 +108,8 @@ export const fetchLeadRecommendations = async (id) => {
   return response.data;
 };
 
-export const shareLeadWithSellerAdmin = async (id, sellerId = null) => {
-  const response = await API.patch(`/admin/inquiries/${id}/share`, { seller_id: sellerId });
+export const shareLeadWithSellerAdmin = async (id, sellerId = null, assignmentNote = "") => {
+  const response = await API.patch(`/admin/inquiries/${id}/share`, { seller_id: sellerId, assignment_note: assignmentNote });
   return response.data;
 };
 

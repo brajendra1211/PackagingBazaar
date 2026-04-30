@@ -428,6 +428,21 @@ export function SellerLeads() {
                   "{l.message}"
                 </p>
               </div>
+
+              {/* Admin Assignment Note */}
+              {l.assignment_note && (
+                <div className="mt-3 p-3 bg-orange-50/50 rounded-xl border border-orange-100 flex gap-2 items-start">
+                  <div className="w-6 h-6 bg-orange-100 rounded-lg flex items-center justify-center shrink-0 text-accent">
+                    <MessageCircle size={12} />
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-black text-accent uppercase tracking-widest block mb-0.5">Admin Instructions</span>
+                    <p className="text-xs text-gray-800 font-medium leading-relaxed">
+                      {l.assignment_note}
+                    </p>
+                  </div>
+                </div>
+              )}
             </motion.div>
           ))}
         </div>

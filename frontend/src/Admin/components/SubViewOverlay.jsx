@@ -22,6 +22,7 @@ import { getImageUrl } from "../../services/api";
 export default function SubViewOverlay({ entity, onClose }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [shareModal, setShareModal] = useState({ open: false, seller: null, note: "" });
 
   const { notifySuccess, notifyError } = useNotification();
 
@@ -33,11 +34,17 @@ export default function SubViewOverlay({ entity, onClose }) {
     window.open(url, '_blank');
   };
 
-  const handleSendToDashboard = async (seller) => {
+  const handleSendToDashboard = async () => {
     try {
-      const res = await shareLeadWithSellerAdmin(entity.id, seller.id);
+      const res = await shareLeadWithSellerAdmin(entity.id, shareModal.seller.id, shareModal.note);
       if (res.success) {
-        notifySuccess(`Lead shared with ${seller.company_name}!`);
+        notifySuccess(`Lead shared with ${shareModal.seller.company_name}!`);
+        
+        setItems(prevItems => prevItems.map(item => 
+          item.id === shareModal.seller.id ? { ...item, is_assigned: 1 } : item
+        ));
+
+        setShareModal({ open: false, seller: null, note: "" });
       }
     } catch (err) {
       notifyError("Failed to share lead");
@@ -169,12 +176,18 @@ export default function SubViewOverlay({ entity, onClose }) {
                         >
                           <MessageCircle size={14} /> WhatsApp Lead
                         </button>
-                        <button 
-                          onClick={() => handleSendToDashboard(seller)}
-                          className="w-full px-8 py-3 bg-white border-2 border-accent text-accent rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-accent hover:text-white transition-all shadow-lg shadow-orange-100"
-                        >
-                          <Zap size={14} /> Send to Dash
-                        </button>
+                        {seller.is_assigned ? (
+                          <div className="w-full px-8 py-3 bg-orange-50 border-2 border-orange-100 text-orange-600 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 cursor-not-allowed">
+                            <CheckCircle2 size={14} /> Already Sent
+                          </div>
+                        ) : (
+                          <button 
+                            onClick={() => setShareModal({ open: true, seller, note: "" })}
+                            className="w-full px-8 py-3 bg-white border-2 border-accent text-accent rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-accent hover:text-white transition-all shadow-lg shadow-orange-100"
+                          >
+                            <Zap size={14} /> Send to Dash
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -183,6 +196,38 @@ export default function SubViewOverlay({ entity, onClose }) {
           )}
         </div>
       </div>
+
+      {/* Share Modal */}
+      {shareModal.open && (
+        <div className="fixed inset-0 z-[200] bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl relative">
+            <h3 className="font-syne font-black text-xl text-gray-900 uppercase mb-2">Share with {shareModal.seller?.company_name}</h3>
+            <p className="text-xs text-gray-500 font-medium mb-6">Add an optional message or instruction for the seller. They will see this on their dashboard.</p>
+            
+            <textarea
+              value={shareModal.note}
+              onChange={(e) => setShareModal({ ...shareModal, note: e.target.value })}
+              placeholder="e.g. Urgent requirement, please call today..."
+              className="w-full text-sm text-gray-700 p-4 rounded-2xl border border-gray-200 bg-gray-50 outline-none focus:border-accent resize-none h-32 mb-6"
+            />
+            
+            <div className="flex gap-3 justify-end">
+              <button 
+                onClick={() => setShareModal({ open: false, seller: null, note: "" })}
+                className="px-6 py-3 rounded-xl text-xs font-black uppercase text-gray-500 hover:bg-gray-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSendToDashboard}
+                className="px-6 py-3 rounded-xl text-xs font-black uppercase bg-accent text-white hover:bg-accent/90 transition-colors flex items-center gap-2"
+              >
+                <Zap size={14} /> Send Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

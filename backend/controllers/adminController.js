@@ -730,7 +730,8 @@ export const getRecommendedSellers = async (req, res) => {
       (s.pincode = ?) as pincode_match,
       EXISTS (SELECT 1 FROM seller_products sp2 WHERE sp2.seller_id = s.id AND sp2.stock_qty >= ? ) as has_stock,
       EXISTS (SELECT 1 FROM seller_products sp3 WHERE sp3.seller_id = s.id AND sp3.moq <= ? ) as moq_fit,
-      EXISTS (SELECT 1 FROM seller_products sp4 WHERE sp4.seller_id = s.id AND sp4.price_min <= (SELECT COALESCE(AVG(price_min), sp4.price_min) FROM seller_products WHERE product_id = sp4.product_id) ) as price_match
+      EXISTS (SELECT 1 FROM seller_products sp4 WHERE sp4.seller_id = s.id AND sp4.price_min <= (SELECT COALESCE(AVG(price_min), sp4.price_min) FROM seller_products WHERE product_id = sp4.product_id) ) as price_match,
+      EXISTS (SELECT 1 FROM lead_assignments la WHERE la.seller_id = s.id AND la.inquiry_id = ?) as is_assigned
       FROM sellers s
       JOIN users u ON s.user_id = u.id
       WHERE u.role = 'seller' AND u.is_verified = 1
@@ -749,6 +750,7 @@ export const getRecommendedSellers = async (req, res) => {
       lead.pincode, // pincode_match
       leadQty, // for breakdown has_stock
       leadQty, // for breakdown moq_fit
+      lead.id // is_assigned check
       // price_match subquery uses its own logic
     ]);
 

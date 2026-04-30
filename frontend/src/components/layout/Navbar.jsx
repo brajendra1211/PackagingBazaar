@@ -142,13 +142,18 @@ export default function Navbar() {
   return (
     <nav className="bg-white border-b border-black/[0.07] sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center">
-            <Package size={18} className="text-white" />
+        <Link to="/" className="flex items-center gap-2 sm:gap-2.5 group shrink-0 max-w-[75%] sm:max-w-none">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-accent rounded-xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:shadow-[0_0_15px_rgba(232,81,26,0.3)] group-hover:-translate-y-0.5">
+            <Package size={16} className="text-white sm:w-5 sm:h-5" />
           </div>
-          <span className="font-syne font-black text-lg sm:text-xl text-ink">
-            Packaging<span className="text-accent">Bazaar</span>
-          </span>
+          <div className="flex flex-col min-w-0">
+            <span className="font-syne font-black text-[17px] sm:text-2xl text-ink leading-none tracking-tight pb-0.5 truncate">
+              Packaging<span className="text-accent">Bazaar</span>
+            </span>
+            <span className="text-[7.5px] sm:text-[11px] font-black text-accent tracking-widest uppercase animate-flashing truncate mt-[1px]">
+              We get you Deals, not just leads
+            </span>
+          </div>
         </Link>
 
         <ul className="hidden lg:flex items-center gap-4 xl:gap-8">

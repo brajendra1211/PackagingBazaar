@@ -52,24 +52,23 @@ export default function HeroSection() {
             <span className="w-1.5 h-1.5 bg-accent rounded-full animate-flashing" />
             Premium Packaging Films
           </div>
-          <h1 className="font-syne font-black text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-ink leading-[1.1] mb-3 sm:mb-4 uppercase tracking-tight">
-            BOPP, PET &<br />
-            <span className="text-accent">CPP Laminates</span>
-            <br />
-            for Every Industry
+          <h1 className="font-syne font-black text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-ink leading-[1.1] mb-2 sm:mb-3 uppercase tracking-tight">
+            India's Packaging Films Marketplace
           </h1>
+          <h2 className="text-base sm:text-lg md:text-xl font-bold text-ink2 mb-4 sm:mb-6">
+             Verified sellers. Best price. Deal closed in 45 minutes.
+          </h2>
           <p className="text-sm md:text-base text-ink3 leading-relaxed mb-6 sm:mb-8 max-w-sm sm:max-w-xl">
-            High-quality flexible packaging solutions. Connect with verified 
-            manufacturers and get the best quotes for your business needs.
+            Packaging Bazaar is India's only marketplace built exclusively for packaging films. Whether you're sourcing BOPP, CPP, PET, Shrink, or Stretch film — we connect you directly with factory-checked, GST-verified sellers who are ready to deal today. No middlemen. No wasted leads. Just real deals, fast.
           </p>
 
           {/* Flashing marketing messages */}
-          <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 sm:gap-3 mb-4">
-            <div className="flex items-center gap-1.5 bg-orange-50 text-[#e8511a] px-3 py-1.5 rounded-full border border-orange-100/50 shadow-sm animate-flashing">
+          <div className="flex items-center gap-2 sm:gap-3 mb-4 w-full max-w-2xl">
+            <div className="flex-1 flex items-center justify-center gap-1.5 bg-orange-50 text-[#e8511a] px-3 py-2 rounded-full border border-orange-100/50 shadow-sm animate-flashing">
               <Zap size={10} fill="#e8511a" />
               <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider">24 Hrs dispatch</span>
             </div>
-            <div className="flex items-center gap-1.5 bg-blue-50 text-blue-600 px-3 py-1.5 rounded-full border border-blue-100/50 shadow-sm animate-flashing" style={{ animationDelay: "0.5s" }}>
+            <div className="flex-1 flex items-center justify-center gap-1.5 bg-blue-50 text-blue-600 px-3 py-2 rounded-full border border-blue-100/50 shadow-sm animate-flashing" style={{ animationDelay: "0.5s" }}>
               <Clock size={10} strokeWidth={3} />
               <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider">45 Min response</span>
             </div>

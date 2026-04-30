@@ -112,7 +112,7 @@ export const getBuyerInquiries = async (req, res) => {
 export const shareLeadToSeller = async (req, res) => {
     try {
         const { id } = req.params; // inquiry_id
-        const { seller_id: providedSellerId } = req.body;
+        const { seller_id: providedSellerId, assignment_note } = req.body;
 
         let seller_id = providedSellerId;
 
@@ -124,8 +124,12 @@ export const shareLeadToSeller = async (req, res) => {
         }
 
         // Insert into lead_assignments (using IGNORE or ON DUPLICATE to avoid duplicates)
-        const query = "INSERT IGNORE INTO lead_assignments (inquiry_id, seller_id) VALUES (?, ?)";
-        await pool.query(query, [id, seller_id]);
+        const query = `
+            INSERT INTO lead_assignments (inquiry_id, seller_id, assignment_note) 
+            VALUES (?, ?, ?) 
+            ON DUPLICATE KEY UPDATE assignment_note = VALUES(assignment_note)
+        `;
+        await pool.query(query, [id, seller_id, assignment_note || null]);
 
         // Also mark the inquiry as assigned (legacy support)
         await pool.query("UPDATE inquiries SET is_assigned = 1, assigned_at = NOW() WHERE id = ?", [id]);
@@ -152,7 +156,7 @@ export const getSellerLeads = async (req, res) => {
 
         // Fetch from lead_assignments table
         const query = `
-            SELECT i.*, p.name as product_name, p.image_url, la.assigned_at
+            SELECT i.*, p.name as product_name, p.image_url, la.assigned_at, la.assignment_note
             FROM lead_assignments la
             JOIN inquiries i ON la.inquiry_id = i.id
             JOIN products p ON i.product_id = p.id
