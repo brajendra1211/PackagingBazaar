@@ -132,7 +132,7 @@ export default function ProductCard({ product, onInquiry }) {
           
           {product.variant_count > 1 && (
             <span className="w-full text-[11px] text-center font-black text-blue-700 bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-200 shadow-sm animate-fadeIn">
-              {product.variant_count} Variants Available
+             + {product.variant_count} Variants Available
             </span>
           )}
         </div>

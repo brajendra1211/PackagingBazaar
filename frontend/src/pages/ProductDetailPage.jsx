@@ -14,6 +14,7 @@ import StarRating from "../components/ui/StarRating";
 import ProductCard from "../components/ui/ProductCard";
 import WhyChooseUs from "../components/sections/WhyChooseUs";
 import InquiryModal from "../components/ui/InquiryModal";
+import ReviewSection from "../components/sections/ReviewSection";
 import {
   ShoppingCart,
   ArrowLeft,
@@ -573,23 +574,20 @@ export default function ProductDetailPage() {
         {/* Related Products Section */}
         {related.length > 0 && (
           <div className="mt-20">
-            <div className="flex items-center gap-3 mb-8">
-              <h2 className="font-syne font-black text-2xl text-ink">
-                Related Products
-              </h2>
-              <div className="h-[2px] flex-1 bg-black/[0.05]"></div>
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl font-syne font-black text-ink uppercase tracking-tight">Related Products</h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {related.map((p) => (
-                <ProductCard
-                  key={p.id}
-                  product={p}
-                  onInquiry={handleOpenInquiry}
-                />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {related.map((item) => (
+                <ProductCard key={item.id} product={item} />
               ))}
             </div>
           </div>
         )}
+
+        {/* Review Section */}
+        <ReviewSection productId={id} />
+
         {/* Inquiry Modal Integration */}
         <InquiryModal
           isOpen={isModalOpen}

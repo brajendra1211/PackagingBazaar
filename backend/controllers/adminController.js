@@ -669,7 +669,11 @@ export const getRecommendedSellers = async (req, res) => {
     
     // 1. Get lead details
     const [leadRows] = await pool.query(
-      "SELECT i.*, p.sub_category_id FROM inquiries i JOIN products p ON i.product_id = p.id WHERE i.id = ?",
+      `SELECT i.*, p.sub_category_id, sc.category_id 
+       FROM inquiries i 
+       JOIN products p ON i.product_id = p.id 
+       LEFT JOIN sub_categories sc ON p.sub_category_id = sc.id
+       WHERE i.id = ?`,
       [id]
     );
 
@@ -709,8 +713,12 @@ export const getRecommendedSellers = async (req, res) => {
           WHEN LOWER(s.state) = LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(s.state), '%') THEN 50 
           ELSE 0 
         END + 
-        -- Sub-Category Match
-        CASE WHEN EXISTS (SELECT 1 FROM products p2 WHERE p2.seller_id = s.id AND p2.sub_category_id = ?) THEN 30 ELSE 0 END +
+        -- Category Match
+        CASE WHEN EXISTS (
+          SELECT 1 FROM products p2 
+          JOIN sub_categories sc2 ON p2.sub_category_id = sc2.id 
+          WHERE p2.seller_id = s.id AND sc2.category_id = ?
+        ) THEN 30 ELSE 0 END +
         -- Smart Matching Scores (from seller_products)
         COALESCE((
           SELECT MAX(
@@ -720,7 +728,16 @@ export const getRecommendedSellers = async (req, res) => {
             -- Price Match (Below Average = points)
             CASE WHEN sp.price_min <= (SELECT COALESCE(AVG(price_min), sp.price_min) FROM seller_products WHERE product_id = sp.product_id) THEN 40 ELSE 0 END +
             -- Thickness Match
-            CASE WHEN EXISTS (SELECT 1 FROM products p3 WHERE p3.id = sp.product_id AND LOWER(p3.thickness) = LOWER(?)) THEN 50 ELSE 0 END
+            CASE WHEN EXISTS (SELECT 1 FROM products p3 WHERE p3.id = sp.product_id AND LOWER(p3.thickness) = LOWER(?)) THEN 50 ELSE 0 END +
+            -- Delivery Speed Match (Tiers)
+            CASE 
+              WHEN sp.delivery_hours IS NULL THEN 0
+              WHEN sp.delivery_hours <= 24 THEN 40
+              WHEN sp.delivery_hours <= 48 THEN 30
+              WHEN sp.delivery_hours <= 72 THEN 20
+              WHEN sp.delivery_hours <= 120 THEN 10
+              ELSE 0 
+            END
           )
           FROM seller_products sp
           WHERE sp.seller_id = s.id AND sp.status = 'active'
@@ -728,26 +745,31 @@ export const getRecommendedSellers = async (req, res) => {
       ) as match_score,
       -- Fetch match breakdown for UI
       (s.pincode = ?) as pincode_match,
+      (LOWER(s.city) = LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(s.city), '%')) as city_match,
+      (LOWER(s.state) = LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(s.state), '%')) as state_match,
       EXISTS (SELECT 1 FROM seller_products sp2 WHERE sp2.seller_id = s.id AND sp2.stock_qty >= ? ) as has_stock,
       EXISTS (SELECT 1 FROM seller_products sp3 WHERE sp3.seller_id = s.id AND sp3.moq <= ? ) as moq_fit,
       EXISTS (SELECT 1 FROM seller_products sp4 WHERE sp4.seller_id = s.id AND sp4.price_min <= (SELECT COALESCE(AVG(price_min), sp4.price_min) FROM seller_products WHERE product_id = sp4.product_id) ) as price_match,
+      (SELECT MIN(delivery_hours) FROM seller_products WHERE seller_id = s.id AND status = 'active') as best_delivery_hours,
       EXISTS (SELECT 1 FROM lead_assignments la WHERE la.seller_id = s.id AND la.inquiry_id = ?) as is_assigned
       FROM sellers s
       JOIN users u ON s.user_id = u.id
       WHERE u.role = 'seller' AND u.is_verified = 1
-      ORDER BY match_score DESC, s.company_name ASC
+      ORDER BY match_score DESC, best_delivery_hours ASC, s.company_name ASC
     `;
 
     const [sellers] = await pool.query(query, [
       lead.pincode,
       lead.city, lead.address, 
       lead.state, lead.address, 
-      lead.sub_category_id,
+      lead.category_id,
       leadQty, // for stock score
       leadQty, // for moq score
       leadWidth,
       leadThickness,
       lead.pincode, // pincode_match
+      lead.city, lead.address, // city_match
+      lead.state, lead.address, // state_match
       leadQty, // for breakdown has_stock
       leadQty, // for breakdown moq_fit
       lead.id // is_assigned check
@@ -813,8 +835,13 @@ export const addProductForSeller = async (req, res) => {
   const { 
     name, display_name, product_group_id, category, subcategory, tag, thickness, width, 
     minPrice, maxPrice, unit, description, img, stock, minOrder, applications,
-    delivery_days, payment_terms, color, productType, productCode
+    delivery_hours, payment_terms, color, productType, productCode
   } = req.body;
+
+  const parsedHours = parseInt(delivery_hours);
+  if (isNaN(parsedHours) || parsedHours <= 0) {
+    return res.status(400).json({ success: false, message: "Delivery time must be a valid number of hours (> 0)" });
+  }
 
   const connection = await pool.getConnection();
   try {
@@ -872,14 +899,14 @@ export const addProductForSeller = async (req, res) => {
     // 4. Insert into seller_products (Seller Listing)
     await connection.query(
       `INSERT INTO seller_products 
-       (product_id, seller_id, price_min, price_max, moq, stock_qty, stock, width, delivery_days, payment_terms) 
+       (product_id, seller_id, price_min, price_max, moq, stock_qty, stock, width, delivery_hours, payment_terms) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE 
        price_min = VALUES(price_min), price_max = VALUES(price_max), moq = VALUES(moq), 
-       stock_qty = VALUES(stock_qty), stock = VALUES(stock), delivery_days = VALUES(delivery_days)`,
+       stock_qty = VALUES(stock_qty), stock = VALUES(stock), delivery_hours = VALUES(delivery_hours)`,
       [
         productId, sellerId, minPrice, maxPrice, minOrder || 100, stock || 0,
-        (stock > 0 ? 'Available' : 'Out of Stock'), width, delivery_days || 48, payment_terms
+        (stock > 0 ? 'Available' : 'Out of Stock'), width, parsedHours, payment_terms
       ]
     );
 

@@ -251,6 +251,7 @@ export default function AdminAddProduct() {
         maxPrice: parseFloat(form.maxPrice),
         minOrder: parseInt(form.minOrder),
         stock: parseInt(form.stock),
+        delivery_hours: parseInt(form.deliveryTime),
       };
       const res = await addProductForSeller(selectedSeller.user_id, productData);
       if (res.success) {
@@ -519,10 +520,10 @@ export default function AdminAddProduct() {
                   </Field>
                 </div>
 
-                <div className="pt-6 border-t border-black/[0.04]">
-                   <Field label="Logistics & Delivery" hint="Shipping lead time">
+                 <div className="pt-6 border-t border-black/[0.04]">
+                   <Field label="Logistics & Delivery Time (Hours)" required hint="Numeric value only (e.g. 24, 48)">
                     <div className="relative">
-                      <input className={inputCls + " h-14 font-black pl-12 bg-green-50/30 border-green-100 focus:bg-white"} placeholder="e.g. 3-5 Business Days" value={form.deliveryTime || ""} onChange={(e) => setFormVal("deliveryTime", e.target.value)} />
+                      <input type="number" min="1" required className={inputCls + " h-14 font-black pl-12 bg-green-50/30 border-green-100 focus:bg-white"} placeholder="e.g. 24" value={form.deliveryTime || ""} onChange={(e) => setFormVal("deliveryTime", e.target.value)} />
                       <div className="absolute left-4 top-1/2 -translate-y-1/2 text-green-500">
                          <Store size={18} />
                       </div>
@@ -625,7 +626,7 @@ export default function AdminAddProduct() {
                        </div>
                        <div>
                           <div className="text-[9px] font-black text-slate-500 uppercase mb-1">Delivery</div>
-                          <div className="text-xs font-bold uppercase">{form.deliveryTime || "N/A"}</div>
+                          <div className="text-xs font-bold uppercase">{form.deliveryTime ? `${form.deliveryTime} Hrs` : "N/A"}</div>
                        </div>
                        <div>
                           <div className="text-[9px] font-black text-slate-500 uppercase mb-1">Unit</div>
@@ -796,7 +797,7 @@ export default function AdminAddProduct() {
                          {form.deliveryTime && (
                            <div className="mt-2 p-2 bg-green-50 rounded-xl border border-green-100 flex items-center justify-between animate-slideDown shadow-sm shadow-green-900/[0.02]">
                               <span className="text-[7px] font-black text-green-600/60 uppercase tracking-[0.2em]">Est. Delivery</span>
-                              <span className="text-[8px] font-black text-green-700 uppercase">{form.deliveryTime}</span>
+                              <span className="text-[8px] font-black text-green-700 uppercase">{form.deliveryTime} Hrs</span>
                            </div>
                          )}
                       </div>

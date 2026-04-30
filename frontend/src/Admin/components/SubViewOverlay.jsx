@@ -157,12 +157,18 @@ export default function SubViewOverlay({ entity, onClose }) {
                           <MapPinIcon size={14} className="text-accent" /> {seller.city}, {seller.state}
                         </div>
                         <div className="bg-white/80 rounded-3xl p-6 border border-black/[0.03] space-y-3">
-                           <p className="text-[10px] font-black text-ink uppercase tracking-widest mb-4 flex items-center justify-between">Match Breakdown <span className="text-accent">{seller.match_score} / 420 PTS</span></p>
+                           <p className="text-[10px] font-black text-ink uppercase tracking-widest mb-4 flex items-center justify-between">Match Breakdown <span className="text-accent">{seller.match_score} / 510 PTS</span></p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
-                               <MatchItem label="Pincode Match" score={seller.pincode_match ? 200 : 0} max={200} status={seller.pincode_match} />
+                               <MatchItem 
+                                 label={seller.pincode_match ? "Pincode Match" : seller.city_match ? "City Match" : seller.state_match ? "State Match" : "Location Match"} 
+                                 score={seller.pincode_match ? 200 : seller.city_match ? 100 : seller.state_match ? 50 : 0} 
+                                 max={200} 
+                                 status={seller.pincode_match || seller.city_match || seller.state_match} 
+                               />
                                <MatchItem label="Price Efficiency" score={seller.price_match ? 40 : 0} max={40} status={seller.price_match} />
                                <MatchItem label="Stock Sufficient" score={seller.has_stock ? 70 : 0} max={70} status={seller.has_stock} />
                                <MatchItem label="MOQ Awareness" score={seller.moq_fit ? 50 : 0} max={50} status={seller.moq_fit} />
+                               <MatchItem label={`Delivery (${seller.best_delivery_hours ? seller.best_delivery_hours + 'h' : 'N/A'})`} score={seller.best_delivery_hours <= 24 ? 40 : seller.best_delivery_hours <= 48 ? 30 : seller.best_delivery_hours <= 72 ? 20 : seller.best_delivery_hours <= 120 ? 10 : 0} max={40} status={seller.best_delivery_hours > 0 && seller.best_delivery_hours <= 120} />
                             </div>
                         </div>
                       </div>

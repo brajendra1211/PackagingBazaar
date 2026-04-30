@@ -242,12 +242,34 @@ export default function AdminInquiries() {
                           <option value="Lost">Lost</option>
                         </select>
                       </td>
-                      <td className="px-8 py-6">
-                        <div className="text-xs font-bold text-gray-800">{inquiry.product_name}</div>
-                        <div className="text-[10px] text-accent font-bold uppercase tracking-widest mt-1">
-                          QTY: {inquiry.quantity_required || 'N/A'} 
-                          {inquiry.thickness && ` • ${inquiry.thickness}`}
-                          {inquiry.width && ` • ${inquiry.width}`}
+                      <td className="px-8 py-6 min-w-[280px]">
+                        <div className="text-sm font-black text-gray-800 mb-2">{inquiry.product_name}</div>
+                        
+                        <div className="flex flex-col gap-3">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-[10px] bg-accent text-white font-black uppercase tracking-widest px-2 py-0.5 rounded shadow-sm shadow-accent/20">
+                              QTY: {inquiry.quantity_required || 'N/A'}
+                            </span>
+                            {inquiry.thickness && (
+                              <span className="text-[10px] bg-white text-gray-500 font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-gray-200 shadow-sm flex items-center gap-1">
+                                <span className="text-[8px] text-gray-400">THICK:</span> {inquiry.thickness}
+                              </span>
+                            )}
+                            {inquiry.width && (
+                              <span className="text-[10px] bg-white text-gray-500 font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-gray-200 shadow-sm flex items-center gap-1">
+                                <span className="text-[8px] text-gray-400">WIDTH:</span> {inquiry.width}
+                              </span>
+                            )}
+                          </div>
+
+                          {inquiry.message && (
+                            <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-100/80 w-full relative group">
+                              <div className="absolute top-0 left-0 w-1 h-full bg-gray-200 rounded-l-xl group-hover:bg-accent transition-colors" />
+                              <p className="text-xs text-gray-600 font-medium italic leading-relaxed line-clamp-2 pl-2">
+                                "{inquiry.message}"
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td className="px-8 py-6">
@@ -285,10 +307,7 @@ export default function AdminInquiries() {
                         <div className="flex gap-4 items-start">
                           <div className="w-1 h-full bg-accent/20 rounded-full shrink-0" />
                           <div className="flex-1 space-y-4">
-                            <div>
-                              <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest block mb-1">Detailed Requirement:</span>
-                              <p className="text-xs text-gray-700 italic leading-relaxed bg-white p-3 rounded-xl border border-gray-100">"{inquiry.message}"</p>
-                            </div>
+                            {/* Message moved to main row for better visibility */}
                             <div>
                               <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest block mb-1">Admin Notes:</span>
                               <textarea 

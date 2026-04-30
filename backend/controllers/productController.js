@@ -259,8 +259,8 @@ export const getAllProducts = async (req, res) => {
         COALESCE(MAX(sp.price_max), MAX(p.max_price), 0) as max_price,
         COALESCE(SUM(sp.stock_qty), MAX(ps.quantity), 0) as stock, 
         COALESCE(MIN(sp.moq), MIN(ps.min_order), 100) as min_order,
-        (SELECT AVG(rating) FROM product_reviews WHERE product_id = SUBSTRING_INDEX(GROUP_CONCAT(p.id ORDER BY COALESCE(sp.price_min, p.min_price) ASC SEPARATOR '||'), '||', 1)) as avg_rating,
-        (SELECT COUNT(*) FROM product_reviews WHERE product_id = SUBSTRING_INDEX(GROUP_CONCAT(p.id ORDER BY COALESCE(sp.price_min, p.min_price) ASC SEPARATOR '||'), '||', 1)) as review_count,
+        (SELECT AVG(rating) FROM product_reviews WHERE product_id = SUBSTRING_INDEX(GROUP_CONCAT(p.id ORDER BY COALESCE(sp.price_min, p.min_price) ASC SEPARATOR '||'), '||', 1) AND status = 'approved') as avg_rating,
+        (SELECT COUNT(*) FROM product_reviews WHERE product_id = SUBSTRING_INDEX(GROUP_CONCAT(p.id ORDER BY COALESCE(sp.price_min, p.min_price) ASC SEPARATOR '||'), '||', 1) AND status = 'approved') as review_count,
         SUBSTRING_INDEX(GROUP_CONCAT(s.company_name ORDER BY COALESCE(sp.price_min, p.min_price) ASC SEPARATOR '||'), '||', 1) as seller_name, 
         SUBSTRING_INDEX(GROUP_CONCAT(s.seller_uid ORDER BY COALESCE(sp.price_min, p.min_price) ASC SEPARATOR '||'), '||', 1) as seller_uid,
         SUBSTRING_INDEX(GROUP_CONCAT(s.id ORDER BY COALESCE(sp.price_min, p.min_price) ASC SEPARATOR '||'), '||', 1) as seller_id,
@@ -405,8 +405,8 @@ export const getProductById = async (req, res) => {
          SUBSTRING_INDEX(GROUP_CONCAT(s.company_name ORDER BY (s.id = ?) DESC, sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_name, 
          SUBSTRING_INDEX(GROUP_CONCAT(s.id ORDER BY (s.id = ?) DESC, sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_id,
          MAX(CASE WHEN ? IS NULL OR s.id = ? THEN s.is_verified ELSE 0 END) as is_verified,
-         (SELECT AVG(rating) FROM product_reviews WHERE product_id = p.id) as avg_rating,
-         (SELECT COUNT(*) FROM product_reviews WHERE product_id = p.id) as review_count,
+         (SELECT AVG(rating) FROM product_reviews WHERE product_id = p.id AND status = 'approved') as avg_rating,
+         (SELECT COUNT(*) FROM product_reviews WHERE product_id = p.id AND status = 'approved') as review_count,
          COALESCE(GROUP_CONCAT(DISTINCT a.app_name), '') as applications 
   FROM products p
   LEFT JOIN tags t ON p.tag_id = t.id
@@ -464,8 +464,8 @@ export const getTopSellingProducts = async (req, res) => {
              COALESCE(MAX(sp.price_max), MAX(p.max_price), 0) as max_price,
              COALESCE(SUM(sp.stock_qty), MAX(ps.quantity), 0) as stock, 
              COALESCE(MIN(sp.moq), MIN(ps.min_order), 100) as min_order,
-             (SELECT AVG(rating) FROM product_reviews WHERE product_id = MAX(p.id)) as avg_rating,
-             (SELECT COUNT(*) FROM product_reviews WHERE product_id = MAX(p.id)) as review_count,
+             (SELECT AVG(rating) FROM product_reviews WHERE product_id = MAX(p.id) AND status = 'approved') as avg_rating,
+             (SELECT COUNT(*) FROM product_reviews WHERE product_id = MAX(p.id) AND status = 'approved') as review_count,
              COUNT(DISTINCT s.id) as seller_count
       FROM products p
       LEFT JOIN tags t ON p.tag_id = t.id
