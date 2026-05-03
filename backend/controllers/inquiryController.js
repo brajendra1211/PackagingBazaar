@@ -156,10 +156,17 @@ export const getSellerLeads = async (req, res) => {
 
         // Fetch from lead_assignments table
         const query = `
-            SELECT i.*, p.name as product_name, p.image_url, la.assigned_at, la.assignment_note
+            SELECT i.*, p.name as product_name, p.image_url, p.color,
+                   COALESCE(
+                     sp.delivery_hours,
+                     (SELECT MIN(sp2.delivery_hours) FROM seller_products sp2 WHERE sp2.product_id = i.product_id AND sp2.delivery_hours IS NOT NULL),
+                     p.delivery_time
+                   ) as delivery_hours,
+                   la.assigned_at, la.assignment_note
             FROM lead_assignments la
             JOIN inquiries i ON la.inquiry_id = i.id
             JOIN products p ON i.product_id = p.id
+            LEFT JOIN seller_products sp ON i.product_id = sp.product_id AND sp.seller_id = la.seller_id
             WHERE la.seller_id = ?
             ORDER BY la.assigned_at DESC
         `;

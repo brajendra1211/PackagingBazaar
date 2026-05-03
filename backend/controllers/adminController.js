@@ -764,6 +764,10 @@ export const getRecommendedSellers = async (req, res) => {
       FROM sellers s
       JOIN users u ON s.user_id = u.id
       WHERE u.role = 'seller' AND u.is_verified = 1
+        AND EXISTS (
+          SELECT 1 FROM seller_products sp_check 
+          WHERE sp_check.seller_id = s.id AND sp_check.status = 'active'
+        )
       ORDER BY match_score DESC, best_delivery_hours ASC, s.company_name ASC
     `;
 

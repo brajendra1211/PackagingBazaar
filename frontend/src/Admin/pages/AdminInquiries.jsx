@@ -107,8 +107,27 @@ export default function AdminInquiries() {
   };
 
   const handleWhatsAppForward = (inquiry) => {
-    const text = `*New Lead Alert!*\nBuyer: ${inquiry.buyer_display_name}\nMobile: ${inquiry.buyer_display_mobile}\nProduct: ${inquiry.product_name}\nQty: ${inquiry.quantity_required}\nCity: ${inquiry.city}\nMessage: ${inquiry.message}`;
-    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    const lines = [
+      `🔔 *New Lead Alert from PackagingBazaar!*`,
+      ``,
+      `📦 *Product:* ${inquiry.product_name}`,
+      inquiry.quantity_required ? `📊 *Quantity:* ${inquiry.quantity_required}` : null,
+      inquiry.thickness         ? `📏 *Thickness (Micron):* ${inquiry.thickness}` : null,
+      inquiry.width             ? `📐 *Width:* ${inquiry.width}` : null,
+      ``,
+      `👤 *Buyer:* ${inquiry.buyer_display_name}`,
+      `📞 *Mobile:* ${inquiry.buyer_display_mobile}`,
+      ``,
+      `📍 *Buyer Location:*`,
+      inquiry.city    ? `   • City: ${inquiry.city}` : null,
+      inquiry.state   ? `   • State: ${inquiry.state}` : null,
+      inquiry.pincode ? `   • Pincode: ${inquiry.pincode}` : null,
+      inquiry.address ? `   • Address: ${inquiry.address}` : null,
+      inquiry.message ? `\n💬 *Requirement:* ${inquiry.message}` : null,
+      ``,
+      `— PackagingBazaar Admin`
+    ].filter(Boolean).join('\n');
+    const url = `https://wa.me/?text=${encodeURIComponent(lines)}`;
     window.open(url, '_blank');
   };
 

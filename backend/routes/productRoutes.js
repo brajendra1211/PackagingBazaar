@@ -6,6 +6,7 @@ import {
   getProductById,
   getProductVariants,
   getTopSellingProducts,
+  getUniqueTopSelling,
   addProduct,
   updateProduct,
   deleteProduct,
@@ -34,6 +35,7 @@ router.post("/product-groups", verifyToken, isAdmin, createProductGroup);
 router.get("/products", getAllProducts);
 router.get("/products/sellers-view", getProductsBySellers); // NEW
 router.get("/products/top-selling", getTopSellingProducts);
+router.get("/products/unique-top-selling", getUniqueTopSelling);
 router.get("/products/hot-deals", getHotDeals);
 router.get("/products/trending", getTrendingProducts);
 router.get("/products/names", getUniqueProductNames);

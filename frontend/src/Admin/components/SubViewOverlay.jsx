@@ -29,8 +29,42 @@ export default function SubViewOverlay({ entity, onClose }) {
   const handleWhatsAppForward = (seller) => {
     if (!entity.inquiryData) return;
     const inquiry = entity.inquiryData;
-    const text = `*New Lead Alert!*\nHello ${seller.company_name},\n\nWe have a new requirement matching your profile:\n\n*Product:* ${inquiry.product_name}\n*Quantity:* ${inquiry.quantity_required}\n*Buyer Location:* ${inquiry.city}\n*Requirement:* ${inquiry.message}\n\nPlease let us know if you can fulfill this!`;
-    const url = `https://wa.me/${seller.phone}?text=${encodeURIComponent(text)}`;
+
+    // Build delivery line
+    const deliveryLine = inquiry.delivery_hours
+      ? (inquiry.delivery_hours <= 48
+          ? `${inquiry.delivery_hours} Hours`
+          : `${Math.round(inquiry.delivery_hours / 24)} Days`)
+      : null;
+
+    const lines = [
+      `🔔 *New Lead Alert from PackagingBazaar!*`,
+      `Hello *${seller.company_name}*,`,
+      ``,
+      `A buyer is looking for a product matching your profile:`,
+      ``,
+      `📦 *Product:* ${inquiry.product_name}`,
+      inquiry.quantity_required ? `📊 *Quantity Required:* ${inquiry.quantity_required}` : null,
+      inquiry.thickness        ? `📏 *Thickness (Micron):* ${inquiry.thickness}` : null,
+      inquiry.width            ? `📐 *Width:* ${inquiry.width}` : null,
+      inquiry.color            ? `🎨 *Color / Finish:* ${inquiry.color}` : null,
+      deliveryLine             ? `🚚 *Expected Delivery:* ${deliveryLine}` : null,
+      ``,
+      `📍 *Buyer Location:*`,
+      inquiry.city    ? `   • City: ${inquiry.city}` : null,
+      inquiry.state   ? `   • State: ${inquiry.state}` : null,
+      inquiry.pincode ? `   • Pincode: ${inquiry.pincode}` : null,
+      inquiry.address ? `   • Address: ${inquiry.address}` : null,
+      ``,
+      `📞 *Buyer Mobile:* ${inquiry.phone || 'N/A'}`,
+      inquiry.message ? `💬 *Requirement:* ${inquiry.message}` : null,
+      ``,
+      `Please confirm if you can fulfill this order. Reply ASAP!`,
+      ``,
+      `— PackagingBazaar Team`
+    ].filter(line => line !== null).join('\n');
+
+    const url = `https://wa.me/${seller.phone}?text=${encodeURIComponent(lines)}`;
     window.open(url, '_blank');
   };
 

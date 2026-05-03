@@ -21,16 +21,64 @@ import {
   CheckCircle,
   Loader2,
   Send,
-  ShieldCheck,
+  Activity,
   MessageCircle,
   MapPin,
+  Clock,
+  Zap,
+  Truck,
+  Ruler,
+  Maximize,
+  Palette,
+  Layers,
+  Check,
+  Info,
+  ShieldCheck,
+  Star,
+  ChevronRight,
 } from "lucide-react";
 
-const catColors = {
+const gradColors = {
   BOPP: "from-green-50 to-emerald-100",
   PET: "from-blue-50 to-sky-100",
   CPP: "from-orange-50 to-amber-100",
   LAMINATED: "from-purple-50 to-pink-100",
+};
+
+const formatDeliveryTime = (hours) => {
+  if (!hours) return null;
+  const h = parseInt(hours);
+  if (isNaN(h)) return hours;
+  if (h <= 48) return `${h} Hours`;
+  const days = Math.floor(h / 24);
+  return `${days} Days`;
+};
+
+const DeliveryBadge = ({ hours, timeStr, className = "" }) => {
+  const formatted = formatDeliveryTime(hours) || timeStr;
+  if (!formatted) return <span className="text-gray-400 font-bold">N/A</span>;
+  
+  const h = parseInt(hours);
+  const isExpress = !isNaN(h) && h <= 24;
+  const isStandard = !isNaN(h) && h <= 72;
+
+  return (
+    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border font-black uppercase tracking-widest text-[9px] shadow-sm transition-all hover:scale-105 ${
+      isExpress 
+        ? "bg-orange-50 border-orange-100 text-accent shadow-orange-100/50" 
+        : isStandard
+          ? "bg-blue-50 border-blue-100 text-blue-600 shadow-blue-100/50"
+          : "bg-slate-50 border-slate-100 text-slate-600 shadow-slate-100/50"
+    } ${className}`}>
+      {isExpress ? (
+        <Zap size={12} className="fill-current animate-pulse" />
+      ) : (
+        <Truck size={12} className="fill-current/10" />
+      )}
+      {formatted}
+      {isExpress && <span className="ml-1 text-[7px] bg-accent text-white px-1.5 py-0.5 rounded-full animate-bounce">Fast</span>}
+    </div>
+  );
 };
 
 export default function ProductDetailPage() {
@@ -51,14 +99,30 @@ export default function ProductDetailPage() {
   const [sellersLoading, setSellersLoading] = useState(false);
 
   const handleOpenInquiry = (p) => {
-    setInquiryProduct(p || product);
+    const base = p || product;
+    // Merge selected specs so InquiryModal can pre-fill them
+    setInquiryProduct({
+      ...base,
+      selected_thickness: selectedThickness.length > 0
+        ? selectedThickness.join(", ")
+        : base.thickness || "",
+      selected_width: selectedWidth || base.width || "",
+    });
     setIsModalOpen(true);
   };
 
   // Specifications Selection State
-  const [selectedThickness, setSelectedThickness] = useState("");
+  const [selectedThickness, setSelectedThickness] = useState([]);
   const [selectedWidth, setSelectedWidth] = useState("");
   const [selectedBrand, setSelectedBrand] = useState("");
+
+  const toggleThickness = (micron) => {
+    setSelectedThickness(prev =>
+      prev.includes(micron)
+        ? prev.filter(t => t !== micron)  // remove if already selected
+        : [...prev, micron]               // add if not selected
+    );
+  };
 
   useEffect(() => {
     const getDetails = async () => {
@@ -115,14 +179,12 @@ export default function ProductDetailPage() {
 
   const handleAdd = () => {
     if (product) {
-      // Create a product object that includes the user's specific selections
       const productWithSpecs = {
         ...product,
-        selected_thickness: selectedThickness,
+        selected_thickness: selectedThickness.join(", "),  // array to string
         selected_width: selectedWidth,
         selected_brand: selectedBrand,
       };
-
       addToCart(productWithSpecs);
       setAdded(true);
       setTimeout(() => setAdded(false), 2000);
@@ -157,257 +219,263 @@ export default function ProductDetailPage() {
       </div>
     );
   }
-
-  const grad = catColors[product.category_name] || "from-gray-50 to-gray-100";
+  const grad = gradColors[product.category_name] || "from-gray-50 to-gray-100";
 
   return (
-    <div key={`${id}-${sellerId}`} className="animate-fadeIn">
-      <div className="max-w-7xl mx-auto px-4 py-4 md:py-6">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-sm text-ink3 hover:text-accent mb-4 transition-colors font-medium"
-        >
-          <ArrowLeft size={16} /> Back
-        </button>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 mb-12 lg:mb-20 items-start">
-          {/* Image Section */}
-          <div className="lg:sticky lg:top-24">
-            <div
-              className={`bg-gradient-to-br ${grad} rounded-3xl h-[280px] sm:h-[400px] lg:h-[520px] flex items-center justify-center relative overflow-hidden border border-black/[0.03] shadow-inner`}
-            >
-              <img
-                src={getImageUrl(product.image_url)}
-                alt={product.name}
-                className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-              />
-              <div className="absolute top-4 left-4">
-                <Badge tag={product.tag_name} />
-              </div>
-            </div>
-          </div>
+    <div key={`${id}-${sellerId}`} className="animate-fadeIn bg-gray-50 min-h-screen">
+      <div className="max-w-7xl mx-auto px-4 py-4">
+        {/* Breadcrumb */}
+        <nav className="flex items-center gap-2 text-[11px] font-semibold text-gray-400 mb-4">
+          <button onClick={() => navigate("/products")} className="hover:text-accent transition-colors">Products</button>
+          <ChevronRight size={12} />
+          <span className="text-gray-500">{product.category_name}</span>
+          <ChevronRight size={12} />
+          <span className="text-gray-800 truncate max-w-[200px]">{product.name}</span>
+        </nav>
 
-          {/* Info Section */}
-          <div className="flex flex-col">
-            <div className="text-center lg:text-left">
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 mb-4">
-                <span className="text-[10px] sm:text-xs font-black text-accent uppercase tracking-widest bg-accent/5 px-3 py-1 rounded-full border border-accent/10">
-                  {product.category_name}{" "}
-                  {product.subcategory_name && `· ${product.subcategory_name}`}
-                </span>
-              </div>
-              <h1 className="font-syne font-black text-3xl sm:text-4xl lg:text-5xl text-ink mb-3 leading-tight uppercase tracking-tight">
-                {product.name}
-              </h1>
-
-              <div className="flex justify-center lg:justify-start">
-                <StarRating
-                  rating={Number(product.avg_rating) || 0}
-                  reviews={Number(product.review_count) || 0}
-                />
-              </div>
-
-              <p className="text-ink2 text-sm sm:text-base leading-relaxed my-6 sm:my-8 text-center lg:text-left">
-                {product.description}
-              </p>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4 gap-3 mb-8">
-                {[
-                  ["Thickness", product.thickness || "N/A"],
-                  ["Width", product.width || "N/A"],
-                  ["Color", product.color || "N/A"],
-                  [
-                    "Min. Order",
-                    `${product.min_order || 0} ${product.unit || "units"}`,
-                  ],
-                  [
-                    "In Stock",
-                    `${product.stock || 0} ${product.unit || "units"}`,
-                  ],
-                ].map(([l, v]) => (
-                  <div
-                    key={l}
-                    className="bg-surface rounded-2xl p-4 border border-black/[0.03] shadow-sm"
-                  >
-                    <div className="text-[9px] sm:text-[10px] text-ink3 mb-1 font-black uppercase tracking-wider">
-                      {l}
-                    </div>
-                    <div className="font-black text-sm text-ink">{v}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Applications Chips */}
-              {product.applications && (
-                <div className="mb-8 text-center lg:text-left">
-                  <div className="text-[10px] text-ink3 mb-3 font-black uppercase tracking-widest text-gray-400">
-                    Applications / Usage
-                  </div>
-                  <div className="flex flex-wrap justify-center lg:justify-start gap-2">
-                    {(() => {
-                      let apps = [];
-                      if (Array.isArray(product.applications)) {
-                        apps = product.applications;
-                      } else if (typeof product.applications === "string") {
-                        try {
-                          apps = JSON.parse(product.applications);
-                        } catch {
-                          apps = product.applications.split(",");
-                        }
-                      }
-                      return Array.isArray(apps) ? apps : [];
-                    })().map((a) => (
-                      <span
-                        key={a}
-                        className="text-[10px] sm:text-[11px] bg-white text-ink2 px-4 py-1.5 rounded-full border border-black/[0.06] font-bold shadow-sm"
-                      >
-                        {String(a).trim()}
-                      </span>
-                    ))}
-                  </div>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] xl:grid-cols-[1fr_440px] gap-6 items-start">
+          
+          {/* LEFT: Image */}
+          <div className="lg:sticky lg:top-4">
+            <div className={`bg-gradient-to-br ${grad} rounded-2xl h-[300px] sm:h-[420px] flex items-center justify-center relative overflow-hidden border border-black/[0.06]`}>
+              <img src={getImageUrl(product.image_url)} alt={product.name} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+              <div className="absolute top-3 left-3"><Badge tag={product.tag_name} /></div>
+              {product.is_verified && (
+                <div className="absolute bottom-3 right-3 flex items-center gap-1 bg-white/90 backdrop-blur-sm text-green-600 text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border border-green-100 shadow-sm">
+                  <ShieldCheck size={10} /> Verified Seller
                 </div>
               )}
             </div>
+          </div>
 
-            <div className="space-y-6 mt-6">
-              {/* Selection Options */}
-              <div className="bg-white rounded-3xl p-6 border border-black/[0.05] shadow-sm">
-                <div className="space-y-6">
-                  {/* Thickness Selection - Visual Chips */}
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">
-                      Select Thickness (Micron)
+          {/* RIGHT: Info Panel */}
+          <div className="flex flex-col gap-4">
+            
+            {/* Product Title Block */}
+            <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+              <span className="text-[10px] font-black text-accent uppercase tracking-widest bg-accent/5 px-2.5 py-1 rounded-full border border-accent/10 inline-block mb-3">
+                {product.category_name}{product.subcategory_name && ` · ${product.subcategory_name}`}
+              </span>
+              <h1 className="font-syne font-black text-xl sm:text-2xl text-gray-900 leading-snug uppercase tracking-tight mb-2">
+                {product.name}
+              </h1>
+              <div className="flex items-center gap-3">
+                <StarRating rating={Number(product.avg_rating) || 0} reviews={Number(product.review_count) || 0} />
+                {product.seller_uid && (
+                  <span className="text-[10px] font-bold text-gray-400">by <span className="text-accent font-black">{product.seller_uid}</span></span>
+                )}
+              </div>
+            </div>
+
+            {/* Price Block */}
+            <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+              <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Price Range (Approx.)</p>
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="font-syne font-black text-3xl text-gray-900">₹{product.min_price}</span>
+                <span className="text-gray-300 font-bold">–</span>
+                <span className="font-syne font-black text-3xl text-gray-900">₹{product.max_price}</span>
+                <span className="text-[11px] text-gray-400 font-semibold ml-1">/ {product.unit}</span>
+              </div>
+              <div className="flex items-center gap-4 mt-2">
+                <span className="flex items-center gap-1.5 text-[10px] font-black text-gray-500">
+                  <Truck size={11} className="text-accent" /> MOQ: {product.min_order} {product.unit}
+                </span>
+                <span className="flex items-center gap-1.5 text-[10px] font-black text-gray-500">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+                  {product.stock > 0 ? `${product.stock} ${product.unit} available` : "Out of Stock"}
+                </span>
+                {formatDeliveryTime(product.delivery_hours) && (
+                  <DeliveryBadge hours={product.delivery_hours} />
+                )}
+              </div>
+            </div>
+
+            {/* Specs Table */}
+            <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Product Specifications</p>
+              <div className="divide-y divide-gray-50">
+                {[
+                  ["Thickness", product.thickness || "N/A"],
+                  ["Width", product.width || "N/A"],
+                  ["Color / Finish", product.color || "N/A"],
+                  ["Product Type", product.product_type || "N/A"],
+                  ["Unit", product.unit || "N/A"],
+                ].map(([label, value]) => (
+                  <div key={label} className="flex items-center justify-between py-2">
+                    <span className="text-[11px] font-semibold text-gray-400">{label}</span>
+                    <span className="text-[11px] font-black text-gray-800">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Applications */}
+            {product.applications && product.applications.length > 0 && (
+              <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Applications / Used For</p>
+                <div className="flex flex-wrap gap-2">
+                  {product.applications.map((a) => (
+                    <span key={a} className="text-[10px] font-bold text-gray-600 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
+                      {String(a).trim()}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Description */}
+            {product.description && (
+              <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Description</p>
+                <p className="text-sm text-gray-600 leading-relaxed">{product.description}</p>
+              </div>
+            )}
+
+            {/* Customization / Specs Selection */}
+            <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Customize Your Order</p>
+              <div className="space-y-4">
+                {/* Thickness - Multi Select */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                      Thickness (Micron)
+                      <span className="text-gray-300 font-semibold ml-2 normal-case tracking-normal">(select multiple)</span>
                     </label>
-                    <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                      {[12, 15, 18, 20, 23, 25, 30, 35, 40, 50, 60].map((m) => (
+                    {selectedThickness.length > 0 && (
+                      <button
+                        onClick={() => setSelectedThickness([])}
+                        className="text-[9px] font-black text-red-400 hover:text-red-600 uppercase tracking-widest transition-colors"
+                      >
+                        Clear All
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Selector Buttons */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {[12, 15, 18, 20, 23, 25, 30, 35, 40, 50, 60].map((m) => {
+                      const val = `${m} Micron`;
+                      const isSelected = selectedThickness.includes(val);
+                      return (
                         <button
                           key={m}
-                          onClick={() => setSelectedThickness(`${m} Micron`)}
-                          className={`px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-bold border transition-all ${
-                            selectedThickness === `${m} Micron`
-                              ? "bg-accent border-accent text-white shadow-lg shadow-accent/20"
-                              : "bg-gray-50 border-gray-100 text-gray-600 hover:border-accent/30"
+                          onClick={() => toggleThickness(val)}
+                          className={`px-3 py-1.5 rounded-lg text-[11px] font-black border transition-all ${
+                            isSelected
+                              ? "bg-accent border-accent text-white shadow-sm shadow-accent/20"
+                              : "bg-gray-50 border-gray-100 text-gray-500 hover:border-accent/30 hover:bg-orange-50"
                           }`}
                         >
                           {m}µ
                         </button>
-                      ))}
-                    </div>
+                      );
+                    })}
                   </div>
 
-                  {/* Manufacturer/Brand Selection - Visual Chips */}
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">
-                      Preferred Manufacturer Brand
-                    </label>
-                    <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                      {[
-                        "Uflex",
-                        "Cosmo",
-                        "Jindal",
-                        "Polyplex",
-                        "Garware",
-                        "Any Brand",
-                      ].map((b) => (
-                        <button
-                          key={b}
-                          onClick={() => setSelectedBrand(b)}
-                          className={`px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[10px] sm:text-[11px] font-bold border transition-all ${
-                            selectedBrand === b
-                              ? "bg-accent border-accent text-white shadow-lg shadow-accent/20"
-                              : "bg-gray-50 border-gray-100 text-gray-600 hover:border-accent/30"
-                          }`}
+                  {/* Selected Chips with Remove */}
+                  {selectedThickness.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-gray-50">
+                      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest self-center mr-1">Selected:</span>
+                      {selectedThickness.map((t) => (
+                        <span
+                          key={t}
+                          className="flex items-center gap-1 bg-accent/10 text-accent text-[10px] font-black px-2.5 py-1 rounded-full border border-accent/20"
                         >
-                          {b}
-                        </button>
+                          {t}
+                          <button
+                            onClick={() => toggleThickness(t)}
+                            className="ml-0.5 hover:text-red-500 transition-colors"
+                            title={`Remove ${t}`}
+                          >
+                            ✕
+                          </button>
+                        </span>
                       ))}
                     </div>
-                  </div>
+                  )}
+                </div>
 
-                  {/* Width Selection */}
-                  <div className="space-y-2 pt-2 border-t border-gray-50">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">
-                      Specific Width (mm / inch)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Enter specific width (e.g. 500mm)"
-                      value={selectedWidth}
-                      onChange={(e) => setSelectedWidth(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all"
-                    />
+                {/* Brand */}
+                <div>
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2">
+                    Manufacturer {selectedBrand && <span className="text-accent">· {selectedBrand}</span>}
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {["Uflex", "Cosmo", "Jindal", "Polyplex", "Garware", "Any Brand"].map((b) => (
+                      <button
+                        key={b}
+                        onClick={() => setSelectedBrand(b)}
+                        className={`px-3 py-1.5 rounded-lg text-[11px] font-black border transition-all ${
+                          selectedBrand === b
+                            ? "bg-gray-900 border-gray-900 text-white shadow-sm"
+                            : "bg-gray-50 border-gray-100 text-gray-500 hover:border-gray-300 hover:bg-gray-100"
+                        }`}
+                      >
+                        {b}
+                      </button>
+                    ))}
                   </div>
                 </div>
-              </div>
 
-              <div className="border-t border-black/[0.07] pt-5">
-                <div className="flex flex-col mb-4">
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-syne font-black text-3xl text-accent">
-                      ₹{product.min_price}
-                    </span>
-                    <span className="text-gray-400 font-bold">-</span>
-                    <span className="font-syne font-black text-3xl text-accent">
-                      ₹{product.max_price}
-                    </span>
-                  </div>
-                  <span className="text-ink3 text-[11px] font-medium mt-1">
-                    / {product.unit} (Min {product.min_order} {product.unit})
-                  </span>
+                {/* Width */}
+                <div>
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2">Width (mm / inch)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 500mm, 12 inch"
+                    value={selectedWidth}
+                    onChange={(e) => setSelectedWidth(e.target.value)}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 text-sm font-semibold text-gray-700 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 transition-all"
+                  />
                 </div>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <button
-                    onClick={() => handleOpenInquiry(product)}
-                    className="w-full sm:flex-[2] flex items-center justify-center gap-3 bg-accent text-white py-4.5 sm:py-5 rounded-2xl font-black text-sm uppercase tracking-[3px] shadow-2xl shadow-orange-200 hover:bg-orange-600 active:scale-[0.98] transition-all"
-                  >
-                    <Send size={20} className="shrink-0" /> Get Best Price
-                  </button>
-
-                  <button
-                    onClick={handleAdd}
-                    disabled={
-                      !selectedThickness || !selectedWidth || !selectedBrand
-                    }
-                    className={`flex-1 flex items-center justify-center gap-2 py-4 px-6 rounded-2xl font-bold text-xs transition-all border-2 ${
-                      added
-                        ? "bg-green-600 text-white border-green-600 shadow-lg shadow-green-100"
-                        : !selectedThickness || !selectedWidth || !selectedBrand
-                          ? "bg-gray-50 text-gray-400 border-gray-100 cursor-not-allowed"
-                          : "bg-white border-black/5 text-ink hover:bg-gray-50 active:scale-[0.98]"
-                    }`}
-                  >
-                    {added ? (
-                      <>
-                        {" "}
-                        <CheckCircle size={18} /> Added{" "}
-                      </>
-                    ) : (
-                      <>
-                        {" "}
-                        <ShoppingCart size={18} /> Add to Cart{" "}
-                      </>
-                    )}
-                  </button>
-                </div>
-                {(!selectedThickness || !selectedWidth || !selectedBrand) && (
-                  <p className="text-[10px] text-red-400 font-bold uppercase tracking-wider mt-3 animate-pulse">
-                    * Please select all specifications to add to cart
-                  </p>
-                )}
               </div>
             </div>
+
+            {/* CTA Block */}
+            <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => handleOpenInquiry(product)}
+                  className="w-full flex items-center justify-center gap-2 bg-accent text-white py-3.5 rounded-xl font-black text-sm uppercase tracking-widest shadow-md shadow-orange-100 hover:bg-orange-600 active:scale-[0.99] transition-all"
+                >
+                  <Send size={16} /> Get Best Price
+                </button>
+                <button
+                  onClick={handleAdd}
+                  disabled={selectedThickness.length === 0 || !selectedWidth || !selectedBrand}
+                  className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm uppercase tracking-widest transition-all border ${
+                    added
+                      ? "bg-green-600 text-white border-green-600"
+                      : selectedThickness.length === 0 || !selectedWidth || !selectedBrand
+                        ? "bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed"
+                        : "bg-white border-gray-200 text-gray-800 hover:bg-gray-50 active:scale-[0.99]"
+                  }`}
+                >
+                  {added ? <><CheckCircle size={16} /> Added to Cart</> : <><ShoppingCart size={16} /> Add to Cart</>}
+                </button>
+              </div>
+              {(selectedThickness.length === 0 || !selectedWidth || !selectedBrand) && (
+                <p className="text-[10px] text-amber-500 font-bold mt-3 flex items-center gap-1.5">
+                  <Info size={11} /> Select thickness, brand & width to add to cart
+                </p>
+              )}
+            </div>
+
           </div>
         </div>
 
         {/* Other Sellers Comparison Section (Phase 3) */}
         {otherSellers.length > 1 && (
           <div className="mt-12 md:mt-16 bg-white rounded-[2.5rem] p-6 md:p-10 border border-black/[0.05] shadow-xl shadow-black/5">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-              <div>
-                <h2 className="font-syne font-black text-2xl text-gray-900 uppercase tracking-tight">Compare Other Sellers</h2>
-                <p className="text-[11px] text-gray-500 font-medium uppercase tracking-widest mt-1">Get the best rates from verified manufacturers</p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
+              <div className="relative">
+                <h2 className="font-syne font-black text-3xl text-gray-900 uppercase tracking-tight">Marketplace Quotes</h2>
+                <div className="w-12 h-1 bg-accent rounded-full mt-2" />
+                <p className="text-[11px] text-gray-400 font-black uppercase tracking-[2px] mt-3">Verified manufacturer comparison</p>
               </div>
-              <div className="bg-accent/5 px-4 py-2 rounded-full border border-accent/10">
-                <span className="text-[11px] font-black text-accent uppercase tracking-widest">{otherSellers.length} Sellers Available</span>
+              <div className="bg-accent/5 px-6 py-3 rounded-2xl border border-accent/10 backdrop-blur-sm">
+                <span className="text-xs font-black text-accent uppercase tracking-widest">{otherSellers.length} Direct Suppliers</span>
               </div>
             </div>
 
@@ -421,6 +489,7 @@ export default function ProductDetailPage() {
                       <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Location</th>
                       <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Price Range</th>
                       <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">MOQ / Stock</th>
+                      <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Delivery</th>
                       <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Action</th>
                     </tr>
                   </thead>
@@ -472,6 +541,9 @@ export default function ProductDetailPage() {
                               {s.stock_qty > 0 ? `Ready Stock (${s.stock_qty})` : 'Out of Stock'}
                             </span>
                           </div>
+                        </td>
+                        <td className="py-5 pr-4">
+                           <DeliveryBadge hours={s.delivery_hours} className="!text-[8px] !px-2 !py-1" />
                         </td>
                         <td className="py-5 text-right">
                           <button 
@@ -549,7 +621,7 @@ export default function ProductDetailPage() {
                       {v.name}
                     </h4>
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">
-                       {v.seller_name || "Verified Manufacturer"}
+                       {v.seller_uid || "Verified Manufacturer"}
                     </p>
                   </div>
 

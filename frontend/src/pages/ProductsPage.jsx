@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { fetchProducts } from "../services/productServices"; 
+import { fetchProducts, fetchCategories } from "../services/productServices"; 
 import ProductCard from "../components/ui/ProductCard";
 import TrendingProducts from "../components/sections/TrendingProducts";
 import TopSelling from "../components/sections/TopSelling";
@@ -25,8 +25,8 @@ export default function ProductsPage() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Single State Object for all filters
-  const categories = ["All", "BOPP", "PET", "CPP", "LAMINATED"];
+  // Dynamic Categories from API
+  const [categories, setCategories] = useState(["All"]);
 
   // URL setup
   const [filters, setFilters] = useState(() => {
@@ -37,7 +37,7 @@ export default function ProductsPage() {
     return {
       page: 1,
       limit: 8,
-      category: categoryFromUrl && categories.includes(categoryFromUrl) ? categoryFromUrl : "All",
+      category: categoryFromUrl || "All",
       sort: "default",
       search: searchFromUrl || "",
     };
@@ -58,13 +58,29 @@ export default function ProductsPage() {
     setFilters({ 
       page: pageFromUrl,
       limit: 8,
-      category: categoryFromUrl && categories.includes(categoryFromUrl) ? categoryFromUrl : "All",
+      category: categoryFromUrl || "All",
       sort: sortFromUrl,
       search: searchFromUrl,
     });
     
     setSearchInput(searchFromUrl);
   }, [location.search]);
+
+  // Load Categories
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const res = await fetchCategories();
+        if (res.success) {
+          const names = res.data.map(c => c.name);
+          setCategories(["All", ...names]);
+        }
+      } catch (err) {
+        console.error("Error fetching categories:", err);
+      }
+    };
+    loadCategories();
+  }, []);
 
   // 1. API Call Effect
   useEffect(() => {

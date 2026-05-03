@@ -87,7 +87,8 @@ export const CartProvider = ({ children }) => {
               selected_brand: i.selected_brand,
               unit: i.unit,
               color: i.color,
-              seller_id: i.seller_id
+              seller_id: i.seller_id,
+              seller_uid: i.seller_uid,
             }));
             dispatch({ type: "SET_CART", cart: transformed });
           }
@@ -105,11 +106,12 @@ export const CartProvider = ({ children }) => {
       ...p,
       id: p.id,
       name: p.name,
-      price: p.price || p.min_price, // Ensure price field exists
-      image: p.image || p.image_url, // Ensure image field exists
+      price: p.price || p.min_price,
+      image: p.image || p.image_url,
       unit: p.unit,
       color: p.color,
       seller_id: p.seller_id,
+      seller_uid: p.seller_uid,
       local_id: `${p.id}-${p.seller_id}-${p.selected_thickness || ""}-${p.selected_width || ""}-${p.selected_brand || ""}`
     };
     
@@ -147,7 +149,8 @@ export const CartProvider = ({ children }) => {
               selected_brand: i.selected_brand,
               unit: i.unit,
               color: i.color,
-              seller_id: i.seller_id
+              seller_id: i.seller_id,
+              seller_uid: i.seller_uid,
             }));
             dispatch({ type: "SET_CART", cart: transformed });
         }

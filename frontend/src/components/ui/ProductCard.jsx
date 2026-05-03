@@ -122,20 +122,13 @@ export default function ProductCard({ product, onInquiry }) {
            )}
         </div>
         
-        <div className="flex flex-col gap-1.5 mt-2 mb-1">
-          {product.seller_count > 1 && (
-            <span className="w-full text-[11px] text-center font-black text-orange-700 bg-orange-50 px-2.5 py-1.5 rounded-lg border border-orange-200 shadow-sm animate-fadeIn">
+        {product.seller_count > 1 && (
+          <div className="mt-2 mb-1">
+            <span className="w-full text-[11px] text-center font-black text-orange-700 bg-orange-50 px-2.5 py-1.5 rounded-lg border border-orange-200 shadow-sm animate-fadeIn block">
              + {product.seller_count} Sellers Available
             </span>
-          )}
-          
-          {product.variant_count > 1 && (
-            <span className="w-full text-[11px] text-center font-black text-blue-700 bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-200 shadow-sm animate-fadeIn">
-             + {product.variant_count} Variants Available
-            </span>
-          )}
-        </div>
-
+          </div>
+        )}
         {/* Quick Add Specs Popup Overlay (Bottom) */}
         {showOptions && (
           <div 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { fetchTopSelling } from "../../services/productServices"; 
+import { fetchUniqueTopSelling } from "../../services/productServices"; 
 import { TrendingUp, Loader2 } from "lucide-react";
 import { getImageUrl } from "../../services/api";
 
@@ -19,7 +19,7 @@ export default function TopSelling() {
   useEffect(() => {
     const loadTopSellingData = async () => {
       try {
-        const res = await fetchTopSelling();
+        const res = await fetchUniqueTopSelling();
         // ✅ Safe handling: agar res.data hai toh wo use karein, nahi toh direct res
         setTopItems(res.data || res || []); 
       } catch (err) {

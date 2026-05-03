@@ -344,66 +344,40 @@ export function SellerLeads() {
           <p className="text-xs text-gray-500">Inquiries matched by admin will appear here.</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-3">
           {leads.map((l, idx) => (
             <motion.div
               key={l.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.05 }}
-              className="bg-white rounded-[2rem] border border-gray-100 p-4 shadow-sm hover:border-accent/30 transition-all group"
+              className="bg-white rounded-2xl border border-gray-100 p-3.5 shadow-sm hover:border-accent/30 transition-all group"
             >
-              {/* Top Row: Buyer info & Actions */}
-              <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-                <div className="flex gap-3">
+              {/* Main Content Grid */}
+              <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+                
+                {/* Left: Buyer & Product Basic Info */}
+                <div className="flex gap-3 flex-1 min-w-0">
                   <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-accent shrink-0">
                     <Zap size={18} />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <h4 className="font-black text-gray-900 text-sm uppercase tracking-tight">{l.buyer_name}</h4>
-                      <span className="text-[7px] bg-accent/10 text-accent px-1.5 py-0.5 rounded-full font-black uppercase tracking-widest">Verified</span>
+                      <h4 className="font-black text-gray-900 text-sm uppercase truncate">{l.buyer_name}</h4>
+                      <span className="text-[7px] bg-green-50 text-green-600 px-1.5 py-0.5 rounded-full font-black uppercase tracking-widest border border-green-100">Verified</span>
                     </div>
-                    <div className="text-[10px] font-bold text-gray-400 mt-0.5">
+                    <div className="text-xs font-bold text-gray-800 truncate mt-0.5">
+                      Req: <span className="text-accent">{l.product_name}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-1 text-[10px] text-gray-400 font-bold uppercase">
+                      <MapPin size={10} className="text-accent" />
                       {l.city}, {l.state} • {new Date(l.assigned_at || l.created_at).toLocaleDateString()}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
-                  <a 
-                    href={`tel:${l.phone}`}
-                    className="w-8 h-8 flex items-center justify-center bg-gray-50 text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-all"
-                    title="Call Buyer"
-                  >
-                    <Phone size={14} />
-                  </a>
-                  <a 
-                    href={`mailto:${l.buyer_email}`}
-                    className="w-8 h-8 flex items-center justify-center bg-gray-50 text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-all"
-                    title="Email Buyer"
-                  >
-                    <Mail size={14} />
-                  </a>
-                  <a 
-                    href={`https://wa.me/91${l.phone}?text=Hello ${l.buyer_name}, I am contacting you regarding your inquiry for ${l.product_name} on Packaging Bazaar.`}
-                    target="_blank"
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#25D366] text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-[#128C7E] transition-all shadow-md shadow-green-100"
-                  >
-                    <Icon d={icons.whatsapp} size={13} stroke="none" fill="white" /> 
-                    <span className="hidden xs:block">WhatsApp</span>
-                  </a>
-                </div>
-              </div>
-
-              {/* Requirement & Specs Row */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-gray-50 pt-3">
-                <div className="min-w-0">
-                  <div className="text-[10px] font-black text-gray-400 uppercase tracking-tighter mb-1">Looking for:</div>
-                  <div className="text-xs font-bold text-gray-800 truncate">{l.product_name}</div>
-                </div>
-                
-                <div className="flex flex-wrap gap-2">
+                {/* Center: Specs Badges */}
+                <div className="flex flex-wrap gap-1.5 md:justify-center flex-1">
                   {l.quantity_required && (
                     <div className="text-[9px] font-black text-gray-600 bg-gray-50 px-2 py-1 rounded border border-gray-100">
                       QTY: <span className="text-accent">{l.quantity_required}</span>
@@ -411,36 +385,62 @@ export function SellerLeads() {
                   )}
                   {l.thickness && (
                     <div className="text-[9px] font-black text-gray-600 bg-gray-50 px-2 py-1 rounded border border-gray-100">
-                      THICK: <span className="text-accent">{l.thickness}</span>
+                      µ: <span className="text-accent">{l.thickness}</span>
                     </div>
                   )}
                   {l.width && (
                     <div className="text-[9px] font-black text-gray-600 bg-gray-50 px-2 py-1 rounded border border-gray-100">
-                      WIDTH: <span className="text-accent">{l.width}</span>
+                      W: <span className="text-accent">{l.width}</span>
+                    </div>
+                  )}
+                  {l.color && (
+                    <div className="text-[9px] font-black text-gray-600 bg-purple-50 px-2 py-1 rounded border border-purple-100">
+                      {l.color}
+                    </div>
+                  )}
+                  {l.delivery_hours && (
+                    <div className={`text-[9px] font-black px-2 py-1 rounded border ${
+                      l.delivery_hours <= 24 ? "bg-orange-50 border-orange-100 text-orange-600" : "bg-blue-50 border-blue-100 text-blue-600"
+                    }`}>
+                      {l.delivery_hours <= 48 ? `${l.delivery_hours}h` : `${Math.round(l.delivery_hours / 24)}d`} Delivery
                     </div>
                   )}
                 </div>
+
+                {/* Right: Actions */}
+                <div className="flex items-center gap-1.5 shrink-0 ml-auto md:ml-0">
+                  <a href={`tel:${l.phone}`} className="w-8 h-8 flex items-center justify-center bg-gray-50 text-gray-400 rounded-lg hover:bg-gray-100 hover:text-gray-600 transition-all border border-gray-100"><Phone size={14} /></a>
+                  <a href={`mailto:${l.buyer_email}`} className="w-8 h-8 flex items-center justify-center bg-gray-50 text-gray-400 rounded-lg hover:bg-gray-100 hover:text-gray-600 transition-all border border-gray-100"><Mail size={14} /></a>
+                  <a 
+                    href={`https://wa.me/91${l.phone}?text=Hello ${l.buyer_name}, I am contacting you regarding your inquiry for ${l.product_name} on Packaging Bazaar.`}
+                    target="_blank"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#25D366] text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:shadow-lg transition-all"
+                  >
+                    <Icon d={icons.whatsapp} size={12} stroke="none" fill="white" /> 
+                    <span>WhatsApp</span>
+                  </a>
+                </div>
               </div>
 
-              {/* Message Box */}
-              <div className="mt-3 p-3 bg-gray-50/50 rounded-xl border border-dashed border-gray-100">
-                <p className="text-[10px] text-gray-500 italic leading-relaxed line-clamp-2 group-hover:line-clamp-none transition-all">
-                  "{l.message}"
-                </p>
+              {/* Collapsible Info (Message & Address) */}
+              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 border-t border-gray-50">
+                <div className="bg-gray-50/50 p-2.5 rounded-xl border border-dashed border-gray-200">
+                  <span className="text-[8px] font-black text-gray-400 uppercase block mb-1">Requirement</span>
+                  <p className="text-[10px] text-gray-600 italic leading-relaxed">"{l.message}"</p>
+                </div>
+                {l.address && (
+                  <div className="bg-blue-50/30 p-2.5 rounded-xl border border-dashed border-blue-100">
+                    <span className="text-[8px] font-black text-blue-400 uppercase block mb-1">Delivery Address</span>
+                    <p className="text-[10px] text-gray-600 font-medium">{l.address}, {l.city}, {l.pincode}</p>
+                  </div>
+                )}
               </div>
 
-              {/* Admin Assignment Note */}
+              {/* Admin Note */}
               {l.assignment_note && (
-                <div className="mt-3 p-3 bg-orange-50/50 rounded-xl border border-orange-100 flex gap-2 items-start">
-                  <div className="w-6 h-6 bg-orange-100 rounded-lg flex items-center justify-center shrink-0 text-accent">
-                    <MessageCircle size={12} />
-                  </div>
-                  <div>
-                    <span className="text-[9px] font-black text-accent uppercase tracking-widest block mb-0.5">Admin Instructions</span>
-                    <p className="text-xs text-gray-800 font-medium leading-relaxed">
-                      {l.assignment_note}
-                    </p>
-                  </div>
+                <div className="mt-2 p-2 bg-orange-50/50 rounded-xl border border-orange-100 flex gap-2 items-center">
+                  <MessageCircle size={10} className="text-accent shrink-0" />
+                  <p className="text-[10px] text-gray-700 font-bold italic truncate">Admin: {l.assignment_note}</p>
                 </div>
               )}
             </motion.div>

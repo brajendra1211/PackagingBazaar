@@ -54,7 +54,8 @@ export const getProductVariants = async (req, res) => {
                 COALESCE(MIN(sp.price_min), MAX(p.min_price)) as min_price,
                 COALESCE(MAX(sp.price_max), MAX(p.max_price)) as max_price,
                 COALESCE(SUM(sp.stock_qty), MAX(ps.quantity), 0) as stock_qty,
-                MAX(s.company_name) as seller_name
+                MAX(s.company_name) as seller_name,
+                MAX(s.seller_uid) as seller_uid
          FROM products p
          LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.status = 'active'
          LEFT JOIN product_stocks ps ON p.id = ps.product_id
@@ -79,7 +80,8 @@ export const getProductVariants = async (req, res) => {
                 COALESCE(MIN(sp.price_min), MAX(p.min_price)) as min_price,
                 COALESCE(MAX(sp.price_max), MAX(p.max_price)) as max_price,
                 COALESCE(SUM(sp.stock_qty), MAX(ps.quantity), 0) as stock_qty,
-                MAX(s.company_name) as seller_name
+                MAX(s.company_name) as seller_name,
+                MAX(s.seller_uid) as seller_uid
          FROM products p
          LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.status = 'active'
          LEFT JOIN product_stocks ps ON p.id = ps.product_id
@@ -407,7 +409,8 @@ export const getProductById = async (req, res) => {
          MAX(CASE WHEN ? IS NULL OR s.id = ? THEN s.is_verified ELSE 0 END) as is_verified,
          (SELECT AVG(rating) FROM product_reviews WHERE product_id = p.id AND status = 'approved') as avg_rating,
          (SELECT COUNT(*) FROM product_reviews WHERE product_id = p.id AND status = 'approved') as review_count,
-         COALESCE(GROUP_CONCAT(DISTINCT a.app_name), '') as applications 
+         MAX(CASE WHEN ? IS NULL OR s.id = ? THEN sp.delivery_hours ELSE NULL END) as delivery_hours,
+         COALESCE(GROUP_CONCAT(DISTINCT a.app_name), '') as mapped_applications 
   FROM products p
   LEFT JOIN tags t ON p.tag_id = t.id
   LEFT JOIN sub_categories sc ON p.sub_category_id = sc.id
@@ -427,6 +430,7 @@ export const getProductById = async (req, res) => {
       sellerId || null, sellerId || null, 
       sellerId || null, sellerId || null,
       sellerId || null, sellerId || null, sellerId || null,
+      sellerId || null, sellerId || null, 
       sellerId || null, sellerId || null,
       id
     ]);
@@ -438,9 +442,32 @@ export const getProductById = async (req, res) => {
     }
 
     const product = rows[0];
-    product.applications = product.applications
-      ? product.applications.split(",")
-      : [];
+
+    // Combine applications from JSON column and Mapping table
+    let apps = [];
+    
+    // 1. From JSON column (p.applications)
+    if (product.applications) {
+      if (Array.isArray(product.applications)) {
+        apps = [...product.applications];
+      } else if (typeof product.applications === "string") {
+        try {
+          const parsed = JSON.parse(product.applications);
+          if (Array.isArray(parsed)) apps = [...parsed];
+          else apps = product.applications.split(",").map(s => s.trim());
+        } catch (e) {
+          apps = product.applications.split(",").map(s => s.trim());
+        }
+      }
+    }
+
+    // 2. From Mapping table (mapped_applications)
+    if (product.mapped_applications) {
+      const mapped = product.mapped_applications.split(",").map(s => s.trim());
+      apps = [...new Set([...apps, ...mapped])];
+    }
+
+    product.applications = apps.filter(a => a && a !== "");
 
     res.status(200).json({ success: true, data: product });
   } catch (error) {
@@ -478,15 +505,55 @@ export const getTopSellingProducts = async (req, res) => {
       ORDER BY review_count DESC
       LIMIT 8
     `;
-
     const [rows] = await pool.query(query);
-
-    res.status(200).json({
-      success: true,
-      data: rows,
-    });
+    res.status(200).json({ success: true, data: rows });
   } catch (error) {
     console.error("Error in getTopSellingProducts:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+// NEW: Unique Top Selling — same product from multiple sellers shows only once
+export const getUniqueTopSelling = async (req, res) => {
+  try {
+    const query = `
+      SELECT
+        p.name,
+        -- Pick ALL fields from the same product (lowest id) to avoid mismatch
+        SUBSTRING_INDEX(GROUP_CONCAT(p.id ORDER BY p.id ASC SEPARATOR '||'), '||', 1) as id,
+        SUBSTRING_INDEX(GROUP_CONCAT(p.image_url ORDER BY p.id ASC SEPARATOR '||'), '||', 1) as image_url,
+        SUBSTRING_INDEX(GROUP_CONCAT(p.description ORDER BY p.id ASC SEPARATOR '||'), '||', 1) as description,
+        SUBSTRING_INDEX(GROUP_CONCAT(p.unit ORDER BY p.id ASC SEPARATOR '||'), '||', 1) as unit,
+        SUBSTRING_INDEX(GROUP_CONCAT(t.tag_name ORDER BY p.id ASC SEPARATOR '||'), '||', 1) as tag_name,
+        MAX(c.name) as category_name,
+        SUBSTRING_INDEX(GROUP_CONCAT(s.seller_uid ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_uid,
+        SUBSTRING_INDEX(GROUP_CONCAT(s.id ORDER BY sp.price_min ASC SEPARATOR '||'), '||', 1) as seller_id,
+        COALESCE(MIN(sp.price_min), MIN(p.min_price), 0) as min_price,
+        COALESCE(MAX(sp.price_max), MAX(p.max_price), 0) as max_price,
+        COALESCE(SUM(sp.stock_qty), MAX(ps.quantity), 0) as stock,
+        COALESCE(MIN(sp.moq), MIN(ps.min_order), 100) as min_order,
+        (SELECT AVG(pr.rating) FROM product_reviews pr
+          INNER JOIN products pp ON pr.product_id = pp.id
+          WHERE pp.name = p.name AND pr.status = 'approved') as avg_rating,
+        (SELECT COUNT(*) FROM product_reviews pr
+          INNER JOIN products pp ON pr.product_id = pp.id
+          WHERE pp.name = p.name AND pr.status = 'approved') as review_count,
+        COUNT(DISTINCT s.id) as seller_count
+      FROM products p
+      LEFT JOIN tags t ON p.tag_id = t.id
+      LEFT JOIN sub_categories sc ON p.sub_category_id = sc.id
+      LEFT JOIN categories c ON sc.category_id = c.id
+      LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.status = 'active'
+      LEFT JOIN product_stocks ps ON p.id = ps.product_id
+      LEFT JOIN sellers s ON s.id = COALESCE(sp.seller_id, p.seller_id)
+      GROUP BY p.name
+      ORDER BY review_count DESC, seller_count DESC
+      LIMIT 8
+    `;
+    const [rows] = await pool.query(query);
+    res.status(200).json({ success: true, data: rows });
+  } catch (error) {
+    console.error("Error in getUniqueTopSelling:", error);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
@@ -940,7 +1007,8 @@ export const getSellersByGroupKey = async (req, res) => {
         MAX(u.mobile) as phone, 
         MAX(u.email) as email,
         MAX(p.display_name) as display_name, 
-        MAX(p.name) as master_product_name
+        MAX(p.name) as master_product_name,
+        MAX(sp.delivery_hours) as delivery_hours
       FROM products p
       LEFT JOIN seller_products sp ON p.id = sp.product_id AND sp.status = 'active'
       LEFT JOIN product_stocks ps ON p.id = ps.product_id

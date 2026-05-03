@@ -100,25 +100,22 @@ export default function CartPage() {
                       <h4 className="font-bold text-gray-900 text-sm xs:text-[15px] sm:text-lg leading-tight line-clamp-2">{item.name}</h4>
                       <div className="flex flex-wrap items-center gap-1.5 xs:gap-2 mt-1">
                         {item.selected_thickness && (
-                          <span className="text-[9px] xs:text-[10px] text-gray-500 font-bold">{item.selected_thickness}</span>
-                        )}
-                        {item.selected_thickness && item.selected_width && (
-                          <span className="text-gray-300">•</span>
+                          <span className="text-[9px] xs:text-[10px] text-gray-500 font-bold bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100">{item.selected_thickness}</span>
                         )}
                         {item.selected_width && (
-                          <span className="text-[9px] xs:text-[10px] text-gray-500 font-bold">{item.selected_width}</span>
+                          <span className="text-[9px] xs:text-[10px] text-gray-500 font-bold bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100">{item.selected_width}</span>
                         )}
-                         {item.color && (
-                          <>
-                            <span className="text-gray-300">•</span>
-                            <span className="text-[9px] xs:text-[10px] text-gray-500 font-bold uppercase">{item.color}</span>
-                          </>
+                        {item.selected_brand && (
+                          <span className="text-[9px] xs:text-[10px] text-gray-500 font-bold bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md border border-blue-100">{item.selected_brand}</span>
+                        )}
+                        {item.color && (
+                          <span className="text-[9px] xs:text-[10px] text-gray-400 font-bold uppercase">{item.color}</span>
                         )}
                       </div>
-                      {item.seller_name && (
+                      {item.seller_uid && (
                         <div className="flex items-center gap-1 mt-1">
                           <span className="text-[9px] text-accent font-black uppercase tracking-widest">Seller:</span>
-                          <span className="text-[10px] text-gray-600 font-bold">{item.seller_name}</span>
+                          <span className="text-[10px] text-gray-600 font-bold">{item.seller_uid}</span>
                         </div>
                       )}
                     </div>

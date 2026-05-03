@@ -32,6 +32,11 @@ export const fetchTopSelling = async () => {
   return response.data;
 };
 
+export const fetchUniqueTopSelling = async () => {
+  const response = await API.get('/products/unique-top-selling');
+  return response.data;
+};
+
 export const fetchHotDeals = async () => {
   const response = await API.get('/products/hot-deals');
   return response.data;
