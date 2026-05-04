@@ -378,9 +378,9 @@ export function SellerLeads() {
 
                 {/* Center: Specs Badges */}
                 <div className="flex flex-wrap gap-1.5 md:justify-center flex-1">
-                  {l.quantity_required && (
-                    <div className="text-[9px] font-black text-gray-600 bg-gray-50 px-2 py-1 rounded border border-gray-100">
-                      QTY: <span className="text-accent">{l.quantity_required}</span>
+                  {l.quantity_required && l.quantity_required !== "Not specified" && (
+                    <div className="text-[9px] font-black text-accent bg-orange-50 px-2 py-1 rounded border border-orange-100 shadow-sm shadow-orange-100/50">
+                      QTY: {l.quantity_required}
                     </div>
                   )}
                   {l.thickness && (
@@ -407,19 +407,7 @@ export function SellerLeads() {
                   )}
                 </div>
 
-                {/* Right: Actions */}
-                <div className="flex items-center gap-1.5 shrink-0 ml-auto md:ml-0">
-                  <a href={`tel:${l.phone}`} className="w-8 h-8 flex items-center justify-center bg-gray-50 text-gray-400 rounded-lg hover:bg-gray-100 hover:text-gray-600 transition-all border border-gray-100"><Phone size={14} /></a>
-                  <a href={`mailto:${l.buyer_email}`} className="w-8 h-8 flex items-center justify-center bg-gray-50 text-gray-400 rounded-lg hover:bg-gray-100 hover:text-gray-600 transition-all border border-gray-100"><Mail size={14} /></a>
-                  <a 
-                    href={`https://wa.me/91${l.phone}?text=Hello ${l.buyer_name}, I am contacting you regarding your inquiry for ${l.product_name} on Packaging Bazaar.`}
-                    target="_blank"
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#25D366] text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:shadow-lg transition-all"
-                  >
-                    <Icon d={icons.whatsapp} size={12} stroke="none" fill="white" /> 
-                    <span>WhatsApp</span>
-                  </a>
-                </div>
+                {/* Right: Actions Removed (Admin handles communication) */}
               </div>
 
               {/* Collapsible Info (Message & Address) */}

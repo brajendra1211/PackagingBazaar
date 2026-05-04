@@ -2,7 +2,10 @@ import bcrypt from "bcryptjs";
 import pool from "../config/db.js";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
+import fs from "fs";
 import { validateEmail, validateMobile, validateGST, validatePassword } from "../utils/validation.js";
+import { sendEmail } from "../utils/mailHelper.js";
+import { sendNotification } from "../utils/notificationHelper.js";
 
 const generateSellerUID = () => `PB-S-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 
@@ -145,6 +148,59 @@ export const registerSeller = async (req, res) => {
     );
 
     await connection.commit();
+
+    // --- EMAIL & IN-APP NOTIFICATIONS ---
+    try {
+      // 1. Notify Admins (Email + In-App)
+      const [admins] = await connection.query("SELECT id, email FROM users WHERE role = 'admin'");
+      
+      const adminSubject = "New Seller Registration - Action Required";
+      const adminMessage = `A new seller "${businessName}" has registered and is pending approval.`;
+      const adminHtml = `
+        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ddd;">
+          <h2 style="color: #2c3e50;">New Seller Registered</h2>
+          <p>${adminMessage}</p>
+          <hr>
+          <p><strong>Seller Name:</strong> ${ownerName}</p>
+          <p><strong>Business Name:</strong> ${businessName}</p>
+          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>GST Number:</strong> ${gstNumber}</p>
+          <p><strong>City:</strong> ${city}</p>
+          <hr>
+          <p>Please login to the Admin Dashboard to verify and approve this account.</p>
+        </div>
+      `;
+
+      for (const admin of admins) {
+        // Send In-App Notification (which also sends email internally)
+        await sendNotification({
+          userId: admin.id,
+          userRole: 'admin',
+          title: adminSubject,
+          message: adminMessage,
+          type: 'registration'
+        });
+      }
+
+      // 2. Notify Seller (Acknowledge)
+      const sellerSubject = "Registration Received - PackagingBazaar";
+      const sellerHtml = `
+        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ddd;">
+          <h2 style="color: #2c3e50;">Registration Received!</h2>
+          <p>Hi ${ownerName},</p>
+          <p>Thank you for registering your business <strong>${businessName}</strong> with PackagingBazaar.</p>
+          <p>Your application is currently <strong>Pending Admin Approval</strong>. Once our team verifies your GST details, your account will be activated.</p>
+          <p>We will notify you once your account is approved.</p>
+          <br>
+          <p>Regards,<br>Team PackagingBazaar</p>
+        </div>
+      `;
+      await sendEmail(email, sellerSubject, "Your registration is pending approval.", sellerHtml);
+
+    } catch (mailError) {
+      console.error("Notification Error (registration):", mailError);
+    }
+
     res.status(201).json({
       success: true,
       message: "Application submitted! Admin will verify your account shortly.",

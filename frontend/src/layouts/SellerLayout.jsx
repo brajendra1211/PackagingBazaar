@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Outlet, NavLink, useLocation, Navigate } from "react-router-dom";
 import { fetchSellerProfile, fetchSellerProducts, fetchSellerStats, fetchSellerOrders } from "../services/sellerServices";
 import { AnimatePresence, motion } from "framer-motion";
+import NotificationPanel from "../components/notifications/NotificationPanel";
 
 
 // ─── ICON HELPER ──────────────────────────────────────────────────────────────
@@ -462,6 +463,8 @@ export default function SellerLayout() {
 
             <div className="h-6 w-[1px] bg-gray-200 mx-1 hidden sm:block" />
             
+            <NotificationPanel />
+
             <button 
               onClick={() => { localStorage.removeItem("token"); window.location.href = "/"; }}
               className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all group"

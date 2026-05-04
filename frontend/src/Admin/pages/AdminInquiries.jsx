@@ -266,9 +266,11 @@ export default function AdminInquiries() {
                         
                         <div className="flex flex-col gap-3">
                           <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="text-[10px] bg-accent text-white font-black uppercase tracking-widest px-2 py-0.5 rounded shadow-sm shadow-accent/20">
-                              QTY: {inquiry.quantity_required || 'N/A'}
-                            </span>
+                            {inquiry.quantity_required && inquiry.quantity_required !== 'Not specified' && (
+                              <span className="text-[10px] bg-accent text-white font-black uppercase tracking-widest px-2 py-0.5 rounded shadow-sm shadow-accent/20">
+                                QTY: {inquiry.quantity_required}
+                              </span>
+                            )}
                             {inquiry.thickness && (
                               <span className="text-[10px] bg-white text-gray-500 font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-gray-200 shadow-sm flex items-center gap-1">
                                 <span className="text-[8px] text-gray-400">THICK:</span> {inquiry.thickness}

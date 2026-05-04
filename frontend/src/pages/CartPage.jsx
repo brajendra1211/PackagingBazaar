@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useCart } from "../context/CartContext";
 import { useNavigate } from "react-router-dom";
-import { Trash2, Plus, Minus, ShoppingBag, Send, ShieldCheck } from "lucide-react";
+import { Trash2, ShoppingBag, Send, ShieldCheck, Package } from "lucide-react";
 import { motion } from "framer-motion";
 import InquiryModal from "../components/ui/InquiryModal";
 import { submitInquiryAPI } from "../services/inquiryServices";
@@ -9,7 +9,7 @@ import { useNotification } from "../context/NotificationContext";
 import { getImageUrl } from "../services/api";
 
 export default function CartPage() {
-  const { cart, removeFromCart, updateQty, total, clearCart, count } = useCart();
+  const { cart, removeFromCart, updateInquiryQty, total, clearCart, count } = useCart();
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
   const { notifySuccess, notifyError } = useNotification();
@@ -41,7 +41,8 @@ export default function CartPage() {
         submitInquiryAPI({
           product_id: item.id,
           message: `Bulk Inquiry: ${formData.message}`,
-          quantity: (formData.quantity && formData.quantity !== "Not specified") ? formData.quantity : `${item.qty} ${item.unit || 'kg'}`,
+          // Use the item's own inquiry_quantity (the B2B order size)
+          quantity: item.inquiry_quantity || formData.quantity || "Not specified",
           thickness: item.selected_thickness || "Standard", 
           width: item.selected_width || "Standard",
           phone: formData.phone,
@@ -93,23 +94,31 @@ export default function CartPage() {
                   <img src={getImageUrl(item.image || item.image_url)} alt={item.name} className="w-full h-full object-cover" />
                 </div>
 
-                {/* Product Details */}
+                  {/* Product Details */}
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start gap-2 mb-2">
                     <div className="min-w-0 flex-1">
                       <h4 className="font-bold text-gray-900 text-sm xs:text-[15px] sm:text-lg leading-tight line-clamp-2">{item.name}</h4>
-                      <div className="flex flex-wrap items-center gap-1.5 xs:gap-2 mt-1">
-                        {item.selected_thickness && (
-                          <span className="text-[9px] xs:text-[10px] text-gray-500 font-bold bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100">{item.selected_thickness}</span>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                        {item.selected_thickness ? (
+                          <span className="flex items-center gap-1 text-[9px] xs:text-[10px] font-black bg-white border border-gray-200 text-gray-600 px-1.5 py-0.5 rounded-md shadow-sm">
+                            <span className="text-gray-400">T:</span> {item.selected_thickness}
+                          </span>
+                        ) : (
+                          <span className="text-[9px] xs:text-[10px] font-bold text-gray-300 px-1.5 py-0.5 border border-dashed border-gray-200 rounded-md">T: —</span>
                         )}
-                        {item.selected_width && (
-                          <span className="text-[9px] xs:text-[10px] text-gray-500 font-bold bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100">{item.selected_width}</span>
+                        {item.selected_width ? (
+                          <span className="flex items-center gap-1 text-[9px] xs:text-[10px] font-black bg-white border border-gray-200 text-gray-600 px-1.5 py-0.5 rounded-md shadow-sm">
+                            <span className="text-gray-400">W:</span> {item.selected_width}
+                          </span>
+                        ) : (
+                          <span className="text-[9px] xs:text-[10px] font-bold text-gray-300 px-1.5 py-0.5 border border-dashed border-gray-200 rounded-md">W: —</span>
                         )}
                         {item.selected_brand && (
-                          <span className="text-[9px] xs:text-[10px] text-gray-500 font-bold bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md border border-blue-100">{item.selected_brand}</span>
+                          <span className="text-[9px] xs:text-[10px] text-gray-500 font-bold bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-md border border-blue-100">{item.selected_brand}</span>
                         )}
                         {item.color && (
-                          <span className="text-[9px] xs:text-[10px] text-gray-400 font-bold uppercase">{item.color}</span>
+                          <span className="text-[9px] xs:text-[10px] text-gray-400 font-bold uppercase border border-gray-100 px-1.5 py-0.5 rounded-md">{item.color}</span>
                         )}
                       </div>
                       {item.seller_uid && (
@@ -128,30 +137,24 @@ export default function CartPage() {
                     </button>
                   </div>
 
-                  {/* Price and Quantity Controls */}
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="text-accent font-black text-base xs:text-lg sm:text-xl">
+                  {/* Inquiry Quantity (editable) */}
+                  <div className="flex items-center justify-between gap-2 mt-2">
+                    <div className="text-accent font-black text-base xs:text-lg sm:text-xl leading-none">
                       ₹{item.price}
                       <span className="text-[9px] xs:text-[10px] text-gray-400 font-bold ml-1">/{item.unit}</span>
                     </div>
-                    
-                    {/* Quantity Controls */}
-                    <div className="flex items-center bg-gray-50/30 rounded-lg xs:rounded-xl p-0.5 xs:p-1 border border-gray-100">
-                      <button 
-                        onClick={() => updateQty(item, item.qty - 1)} 
-                        className="w-7 h-7 xs:w-8 xs:h-8 rounded-md xs:rounded-lg bg-white flex items-center justify-center hover:text-accent shadow-sm border border-gray-100 transition-all active:scale-90"
-                        aria-label="Decrease quantity"
-                      >
-                        <Minus className="w-3 h-3 xs:w-4 xs:h-4"/>
-                      </button>
-                      <span className="w-8 xs:w-10 text-center text-xs xs:text-sm font-black text-gray-900">{item.qty}</span>
-                      <button 
-                        onClick={() => updateQty(item, item.qty + 1)} 
-                        className="w-7 h-7 xs:w-8 xs:h-8 rounded-md xs:rounded-lg bg-white flex items-center justify-center hover:text-accent shadow-sm border border-gray-100 transition-all active:scale-90"
-                        aria-label="Increase quantity"
-                      >
-                        <Plus className="w-3 h-3 xs:w-4 xs:h-4"/>
-                      </button>
+
+                    {/* Inquiry Qty Badge + Edit */}
+                    <div className="flex items-center gap-1.5 bg-orange-50 border border-orange-200 rounded-xl px-2.5 py-1.5 shadow-sm">
+                      <span className="text-orange-300 text-[9px] font-black uppercase tracking-widest pl-1">Qty:</span>
+                      <input
+                        type="text"
+                        value={item.inquiry_quantity || ""}
+                        onChange={(e) => updateInquiryQty(item, e.target.value)}
+                        placeholder={`Enter ${item.unit || 'kg'}`}
+                        className="w-16 xs:w-20 text-[11px] xs:text-xs font-black text-accent bg-transparent border-none focus:outline-none placeholder:text-orange-300/50 placeholder:font-bold"
+                        aria-label="Inquiry quantity"
+                      />
                     </div>
                   </div>
                 </div>
@@ -175,18 +178,49 @@ export default function CartPage() {
               <h3 className="font-syne font-black text-lg xs:text-xl sm:text-2xl text-gray-900 mb-4 xs:mb-6 uppercase tracking-tighter">Basket Summary</h3>
               
               {/* Summary Details */}
-              <div className="space-y-3 xs:space-y-4 mb-6 xs:mb-8">
+              <div className="space-y-4 mb-6 xs:mb-8">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500 font-bold uppercase tracking-widest text-[9px] xs:text-[10px]">Total Products</span>
                   <span className="text-gray-900 font-black text-sm xs:text-base">{count}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500 font-bold uppercase tracking-widest text-[9px] xs:text-[10px]">Total Est. Value</span>
-                  <span className="text-gray-900 font-black text-base xs:text-lg">₹{total.toLocaleString()}</span>
+
+                {/* Per-item specs summary */}
+                <div className="space-y-3">
+                  {cart.map((item, idx) => (
+                    <div key={idx} className="bg-gray-50/80 rounded-xl p-2.5 border border-gray-100">
+                      {/* Product Name */}
+                      <p className="text-gray-700 font-black text-[10px] xs:text-[11px] truncate mb-2 leading-tight">{item.name}</p>
+                      {/* Specs Row */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {item.selected_thickness ? (
+                          <span className="flex items-center gap-1 text-[8px] xs:text-[9px] font-black bg-white border border-gray-200 text-gray-600 px-1.5 py-0.5 rounded-md">
+                            <span className="text-gray-400">T:</span> {item.selected_thickness}
+                          </span>
+                        ) : (
+                          <span className="text-[8px] xs:text-[9px] font-bold text-gray-300 px-1.5 py-0.5 border border-dashed border-gray-200 rounded-md">T: —</span>
+                        )}
+                        {item.selected_width ? (
+                          <span className="flex items-center gap-1 text-[8px] xs:text-[9px] font-black bg-white border border-gray-200 text-gray-600 px-1.5 py-0.5 rounded-md">
+                            <span className="text-gray-400">W:</span> {item.selected_width}
+                          </span>
+                        ) : (
+                          <span className="text-[8px] xs:text-[9px] font-bold text-gray-300 px-1.5 py-0.5 border border-dashed border-gray-200 rounded-md">W: —</span>
+                        )}
+                        {item.inquiry_quantity ? (
+                          <span className="flex items-center gap-1 text-[8px] xs:text-[9px] font-black bg-orange-50 border border-orange-200 text-accent px-1.5 py-0.5 rounded-md">
+                            <span className="text-orange-300">Qty:</span> {item.inquiry_quantity} {item.unit || 'kg'}
+                          </span>
+                        ) : (
+                          <span className="text-[8px] xs:text-[9px] font-bold text-orange-300 px-1.5 py-0.5 border border-dashed border-orange-200 rounded-md bg-orange-50/50">Qty: not set ⚠</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="h-px bg-gray-50" />
+
+                <div className="h-px bg-gray-100" />
                 <p className="text-[9px] xs:text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-relaxed">
-                   Requesting quotes for these items as a single requirement.
+                   These specs will be shared with sellers in leads.
                 </p>
               </div>
 

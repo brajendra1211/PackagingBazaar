@@ -19,7 +19,8 @@ export default function ProductCard({ product, onInquiry }) {
   const [showOptions, setShowOptions] = useState(false);
   const [specs, setSpecs] = useState({
     thickness: product.thickness || "",
-    width: product.width || ""
+    width: product.width || "",
+    quantity: ""
   });
   
   const categoryName = product.category_name || "BOPP"; 
@@ -41,7 +42,8 @@ export default function ProductCard({ product, onInquiry }) {
       ...product,
       selected_thickness: specs.thickness,
       selected_width: specs.width,
-      selected_brand: product.brand || "Default"
+      selected_brand: product.brand || "",
+      selected_quantity: specs.quantity  // This becomes inquiry_quantity in cart
     });
     setShowOptions(false);
   };
@@ -139,8 +141,9 @@ export default function ProductCard({ product, onInquiry }) {
               className="w-full bg-white rounded-t-3xl p-5 pb-6 animate-slideInUp shadow-[0_-10px_40px_rgba(0,0,0,0.1)]"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="w-12 h-1 bg-gray-100 rounded-full mx-auto mb-4" />
-              <h4 className="text-xs font-black uppercase tracking-widest text-ink mb-4 text-center">Select Specifications</h4>
+          <div className="w-12 h-1 bg-gray-100 rounded-full mx-auto mb-3" />
+              <h4 className="text-xs font-black uppercase tracking-widest text-ink mb-0.5 text-center">Select Specifications</h4>
+              <p className="text-[9px] text-gray-400 font-bold text-center mb-4 uppercase tracking-widest">Tell us what you need — we'll get you the best price</p>
               <div className="space-y-3">
                 <div className="flex gap-2">
                   <div className="flex-1 relative">
@@ -164,7 +167,27 @@ export default function ProductCard({ product, onInquiry }) {
                     />
                   </div>
                 </div>
-                <div className="flex gap-2 pt-2">
+
+                {/* Inquiry Quantity — clearly labeled */}
+                <div>
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-accent inline-block"></span>
+                    How much do you need?
+                  </label>
+                  <div className="relative">
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-black text-accent uppercase tracking-widest">{product.unit || 'kg'}</span>
+                    <input
+                      type="text"
+                      placeholder={`e.g. 500, 1000, 5000`}
+                      value={specs.quantity}
+                      onChange={(e) => setSpecs({...specs, quantity: e.target.value})}
+                      className="w-full bg-orange-50/60 border border-orange-100 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-accent font-black text-ink placeholder:text-gray-300"
+                    />
+                  </div>
+                  <p className="text-[8px] text-gray-400 font-bold mt-1 pl-1">This quantity will be shown to sellers in the lead</p>
+                </div>
+
+                <div className="flex gap-2 pt-1">
                   <button 
                     onClick={() => setShowOptions(false)}
                     className="flex-1 py-3.5 rounded-xl text-[10px] font-black uppercase bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all active:scale-95"

@@ -56,7 +56,6 @@ export default function SubViewOverlay({ entity, onClose }) {
       inquiry.pincode ? `   • Pincode: ${inquiry.pincode}` : null,
       inquiry.address ? `   • Address: ${inquiry.address}` : null,
       ``,
-      `📞 *Buyer Mobile:* ${inquiry.phone || 'N/A'}`,
       inquiry.message ? `💬 *Requirement:* ${inquiry.message}` : null,
       ``,
       `Please confirm if you can fulfill this order. Reply ASAP!`,
@@ -191,18 +190,37 @@ export default function SubViewOverlay({ entity, onClose }) {
                           <MapPinIcon size={14} className="text-accent" /> {seller.city}, {seller.state}
                         </div>
                         <div className="bg-white/80 rounded-3xl p-6 border border-black/[0.03] space-y-3">
-                           <p className="text-[10px] font-black text-ink uppercase tracking-widest mb-4 flex items-center justify-between">Match Breakdown <span className="text-accent">{seller.match_score} / 510 PTS</span></p>
+                           <div className="flex items-center justify-between mb-4">
+                             <p className="text-[10px] font-black text-ink uppercase tracking-widest flex items-center gap-2">
+                               Match Breakdown 
+                               <span className="text-accent">
+                                 {Math.round((seller.match_score / 510) * 100)}% Match
+                               </span>
+                             </p>
+                             {seller.distance_km !== undefined && seller.distance_km !== null ? (
+                               <div className="bg-accent/10 text-accent px-3 py-1 rounded-xl text-[10px] font-black flex items-center gap-1.5 shadow-sm shadow-accent/5">
+                                 <MapPinIcon size={12} />
+                                 {seller.distance_km < 1 ? 'Under 1 km' : `${parseFloat(seller.distance_km).toFixed(1)} km away`}
+                               </div>
+                             ) : (
+                               <div className="bg-gray-100 text-gray-400 px-3 py-1 rounded-xl text-[10px] font-bold flex items-center gap-1.5 border border-dashed">
+                                 <MapPinIcon size={12} />
+                                 Distance N/A
+                               </div>
+                             )}
+                           </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
                                <MatchItem 
-                                 label={seller.pincode_match ? "Pincode Match" : seller.city_match ? "City Match" : seller.state_match ? "State Match" : "Location Match"} 
-                                 score={seller.pincode_match ? 200 : seller.city_match ? 100 : seller.state_match ? 50 : 0} 
+                                 label={seller.distance_km <= 50 ? "Proximity Match" : "Location Match"} 
+                                 score={seller.distance_km <= 10 ? 200 : seller.distance_km <= 50 ? 160 : seller.distance_km <= 100 ? 120 : seller.distance_km <= 300 ? 80 : 0} 
                                  max={200} 
-                                 status={seller.pincode_match || seller.city_match || seller.state_match} 
+                                 status={seller.distance_km <= 300} 
                                />
                                <MatchItem label="Price Efficiency" score={seller.price_match ? 40 : 0} max={40} status={seller.price_match} />
                                <MatchItem label="Stock Sufficient" score={seller.has_stock ? 70 : 0} max={70} status={seller.has_stock} />
                                <MatchItem label="MOQ Awareness" score={seller.moq_fit ? 50 : 0} max={50} status={seller.moq_fit} />
                                <MatchItem label={`Delivery (${seller.best_delivery_hours ? seller.best_delivery_hours + 'h' : 'N/A'})`} score={seller.best_delivery_hours <= 24 ? 40 : seller.best_delivery_hours <= 48 ? 30 : seller.best_delivery_hours <= 72 ? 20 : seller.best_delivery_hours <= 120 ? 10 : 0} max={40} status={seller.best_delivery_hours > 0 && seller.best_delivery_hours <= 120} />
+                               <MatchItem label="Category Fit" score={seller.category_match ? 30 : 0} max={30} status={seller.category_match} />
                             </div>
                         </div>
                       </div>

@@ -97,19 +97,7 @@ export default function ProductDetailPage() {
   const [inquiryProduct, setInquiryProduct] = useState(null);
   const [otherSellers, setOtherSellers] = useState([]);
   const [sellersLoading, setSellersLoading] = useState(false);
-
-  const handleOpenInquiry = (p) => {
-    const base = p || product;
-    // Merge selected specs so InquiryModal can pre-fill them
-    setInquiryProduct({
-      ...base,
-      selected_thickness: selectedThickness.length > 0
-        ? selectedThickness.join(", ")
-        : base.thickness || "",
-      selected_width: selectedWidth || base.width || "",
-    });
-    setIsModalOpen(true);
-  };
+  const [quantity, setQuantity] = useState("");
 
   // Specifications Selection State
   const [selectedThickness, setSelectedThickness] = useState([]);
@@ -184,11 +172,26 @@ export default function ProductDetailPage() {
         selected_thickness: selectedThickness.join(", "),  // array to string
         selected_width: selectedWidth,
         selected_brand: selectedBrand,
+        selected_quantity: quantity, // Use the state value directly
       };
       addToCart(productWithSpecs);
       setAdded(true);
       setTimeout(() => setAdded(false), 2000);
     }
+  };
+
+  const handleOpenInquiry = (p) => {
+    const base = p || product;
+    // Merge selected specs so InquiryModal can pre-fill them
+    setInquiryProduct({
+      ...base,
+      selected_thickness: selectedThickness.length > 0
+        ? selectedThickness.join(", ")
+        : base.thickness || "",
+      selected_width: selectedWidth || base.width || "",
+      selected_quantity: quantity || "", // Pass the typed quantity
+    });
+    setIsModalOpen(true);
   };
 
   if (loading) {
@@ -419,15 +422,28 @@ export default function ProductDetailPage() {
                 </div>
 
                 {/* Width */}
-                <div>
-                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2">Width (mm / inch)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 500mm, 12 inch"
-                    value={selectedWidth}
-                    onChange={(e) => setSelectedWidth(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 text-sm font-semibold text-gray-700 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 transition-all"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2">Width (mm/inch)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 500mm"
+                      value={selectedWidth}
+                      onChange={(e) => setSelectedWidth(e.target.value)}
+                      className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 text-sm font-semibold text-gray-700 focus:outline-none focus:border-accent transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2">Quantity ({product.unit})</label>
+                    <input
+                      type="number"
+                      min={product.min_order || 1}
+                      placeholder={`Min: ${product.min_order}`}
+                      value={quantity}
+                      onChange={(e) => setQuantity(e.target.value)}
+                      className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 text-sm font-semibold text-gray-700 focus:outline-none focus:border-accent transition-all"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -443,11 +459,11 @@ export default function ProductDetailPage() {
                 </button>
                 <button
                   onClick={handleAdd}
-                  disabled={selectedThickness.length === 0 || !selectedWidth || !selectedBrand}
+                  disabled={selectedThickness.length === 0 || !selectedWidth || !selectedBrand || !quantity}
                   className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm uppercase tracking-widest transition-all border ${
                     added
                       ? "bg-green-600 text-white border-green-600"
-                      : selectedThickness.length === 0 || !selectedWidth || !selectedBrand
+                      : selectedThickness.length === 0 || !selectedWidth || !selectedBrand || !quantity
                         ? "bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed"
                         : "bg-white border-gray-200 text-gray-800 hover:bg-gray-50 active:scale-[0.99]"
                   }`}
@@ -455,9 +471,9 @@ export default function ProductDetailPage() {
                   {added ? <><CheckCircle size={16} /> Added to Cart</> : <><ShoppingCart size={16} /> Add to Cart</>}
                 </button>
               </div>
-              {(selectedThickness.length === 0 || !selectedWidth || !selectedBrand) && (
+              {(selectedThickness.length === 0 || !selectedWidth || !selectedBrand || !quantity) && (
                 <p className="text-[10px] text-amber-500 font-bold mt-3 flex items-center gap-1.5">
-                  <Info size={11} /> Select thickness, brand & width to add to cart
+                  <Info size={11} /> Select thickness, brand, width & quantity to add to cart
                 </p>
               )}
             </div>

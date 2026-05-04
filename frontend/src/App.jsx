@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
 import { NotificationProvider } from "./context/NotificationContext";
+import { SocketProvider } from "./context/SocketContext";
 import ScrollToTop from "./components/layout/ScrollToTop";
 
 // Layouts
@@ -21,7 +22,6 @@ import AboutPage from "./pages/AboutPage";
 import PolicyPage from "./pages/PolicyPage";
 import NotFound from "./pages/NotFound";
 import BecomeaSeller from "./pages/BecomeaSeller";
-// import BecomeaBuyer from "./pages/BecomeaBuyer";
 import LoginPage from "./pages/LoginPage";
 import UserProfile from "./pages/UserProfile";
 import HotDealsPage from "./pages/HotDealsPage";
@@ -43,8 +43,6 @@ import AdminEditProduct from "./Admin/pages/AdminEditProduct";
 import AdminContacts from "./Admin/pages/AdminContacts";
 import AdminReviews from "./Admin/pages/AdminReviews";
 
-import { Navigate } from "react-router-dom";
-
 // Seller
 import { SellerDashboard, SellerProducts, SellerOrders, SellerLeads, SellerProfile } from "./Seller/SellerDashboard";
 import AddProduct from "./Seller/AddProduct";
@@ -54,75 +52,76 @@ export default function App() {
     <BrowserRouter>
       <ScrollToTop />
       <NotificationProvider>
-        <CartProvider>
-          <Routes>
-            {/* Guest Routes (Redirects to dashboard if already logged in) */}
-            <Route element={<GuestRoute />}>
-              <Route element={<UserLayout />}>
-                <Route path="/login" element={<LoginPage />} />
+        <SocketProvider>
+          <CartProvider>
+            <Routes>
+              {/* Guest Routes */}
+              <Route element={<GuestRoute />}>
+                <Route element={<UserLayout />}>
+                  <Route path="/login" element={<LoginPage />} />
+                </Route>
               </Route>
-            </Route>
 
-            {/* Public / Standard Routes (Isolated from Professionals) */}
-            <Route element={<UserLayoutGuard />}>
-              <Route element={<UserLayout />}>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/products" element={<ProductsPage />} />
-                <Route path="/products/:id" element={<ProductDetailPage />} />
-                <Route path="/cart" element={<CartPage />} />
-                <Route path="/contact" element={<ContactPage />} />
-                <Route path="/about" element={<AboutPage />} />
-                <Route path="/policy" element={<PolicyPage />} />
-                <Route path="/hot-deals" element={<HotDealsPage />} />
-                <Route path="/seller" element={<SellerPage />} />
-                <Route path="/become-a-seller" element={<BecomeaSeller />} />
+              {/* Public / Standard Routes */}
+              <Route element={<UserLayoutGuard />}>
+                <Route element={<UserLayout />}>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/products" element={<ProductsPage />} />
+                  <Route path="/products/:id" element={<ProductDetailPage />} />
+                  <Route path="/cart" element={<CartPage />} />
+                  <Route path="/contact" element={<ContactPage />} />
+                  <Route path="/about" element={<AboutPage />} />
+                  <Route path="/policy" element={<PolicyPage />} />
+                  <Route path="/hot-deals" element={<HotDealsPage />} />
+                  <Route path="/seller" element={<SellerPage />} />
+                  <Route path="/become-a-seller" element={<BecomeaSeller />} />
+                </Route>
               </Route>
-            </Route>
 
-            {/* Global 404 - Handled outside to be role-aware or general */}
-            <Route path="*" element={<NotFound />} />
+              {/* Global 404 */}
+              <Route path="*" element={<NotFound />} />
 
-            {/* Protected User Routes (Must be logged in) */}
-            <Route element={<ProtectedRoute />}>
-              <Route element={<UserLayout />}>
-                {/* <Route path="/become-a-buyer" element={<BecomeaBuyer />} /> */}
-                <Route path="/profile" element={<UserProfile />} />
+              {/* Protected User Routes */}
+              <Route element={<ProtectedRoute />}>
+                <Route element={<UserLayout />}>
+                  <Route path="/profile" element={<UserProfile />} />
+                </Route>
               </Route>
-            </Route>
 
-            {/* Admin Routes */}
-            <Route element={<AdminRoute />}>
-              <Route element={<AdminLayout />}>
-                <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                <Route path="/admin/sellers" element={<AdminSellers />} />
-                <Route path="/admin/pending-sellers" element={<AdminPendingSellers />} />
-                <Route path="/admin/users" element={<AdminUsers />} />
-                <Route path="/admin/products" element={<AdminProducts />} />
-                <Route path="/admin/orders" element={<AdminOrders />} />
-                <Route path="/admin/inquiries" element={<AdminInquiries />} />
-                <Route path="/admin/contacts" element={<AdminContacts />} />
-                <Route path="/admin/reviews" element={<AdminReviews />} />
-                <Route path="/admin/seller-hub" element={<AdminSellerHub />} />
-                <Route path="/admin/add-product" element={<AdminAddProduct />} />
-                <Route path="/admin/add-seller" element={<AdminAddSeller />} />
-                <Route path="/admin/sellers/edit/:id" element={<AdminEditSeller />} />
-                <Route path="/admin/products/edit/:id" element={<AdminEditProduct />} />
+              {/* Admin Routes */}
+              <Route element={<AdminRoute />}>
+                <Route element={<AdminLayout />}>
+                  <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                  <Route path="/admin/sellers" element={<AdminSellers />} />
+                  <Route path="/admin/pending-sellers" element={<AdminPendingSellers />} />
+                  <Route path="/admin/users" element={<AdminUsers />} />
+                  <Route path="/admin/products" element={<AdminProducts />} />
+                  <Route path="/admin/orders" element={<AdminOrders />} />
+                  <Route path="/admin/inquiries" element={<AdminInquiries />} />
+                  <Route path="/admin/contacts" element={<AdminContacts />} />
+                  <Route path="/admin/reviews" element={<AdminReviews />} />
+                  <Route path="/admin/seller-hub" element={<AdminSellerHub />} />
+                  <Route path="/admin/add-product" element={<AdminAddProduct />} />
+                  <Route path="/admin/add-seller" element={<AdminAddSeller />} />
+                  <Route path="/admin/sellers/edit/:id" element={<AdminEditSeller />} />
+                  <Route path="/admin/products/edit/:id" element={<AdminEditProduct />} />
+                </Route>
               </Route>
-            </Route>
 
-            {/* Seller Routes */}
-            <Route element={<SellerRoute />}>
-              <Route element={<SellerLayout />}>
-                <Route path="/seller/dashboard" element={<SellerDashboard />} />
-                <Route path="/seller/products" element={<SellerProducts />} />
-                <Route path="/seller/leads" element={<SellerLeads />} />
-                <Route path="/seller/orders" element={<SellerOrders />} />
-                <Route path="/seller/profile" element={<SellerProfile />} />
-                <Route path="/seller/add-product" element={<AddProduct />} />
+              {/* Seller Routes */}
+              <Route element={<SellerRoute />}>
+                <Route element={<SellerLayout />}>
+                  <Route path="/seller/dashboard" element={<SellerDashboard />} />
+                  <Route path="/seller/products" element={<SellerProducts />} />
+                  <Route path="/seller/leads" element={<SellerLeads />} />
+                  <Route path="/seller/orders" element={<SellerOrders />} />
+                  <Route path="/seller/profile" element={<SellerProfile />} />
+                  <Route path="/seller/add-product" element={<AddProduct />} />
+                </Route>
               </Route>
-            </Route>
-          </Routes>
-        </CartProvider>
+            </Routes>
+          </CartProvider>
+        </SocketProvider>
       </NotificationProvider>
     </BrowserRouter>
   );

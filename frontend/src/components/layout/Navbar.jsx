@@ -5,6 +5,7 @@ import {
   LayoutDashboard, ShieldCheck, Store, ChevronDown, Users
 } from "lucide-react";
 import { useCart } from "../../context/CartContext";
+import NotificationPanel from "../notifications/NotificationPanel";
 // ✅ Axios ki jagah modular service import ki
 import { fetchUserData } from "../../services/authServices"; 
 
@@ -165,6 +166,7 @@ export default function Navbar() {
         </ul>
 
         <div className="flex items-center gap-3">
+          {user && <NotificationPanel />}
           <button onClick={() => navigate("/cart")} className="relative w-9 h-9 sm:w-10 sm:h-10 border border-black/[0.08] rounded-xl flex items-center justify-center hover:bg-surface transition-colors">
             <ShoppingCart size={18} className="text-ink2" />
             {count > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-accent text-white text-[9px] sm:text-[10px] font-bold rounded-full flex items-center justify-center">{count}</span>}

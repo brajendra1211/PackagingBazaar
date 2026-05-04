@@ -7,7 +7,7 @@ const CartContext = createContext();
 const reducer = (state, action) => {
   switch (action.type) {
     case "ADD": {
-      // Create a unique key for guest/local state
+      // Create a unique key based on product + specs (not quantity)
       const attrKey = `${action.product.id}-${action.product.seller_id}-${action.product.selected_thickness || ""}-${action.product.selected_width || ""}-${action.product.selected_brand || ""}`;
       
       const exists = state.find((i) => {
@@ -16,11 +16,15 @@ const reducer = (state, action) => {
       });
 
       if (exists) {
+        // Same product+specs → just update inquiry_quantity
         return state.map((i) => {
           const iKey = `${i.id}-${i.seller_id}-${i.selected_thickness || ""}-${i.selected_width || ""}-${i.selected_brand || ""}`;
-          return iKey === attrKey ? { ...i, qty: i.qty + 1 } : i;
+          return iKey === attrKey 
+            ? { ...i, inquiry_quantity: action.product.inquiry_quantity || i.inquiry_quantity } 
+            : i;
         });
       }
+      // New entry → always qty=1 (B2B: 1 item per unique spec)
       return [...state, { ...action.product, qty: 1 }];
     }
     case "REMOVE": {
@@ -30,12 +34,12 @@ const reducer = (state, action) => {
         return true;
       });
     }
-    case "UPDATE_QTY": {
+    case "UPDATE_INQUIRY_QTY": {
       return state.map((i) => {
         const isMatch = (action.cart_id && i.cart_id === action.cart_id) || 
                         (action.local_id && i.local_id === action.local_id);
-        return isMatch ? { ...i, qty: action.qty } : i;
-      }).filter((i) => i.qty > 0);
+        return isMatch ? { ...i, inquiry_quantity: action.inquiry_quantity } : i;
+      });
     }
     case "CLEAR": return [];
     case "SET_CART": return action.cart;
@@ -66,10 +70,11 @@ export const CartProvider = ({ children }) => {
             await syncCartAPI(localItems.map(i => ({ 
               id: i.id, 
               seller_id: i.seller_id,
-              qty: i.qty,
+              qty: 1,
               thickness: i.selected_thickness,
               width: i.selected_width,
-              brand: i.selected_brand
+              brand: i.selected_brand,
+              inquiry_quantity: i.inquiry_quantity || ""
             })));
           }
           const res = await fetchCartAPI();
@@ -80,11 +85,12 @@ export const CartProvider = ({ children }) => {
               id: i.product_id,
               name: i.name,
               price: i.price,
-              qty: i.quantity,
+              qty: 1,
               image: i.image,
               selected_thickness: i.selected_thickness,
               selected_width: i.selected_width,
               selected_brand: i.selected_brand,
+              inquiry_quantity: i.inquiry_quantity || "",
               unit: i.unit,
               color: i.color,
               seller_id: i.seller_id,
@@ -112,27 +118,21 @@ export const CartProvider = ({ children }) => {
       color: p.color,
       seller_id: p.seller_id,
       seller_uid: p.seller_uid,
+      inquiry_quantity: p.selected_quantity || p.inquiry_quantity || "",
       local_id: `${p.id}-${p.seller_id}-${p.selected_thickness || ""}-${p.selected_width || ""}-${p.selected_brand || ""}`
     };
     
     dispatch({ type: "ADD", product: normalizedItem });
-    notifySuccess("Added to cart!");
+    notifySuccess("Requirement added!");
     
     if (token) {
       try {
-        const existing = cart.find(i => 
-          i.id === p.id && 
-          i.seller_id === p.seller_id &&
-          i.selected_thickness === p.selected_thickness && 
-          i.selected_width === p.selected_width && 
-          i.selected_brand === p.selected_brand
-        );
-        const newQty = existing ? existing.qty + 1 : 1;
-        await addToCartAPI(p.id, newQty, {
+        await addToCartAPI(p.id, 1, {
           sellerId: p.seller_id,
           thickness: p.selected_thickness,
           width: p.selected_width,
-          brand: p.selected_brand
+          brand: p.selected_brand,
+          inquiryQuantity: p.selected_quantity || p.inquiry_quantity || ""
         });
         // Refresh cart to get real cart_ids from backend
         const res = await fetchCartAPI();
@@ -142,11 +142,12 @@ export const CartProvider = ({ children }) => {
               id: i.product_id,
               name: i.name,
               price: i.price,
-              qty: i.quantity,
+              qty: 1,
               image: i.image,
               selected_thickness: i.selected_thickness,
               selected_width: i.selected_width,
               selected_brand: i.selected_brand,
+              inquiry_quantity: i.inquiry_quantity,
               unit: i.unit,
               color: i.color,
               seller_id: i.seller_id,
@@ -165,15 +166,16 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  const updateQty = async (item, qty) => {
-    dispatch({ type: "UPDATE_QTY", cart_id: item.cart_id, local_id: item.local_id, qty });
+  const updateInquiryQty = async (item, inquiry_quantity) => {
+    dispatch({ type: "UPDATE_INQUIRY_QTY", cart_id: item.cart_id, local_id: item.local_id, inquiry_quantity });
     if (token && item.id) {
       try { 
-        await addToCartAPI(item.id, qty, {
+        await addToCartAPI(item.id, 1, {
           sellerId: item.seller_id,
           thickness: item.selected_thickness,
           width: item.selected_width,
-          brand: item.selected_brand
+          brand: item.selected_brand,
+          inquiryQuantity: inquiry_quantity
         }); 
       } catch (err) { 
         notifyError("Update failed");
@@ -189,11 +191,11 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  const total = cart.reduce((s, i) => s + (Number(i.price) || 0) * i.qty, 0);
-  const count = cart.reduce((s, i) => s + i.qty, 0);
+  const total = cart.reduce((s, i) => s + (Number(i.price) || 0), 0);
+  const count = cart.length; // Number of unique product entries
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQty, clearCart, total, count }}>
+    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateInquiryQty, clearCart, total, count }}>
       {children}
     </CartContext.Provider>
   );

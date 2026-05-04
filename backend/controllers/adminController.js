@@ -3,6 +3,9 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import fs from "fs";
 import path from "path";
+import { sendNotification } from "../utils/notificationHelper.js";
+import { getCoordinates } from "../utils/geoUtils.js";
+import { sendEmail } from "../utils/mailHelper.js";
 
 // --- SELLER MANAGEMENT ---
 
@@ -110,6 +113,19 @@ export const updateSellerStatus = async (req, res) => {
     // 2. If status is 'verified', update users table
     if (status === 'verified') {
       await connection.query("UPDATE users SET is_verified = 1 WHERE id = ?", [id]);
+      
+      // Notify Seller
+      try {
+        await sendNotification({
+          userId: id,
+          userRole: 'seller',
+          title: 'Account Verified!',
+          message: 'Congratulations! Your seller account has been verified. You can now receive leads and manage your products.',
+          type: 'status'
+        });
+      } catch (notifErr) {
+        console.error("Notification Error:", notifErr);
+      }
     } else {
       await connection.query("UPDATE users SET is_verified = 0 WHERE id = ?", [id]);
     }
@@ -241,7 +257,7 @@ export const getAllProductsAdmin = async (req, res) => {
 
     const query = `
       SELECT 
-        p.id as product_id, p.name, p.group_key, p.product_code, p.thickness, p.color, p.product_type, p.unit, p.image_url, p.is_hot_deal, p.is_trending,
+        p.id, p.id as product_id, p.name, p.group_key, p.product_code, p.thickness, p.color, p.product_type, p.unit, p.image_url, p.is_hot_deal, p.is_trending,
         COALESCE(sp.price_min, p.min_price) as price_min, 
         COALESCE(sp.price_max, p.max_price) as price_max, 
         COALESCE(sp.moq, ps.min_order) as moq, 
@@ -694,31 +710,44 @@ export const getRecommendedSellers = async (req, res) => {
     const leadThickness = lead.thickness ? lead.thickness.toLowerCase() : null;
     const leadWidth = lead.width ? lead.width.toLowerCase() : null;
 
+    // 1.1 Get Lead Coordinates
+    const leadCoords = await getCoordinates(lead.pincode);
+    const bLat = leadCoords?.latitude || 0;
+    const bLng = leadCoords?.longitude || 0;
+
     // 2. Fetch all verified sellers with smart matching logic
     // Scoring logic (Phase 2):
-    // - Location: Pincode (200), City (100), State (50)
+    // - Distance: 0-10km (200), 10-50km (150), 50-100km (100), 100km+ (50/fallback)
+    // - Location: City (50), State (20) - lowered as distance is more precise
     // - Sub-Category Match (30)
-    // - Stock Sufficient (+50)
-    // - MOQ Fits (+40)
-    // - Thickness Match (+30)
-    // - Width Match (+20)
+    // - Stock Sufficient (+70)
+    // - MOQ Fits (+50)
+    // - Thickness Match (+50)
+    // - Width Match (+30)
     
     const query = `
       SELECT s.*, u.email, u.mobile as phone, u.name as owner_name,
+      -- Distance Calculation (Haversine)
+      (6371 * acos(
+        cos(radians(?)) * cos(radians(pg.latitude)) * 
+        cos(radians(pg.longitude) - radians(?)) + 
+        sin(radians(?)) * sin(radians(pg.latitude))
+      )) AS distance_km,
       (
-        -- Location Scores
+        -- Distance-Based Scoring
         CASE 
-          WHEN s.pincode = ? THEN 200
-          WHEN LOWER(s.city) = LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(s.city), '%') THEN 100 
-          WHEN LOWER(s.state) = LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(s.state), '%') THEN 50 
-          -- Regional Match (NCR Awareness - Delhi, Noida, Ghaziabad, Gurgaon etc)
+          WHEN (6371 * acos(cos(radians(?)) * cos(radians(pg.latitude)) * cos(radians(pg.longitude) - radians(?)) + sin(radians(?)) * sin(radians(pg.latitude)))) <= 10 THEN 200
+          WHEN (6371 * acos(cos(radians(?)) * cos(radians(pg.latitude)) * cos(radians(pg.longitude) - radians(?)) + sin(radians(?)) * sin(radians(pg.latitude)))) <= 50 THEN 160
+          WHEN (6371 * acos(cos(radians(?)) * cos(radians(pg.latitude)) * cos(radians(pg.longitude) - radians(?)) + sin(radians(?)) * sin(radians(pg.latitude)))) <= 100 THEN 120
+          WHEN (6371 * acos(cos(radians(?)) * cos(radians(pg.latitude)) * cos(radians(pg.longitude) - radians(?)) + sin(radians(?)) * sin(radians(pg.latitude)))) <= 300 THEN 80
+          -- Fallback Location Scores
+          WHEN s.pincode = ? THEN 150
+          WHEN LOWER(s.city) = LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(s.city), '%') THEN 50 
+          WHEN LOWER(s.state) = LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(s.state), '%') THEN 20 
+          -- Regional Match (NCR Awareness)
           WHEN (
             (LOWER(?) LIKE '%delhi%' OR LOWER(?) LIKE '%ncr%') AND 
             (LOWER(s.city) IN ('ghaziabad', 'noida', 'greater noida', 'gurgaon', 'gurugram', 'faridabad', 'sonepat', 'bahadurgarh'))
-          ) THEN 150
-          WHEN (
-            (LOWER(s.city) LIKE '%delhi%' OR LOWER(s.state) LIKE '%delhi%') AND 
-            (LOWER(?) IN ('ghaziabad', 'noida', 'greater noida', 'gurgaon', 'gurugram', 'faridabad', 'sonepat', 'bahadurgarh'))
           ) THEN 150
           ELSE 0 
         END + 
@@ -756,6 +785,7 @@ export const getRecommendedSellers = async (req, res) => {
       (s.pincode = ?) as pincode_match,
       (LOWER(s.city) = LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(s.city), '%')) as city_match,
       (LOWER(s.state) = LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(s.state), '%')) as state_match,
+      EXISTS (SELECT 1 FROM products p_cat JOIN sub_categories sc_cat ON p_cat.sub_category_id = sc_cat.id WHERE p_cat.seller_id = s.id AND sc_cat.category_id = ?) as category_match,
       EXISTS (SELECT 1 FROM seller_products sp2 WHERE sp2.seller_id = s.id AND sp2.stock_qty >= ? ) as has_stock,
       EXISTS (SELECT 1 FROM seller_products sp3 WHERE sp3.seller_id = s.id AND sp3.moq <= ? ) as moq_fit,
       EXISTS (SELECT 1 FROM seller_products sp4 WHERE sp4.seller_id = s.id AND sp4.price_min <= (SELECT COALESCE(AVG(price_min), sp4.price_min) FROM seller_products WHERE product_id = sp4.product_id) ) as price_match,
@@ -763,21 +793,26 @@ export const getRecommendedSellers = async (req, res) => {
       EXISTS (SELECT 1 FROM lead_assignments la WHERE la.seller_id = s.id AND la.inquiry_id = ?) as is_assigned
       FROM sellers s
       JOIN users u ON s.user_id = u.id
+      LEFT JOIN pincodes_geo pg ON s.pincode = pg.pincode
       WHERE u.role = 'seller' AND u.is_verified = 1
         AND EXISTS (
           SELECT 1 FROM seller_products sp_check 
           WHERE sp_check.seller_id = s.id AND sp_check.status = 'active'
         )
-      ORDER BY match_score DESC, best_delivery_hours ASC, s.company_name ASC
+      ORDER BY match_score DESC, distance_km ASC, best_delivery_hours ASC, s.company_name ASC
     `;
 
     const [sellers] = await pool.query(query, [
+      bLat, bLng, bLat, // for distance_km
+      bLat, bLng, bLat, // for distance score <= 10
+      bLat, bLng, bLat, // for distance score <= 50
+      bLat, bLng, bLat, // for distance score <= 100
+      bLat, bLng, bLat, // for distance score <= 300
       lead.pincode,
       lead.city, lead.address, 
       lead.state, lead.address, 
       // Parameters for NCR Matching
       lead.state, lead.state,
-      lead.city,
       lead.category_id,
       leadQty, // for stock score
       leadQty, // for moq score
@@ -786,10 +821,10 @@ export const getRecommendedSellers = async (req, res) => {
       lead.pincode, // pincode_match
       lead.city, lead.address, // city_match
       lead.state, lead.address, // state_match
+      lead.category_id, // category_match check
       leadQty, // for breakdown has_stock
       leadQty, // for breakdown moq_fit
       lead.id // is_assigned check
-      // price_match subquery uses its own logic
     ]);
 
     res.status(200).json({ 
@@ -1019,6 +1054,46 @@ export const addSellerAdmin = async (req, res) => {
     );
 
     await connection.commit();
+
+    // 5. Send Welcome Email to Seller
+    try {
+      const subject = "Welcome to PackagingBazaar - Seller Account Created";
+      const loginUrl = process.env.FRONTEND_URL || "http://localhost:5173/login";
+      const html = `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden;">
+          <div style="background: #FF5722; padding: 20px; text-align: center;">
+            <h1 style="color: #fff; margin: 0; font-size: 24px;">Welcome to PackagingBazaar!</h1>
+          </div>
+          <div style="padding: 30px;">
+            <p>Hello <strong>${ownerName}</strong>,</p>
+            <p>Your seller account for <strong>${companyName}</strong> has been successfully created by the administrator.</p>
+            
+            <div style="background: #FFF3E0; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #FF5722;">
+              <h3 style="margin-top: 0; color: #E64A19;">Your Login Credentials</h3>
+              <p style="margin: 5px 0;"><strong>Email:</strong> ${email}</p>
+              <p style="margin: 5px 0;"><strong>Password:</strong> ${password}</p>
+              <p style="font-size: 12px; color: #666; margin-top: 10px;">* Please change your password after your first login for security.</p>
+            </div>
+
+            <p>You can now log in to your seller dashboard to manage your products, track orders, and receive direct business leads.</p>
+            
+            <div style="text-align: center; margin: 35px 0;">
+              <a href="${loginUrl}" style="background: #FF5722; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 30px; font-weight: bold; display: inline-block; box-shadow: 0 4px 6px rgba(255,87,34,0.2);">Login to Dashboard</a>
+            </div>
+
+            <p style="font-size: 14px; color: #777;">If you have any questions, feel free to reply to this email or contact our support team.</p>
+          </div>
+          <div style="background: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee;">
+            <p style="margin: 0;">&copy; ${new Date().getFullYear()} PackagingBazaar. All rights reserved.</p>
+          </div>
+        </div>
+      `;
+      
+      await sendEmail(email, subject, `Welcome to PackagingBazaar! Your account has been created. Login with: ${email} / ${password}`, html);
+    } catch (mailErr) {
+      console.error("Failed to send welcome email:", mailErr);
+    }
+
     res.status(201).json({ 
       success: true, 
       message: "Seller account created and verified successfully!",

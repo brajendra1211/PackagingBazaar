@@ -10,7 +10,8 @@ export const getCart = async (req, res) => {
                s.company_name as seller_name,
                p.description, p.image_url as image,
                p.thickness, p.width, p.unit, p.color,
-               c.selected_thickness, c.selected_width, c.selected_brand
+               c.selected_thickness, c.selected_width, c.selected_brand,
+               c.inquiry_quantity
         FROM cart_items c 
         JOIN products p ON c.product_id = p.id 
         LEFT JOIN seller_products sp ON p.id = sp.product_id AND c.seller_id = sp.seller_id
@@ -29,9 +30,9 @@ export const getCart = async (req, res) => {
 export const addToCart = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { productId, sellerId, quantity, thickness, width, brand } = req.body;
+    const { productId, sellerId, quantity, thickness, width, brand, inquiryQuantity } = req.body;
 
-    if (!productId || !quantity || !sellerId) return res.status(400).json({ success: false, message: "Product ID, Seller ID and quantity required" });
+    if (!productId || !sellerId) return res.status(400).json({ success: false, message: "Product ID and Seller ID required" });
 
     // Check if item with SAME ATTRIBUTES already exists
     const [existing] = await pool.query(
@@ -39,16 +40,21 @@ export const addToCart = async (req, res) => {
       [userId, productId, sellerId, thickness || null, width || null, brand || null]
     );
 
+    const safeQty = parseInt(quantity) || 1;
+
     if (existing.length > 0) {
-      if (quantity <= 0) {
+      if (safeQty <= 0) {
         await pool.query("DELETE FROM cart_items WHERE id = ?", [existing[0].id]);
       } else {
-        await pool.query("UPDATE cart_items SET quantity = ? WHERE id = ?", [quantity, existing[0].id]);
+        await pool.query(
+          "UPDATE cart_items SET quantity = ?, inquiry_quantity = ? WHERE id = ?", 
+          [safeQty, inquiryQuantity || existing[0].inquiry_quantity || null, existing[0].id]
+        );
       }
-    } else if (quantity > 0) {
+    } else if (safeQty > 0) {
       await pool.query(
-        "INSERT INTO cart_items (user_id, product_id, seller_id, quantity, selected_thickness, selected_width, selected_brand) VALUES (?, ?, ?, ?, ?, ?, ?)", 
-        [userId, productId, sellerId, quantity, thickness || null, width || null, brand || null]
+        "INSERT INTO cart_items (user_id, product_id, seller_id, quantity, selected_thickness, selected_width, selected_brand, inquiry_quantity) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", 
+        [userId, productId, sellerId, safeQty, thickness || null, width || null, brand || null, inquiryQuantity || null]
       );
     }
 
@@ -90,12 +96,14 @@ export const syncCart = async (req, res) => {
       );
       
       if (exists.length > 0) {
-        const newQty = Math.max(exists[0].quantity, item.qty);
-        await connection.query("UPDATE cart_items SET quantity = ? WHERE id = ?", [newQty, exists[0].id]);
+        await connection.query(
+          "UPDATE cart_items SET quantity = 1, inquiry_quantity = ? WHERE id = ?", 
+          [item.inquiry_quantity || null, exists[0].id]
+        );
       } else {
         await connection.query(
-          "INSERT INTO cart_items (user_id, product_id, seller_id, quantity, selected_thickness, selected_width, selected_brand) VALUES (?, ?, ?, ?, ?, ?, ?)", 
-          [userId, item.id, item.seller_id, item.qty, item.thickness || null, item.width || null, item.brand || null]
+          "INSERT INTO cart_items (user_id, product_id, seller_id, quantity, selected_thickness, selected_width, selected_brand, inquiry_quantity) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", 
+          [userId, item.id, item.seller_id, 1, item.thickness || null, item.width || null, item.brand || null, item.inquiry_quantity || null]
         );
       }
     }

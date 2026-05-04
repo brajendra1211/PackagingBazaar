@@ -313,6 +313,7 @@ export default function InquiryModal({ isOpen, onClose, product, customSubmit })
         if (product.id !== "BULK") {
             setThickness(product.selected_thickness || product.thickness || "");
             setWidth(product.selected_width || product.width || "");
+            setQuantity(product.selected_quantity || "");
         }
     }
   }, [isOpen, product]);
@@ -381,11 +382,18 @@ export default function InquiryModal({ isOpen, onClose, product, customSubmit })
       notifyError("Please provide your name for the inquiry");
       return;
     }
+    // For single product, quantity is required
+    if (product.id !== "BULK" && !quantity) {
+      notifyError("Please enter the quantity you need");
+      return;
+    }
 
     setLoading(true);
     try {
       const data = {
-        quantity: quantity || "Not specified",
+        // For BULK: quantity is not needed here (each item has its own inquiry_quantity)
+        // For single product: send what user typed
+        quantity: product.id !== "BULK" ? (quantity || "Not specified") : undefined,
         thickness,
         width,
         phone,
@@ -461,18 +469,21 @@ export default function InquiryModal({ isOpen, onClose, product, customSubmit })
               </div>
             )}
 
-            {/* Quantity */}
-            <div className="col-span-2 sm:flex sm:items-center sm:gap-4">
-              <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest sm:w-28 sm:text-right mb-1 sm:mb-0 block shrink-0">Qty Needed</label>
-              <div className="relative flex-1">
-                <Package size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text" placeholder="e.g. 500kg"
-                  className="w-full pl-8 pr-3 py-2.5 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:border-accent text-[12px] font-bold text-ink"
-                  value={quantity} onChange={(e) => setQuantity(e.target.value)} required
-                />
+            {/* Quantity — Only show for single product inquiries.
+                  For BULK cart, each item already has its own inquiry_quantity set in the cart. */}
+            {product.id !== "BULK" && (
+              <div className="col-span-2 sm:flex sm:items-center sm:gap-4">
+                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest sm:w-28 sm:text-right mb-1 sm:mb-0 block shrink-0">Qty Needed</label>
+                <div className="relative flex-1">
+                  <Package size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text" placeholder="e.g. 500kg"
+                    className="w-full pl-8 pr-3 py-2.5 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:border-accent text-[12px] font-bold text-ink"
+                    value={quantity} onChange={(e) => setQuantity(e.target.value)} required
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Phone */}
             <div className="col-span-2 sm:flex sm:items-center sm:gap-4">

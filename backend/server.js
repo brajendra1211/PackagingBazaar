@@ -13,11 +13,19 @@ import cartRoutes from "./routes/cartRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import inquiryRoutes from './routes/inquiryRoutes.js';
 import contactRoutes from './routes/contactRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
+
+import { createServer } from 'http';
+import { initSocket } from './socket.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+const httpServer = createServer(app);
+
+// Initialize Socket.io
+initSocket(httpServer);
 
 // Ensure upload directories exist
 const folders = ['uploads/gst_certificates', 'uploads/product_images', 'uploads/others'];
@@ -54,8 +62,9 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/inquiries', inquiryRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 
 
 const PORT = 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+httpServer.listen(PORT, () => console.log(`Server running on port ${PORT}`));

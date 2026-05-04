@@ -8,6 +8,7 @@ import {
 import { Toaster } from 'react-hot-toast';
 import { AnimatePresence, motion } from "framer-motion";
 import { fetchDashboardStats } from "../services/adminServices";
+import NotificationPanel from "../components/notifications/NotificationPanel";
 
 export default function AdminLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -158,12 +159,6 @@ export default function AdminLayout() {
 
         <div className="p-4 border-t border-black/[0.04] space-y-1.5">
           <button 
-             onClick={() => { window.location.href = "/"; }}
-             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-ink3 hover:bg-surface hover:text-ink transition-colors"
-          >
-             <Package size={18} /> Back to Website
-          </button>
-          <button 
              onClick={handleLogout}
              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors"
           >
@@ -200,6 +195,8 @@ export default function AdminLayout() {
             
             <div className="h-6 w-[1px] bg-gray-200 mx-1 hidden sm:block" />
             
+            <NotificationPanel />
+
             <button 
               onClick={handleLogout}
               className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
