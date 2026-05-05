@@ -34,14 +34,19 @@ export const getPendingSellers = async (req, res) => {
              s.status
       FROM users u
       LEFT JOIN sellers s ON u.id = s.user_id
-      WHERE u.role = 'seller' AND (u.is_verified = 0 OR s.status IN ('pending', 'hold'))
+      WHERE u.role = 'seller' AND (s.status IN ('pending', 'hold') OR s.id IS NULL)
       ORDER BY s.created_at DESC
       LIMIT ? OFFSET ?
     `;
     const [rows] = await pool.query(query, [limit, offset]);
     
     // Total count for pagination
-    const [[{ total }]] = await pool.query("SELECT COUNT(*) as total FROM users WHERE role = 'seller' AND is_verified = 0");
+    const [[{ total }]] = await pool.query(`
+      SELECT COUNT(*) as total 
+      FROM users u
+      LEFT JOIN sellers s ON u.id = s.user_id
+      WHERE u.role = 'seller' AND (s.status IN ('pending', 'hold') OR s.id IS NULL)
+    `);
 
     res.status(200).json({ 
       success: true, 
@@ -72,7 +77,7 @@ export const getAllSellers = async (req, res) => {
              s.created_at, s.status
       FROM users u
       JOIN sellers s ON u.id = s.user_id
-      WHERE u.role = 'seller' AND (u.is_verified = 1 OR s.status IN ('verified', 'approved', 'active'))
+      WHERE u.role = 'seller' AND s.status IN ('verified', 'approved', 'active')
       ORDER BY s.created_at DESC
       LIMIT ? OFFSET ?
     `;
@@ -82,7 +87,7 @@ export const getAllSellers = async (req, res) => {
     const [[{ total }]] = await pool.query(`
       SELECT COUNT(*) as total FROM users u 
       JOIN sellers s ON u.id = s.user_id 
-      WHERE u.role = 'seller' AND (u.is_verified = 1 OR s.status IN ('verified', 'approved', 'active'))
+      WHERE u.role = 'seller' AND s.status IN ('verified', 'approved', 'active')
     `);
 
     res.status(200).json({ 
@@ -297,9 +302,14 @@ export const getDashboardStats = async (req, res) => {
     const [sellers] = await pool.query(`
       SELECT COUNT(*) as count FROM users u 
       JOIN sellers s ON u.id = s.user_id 
-      WHERE u.role = 'seller' AND (u.is_verified = 1 OR s.status IN ('verified', 'approved', 'active'))
+      WHERE u.role = 'seller' AND s.status IN ('verified', 'approved', 'active')
     `);
-    const [pending] = await pool.query("SELECT COUNT(*) as count FROM users WHERE role='seller' AND is_verified=0");
+    const [pending] = await pool.query(`
+      SELECT COUNT(*) as count 
+      FROM users u
+      LEFT JOIN sellers s ON u.id = s.user_id
+      WHERE u.role = 'seller' AND (s.status IN ('pending', 'hold') OR s.id IS NULL)
+    `);
     const [totalProducts] = await pool.query("SELECT COUNT(*) as count FROM products");
     const [uniqueProducts] = await pool.query("SELECT COUNT(DISTINCT group_key) as count FROM products WHERE group_key IS NOT NULL");
     const [orders] = await pool.query("SELECT COUNT(*) as count FROM orders");
@@ -538,11 +548,13 @@ export const getAllInquiriesAdmin = async (req, res) => {
              COALESCE(u.mobile, i.phone) as buyer_display_mobile,
              COALESCE(u.email, i.buyer_email) as buyer_display_email,
              p.name as product_name, p.image_url,
-             s.company_name as seller_name, s.city as seller_city, s.state as seller_state
+             s.company_name as seller_name, s.city as seller_city, s.state as seller_state,
+             ws.company_name as won_seller_name
       FROM inquiries i
       LEFT JOIN users u ON i.buyer_id = u.id
       JOIN products p ON i.product_id = p.id
       JOIN sellers s ON i.seller_id = s.id
+      LEFT JOIN sellers ws ON i.won_seller_id = ws.id
       ORDER BY i.id DESC
       LIMIT ? OFFSET ?
     `;
@@ -563,39 +575,7 @@ export const getAllInquiriesAdmin = async (req, res) => {
   }
 };
 
-export const updateInquiryStatus = async (req, res) => {
-  const { id } = req.params;
-  const { status, admin_notes } = req.body;
-  try {
-    const updateFields = [];
-    const updateValues = [];
-    
-    if (status !== undefined) {
-      updateFields.push("status = ?");
-      updateValues.push(status);
-    }
-    
-    if (admin_notes !== undefined) {
-      updateFields.push("admin_notes = ?");
-      updateValues.push(admin_notes);
-    }
-    
-    if (updateFields.length === 0) {
-      return res.status(400).json({ success: false, message: "No fields to update." });
-    }
-    
-    updateValues.push(id);
-    const query = `UPDATE inquiries SET ${updateFields.join(", ")} WHERE id = ?`;
-    
-    const [result] = await pool.query(query, updateValues);
-    if (result.affectedRows === 0) return res.status(404).json({ success: false, message: "Inquiry not found." });
-    
-    res.status(200).json({ success: true, message: "Inquiry updated successfully." });
-  } catch (error) {
-    console.error("Error updating inquiry:", error);
-    res.status(500).json({ success: false, message: "Server Error" });
-  }
-};
+// updateInquiryStatus moved to the end of file for cleaner organization
 
 
 // ── CATEGORY & SUBCATEGORY MANAGEMENT ──────────────────────────────────────
@@ -716,115 +696,120 @@ export const getRecommendedSellers = async (req, res) => {
     const bLng = leadCoords?.longitude || 0;
 
     // 2. Fetch all verified sellers with smart matching logic
-    // Scoring logic (Phase 2):
+    // New IndiaMART Style Layered Filtering & Smart Scoring (Max ~1000 Pts)
     // - Distance: 0-10km (200), 10-50km (150), 50-100km (100), 100km+ (50/fallback)
-    // - Location: City (50), State (20) - lowered as distance is more precise
-    // - Sub-Category Match (30)
-    // - Stock Sufficient (+70)
-    // - MOQ Fits (+50)
-    // - Thickness Match (+50)
-    // - Width Match (+30)
+    // - Location: City (50), State (20) - fallback if lat/lng missing
+    // - Specifications Match: Exact (150), Custom/All/Null (100), Mismatch (0)
+    // - Delivery Speed: <= 24h (150), <= 48h (100), <= 72h (50)
+    // - Stock & Price are dynamically scored based on averages
     
     const query = `
-      SELECT s.*, u.email, u.mobile as phone, u.name as owner_name,
-      -- Distance Calculation (Haversine)
-      (6371 * acos(
-        cos(radians(?)) * cos(radians(pg.latitude)) * 
-        cos(radians(pg.longitude) - radians(?)) + 
-        sin(radians(?)) * sin(radians(pg.latitude))
-      )) AS distance_km,
-      (
-        -- Distance-Based Scoring
-        CASE 
-          WHEN (6371 * acos(cos(radians(?)) * cos(radians(pg.latitude)) * cos(radians(pg.longitude) - radians(?)) + sin(radians(?)) * sin(radians(pg.latitude)))) <= 10 THEN 200
-          WHEN (6371 * acos(cos(radians(?)) * cos(radians(pg.latitude)) * cos(radians(pg.longitude) - radians(?)) + sin(radians(?)) * sin(radians(pg.latitude)))) <= 50 THEN 160
-          WHEN (6371 * acos(cos(radians(?)) * cos(radians(pg.latitude)) * cos(radians(pg.longitude) - radians(?)) + sin(radians(?)) * sin(radians(pg.latitude)))) <= 100 THEN 120
-          WHEN (6371 * acos(cos(radians(?)) * cos(radians(pg.latitude)) * cos(radians(pg.longitude) - radians(?)) + sin(radians(?)) * sin(radians(pg.latitude)))) <= 300 THEN 80
-          -- Fallback Location Scores
-          WHEN s.pincode = ? THEN 150
-          WHEN LOWER(s.city) = LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(s.city), '%') THEN 50 
-          WHEN LOWER(s.state) = LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(s.state), '%') THEN 20 
-          -- Regional Match (NCR Awareness)
-          WHEN (
-            (LOWER(?) LIKE '%delhi%' OR LOWER(?) LIKE '%ncr%') AND 
-            (LOWER(s.city) IN ('ghaziabad', 'noida', 'greater noida', 'gurgaon', 'gurugram', 'faridabad', 'sonepat', 'bahadurgarh'))
-          ) THEN 150
-          ELSE 0 
-        END + 
-        -- Category Match
-        CASE WHEN EXISTS (
-          SELECT 1 FROM products p2 
-          JOIN sub_categories sc2 ON p2.sub_category_id = sc2.id 
-          WHERE p2.seller_id = s.id AND sc2.category_id = ?
-        ) THEN 30 ELSE 0 END +
-        -- Smart Matching Scores (from seller_products)
+      SELECT * FROM (
+        SELECT s.id as seller_id, s.company_name, s.city, s.state, s.pincode, s.business_address as address, s.status as seller_status,
+        u.email, u.mobile as phone, u.name as owner_name,
+        -- Distance Calculation
+        (6371 * acos(cos(radians(?)) * cos(radians(pg.latitude)) * cos(radians(pg.longitude) - radians(?)) + sin(radians(?)) * sin(radians(pg.latitude)))) AS distance_km,
+        
+        -- Location Score Breakdown
+        (
+          CASE 
+            WHEN (6371 * acos(cos(radians(?)) * cos(radians(pg.latitude)) * cos(radians(pg.longitude) - radians(?)) + sin(radians(?)) * sin(radians(pg.latitude)))) <= 10 THEN 200
+            WHEN (6371 * acos(cos(radians(?)) * cos(radians(pg.latitude)) * cos(radians(pg.longitude) - radians(?)) + sin(radians(?)) * sin(radians(pg.latitude)))) <= 50 THEN 150
+            WHEN (6371 * acos(cos(radians(?)) * cos(radians(pg.latitude)) * cos(radians(pg.longitude) - radians(?)) + sin(radians(?)) * sin(radians(pg.latitude)))) <= 100 THEN 100
+            WHEN (6371 * acos(cos(radians(?)) * cos(radians(pg.latitude)) * cos(radians(pg.longitude) - radians(?)) + sin(radians(?)) * sin(radians(pg.latitude)))) <= 300 THEN 50
+            WHEN s.pincode = ? THEN 150
+            WHEN LOWER(s.city) = LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(s.city), '%') THEN 50 
+            WHEN LOWER(s.state) = LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(s.state), '%') THEN 20 
+            WHEN (
+              (LOWER(?) LIKE '%delhi%' OR LOWER(?) LIKE '%ncr%') AND 
+              (LOWER(s.city) IN ('ghaziabad', 'noida', 'greater noida', 'gurgaon', 'gurugram', 'faridabad', 'sonepat', 'bahadurgarh'))
+            ) THEN 150
+            ELSE 0 
+          END
+        ) as location_score,
+
+        -- Product Score Breakdown
         COALESCE((
           SELECT MAX(
-            CASE WHEN sp.stock_qty >= ? THEN 70 ELSE 0 END +
-            CASE WHEN sp.moq <= ? THEN 50 ELSE 0 END +
-            CASE WHEN LOWER(sp.width) = LOWER(?) THEN 30 ELSE 0 END +
-            -- Price Match (Below Average = points)
-            CASE WHEN sp.price_min <= (SELECT COALESCE(AVG(price_min), sp.price_min) FROM seller_products WHERE product_id = sp.product_id) THEN 40 ELSE 0 END +
-            -- Thickness Match
-            CASE WHEN EXISTS (SELECT 1 FROM products p3 WHERE p3.id = sp.product_id AND LOWER(p3.thickness) = LOWER(?)) THEN 50 ELSE 0 END +
-            -- Delivery Speed Match (Tiers)
             CASE 
               WHEN sp.delivery_hours IS NULL THEN 0
-              WHEN sp.delivery_hours <= 24 THEN 40
-              WHEN sp.delivery_hours <= 48 THEN 30
-              WHEN sp.delivery_hours <= 72 THEN 20
-              WHEN sp.delivery_hours <= 120 THEN 10
+              WHEN sp.delivery_hours <= 24 THEN 150
+              WHEN sp.delivery_hours <= 48 THEN 100
+              WHEN sp.delivery_hours <= 72 THEN 50
+              ELSE 0 
+            END +
+            CASE 
+              WHEN sp.price_min <= (SELECT COALESCE(MIN(price_min), sp.price_min) FROM seller_products WHERE product_id = sp.product_id) THEN 250
+              WHEN sp.price_min <= (SELECT COALESCE(AVG(price_min), sp.price_min) FROM seller_products WHERE product_id = sp.product_id) THEN 150 
+              ELSE 50 
+            END +
+            CASE WHEN sp.stock_qty >= ? THEN 100 ELSE 0 END +
+            CASE 
+              WHEN LOWER(sp.width) = LOWER(?) THEN 150 
+              WHEN sp.width IS NULL OR LOWER(sp.width) IN ('all', 'custom', 'any') THEN 100
+              ELSE 0 
+            END +
+            CASE 
+              WHEN EXISTS (SELECT 1 FROM products p3 WHERE p3.id = sp.product_id AND LOWER(p3.thickness) = LOWER(?)) THEN 150 
+              WHEN EXISTS (SELECT 1 FROM products p3 WHERE p3.id = sp.product_id AND (p3.thickness IS NULL OR LOWER(p3.thickness) IN ('all', 'custom', 'any'))) THEN 100
               ELSE 0 
             END
           )
           FROM seller_products sp
-          WHERE sp.seller_id = s.id AND sp.status = 'active'
-        ), 0)
-      ) as match_score,
-      -- Fetch match breakdown for UI
-      (s.pincode = ?) as pincode_match,
-      (LOWER(s.city) = LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(s.city), '%')) as city_match,
-      (LOWER(s.state) = LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(s.state), '%')) as state_match,
-      EXISTS (SELECT 1 FROM products p_cat JOIN sub_categories sc_cat ON p_cat.sub_category_id = sc_cat.id WHERE p_cat.seller_id = s.id AND sc_cat.category_id = ?) as category_match,
-      EXISTS (SELECT 1 FROM seller_products sp2 WHERE sp2.seller_id = s.id AND sp2.stock_qty >= ? ) as has_stock,
-      EXISTS (SELECT 1 FROM seller_products sp3 WHERE sp3.seller_id = s.id AND sp3.moq <= ? ) as moq_fit,
-      EXISTS (SELECT 1 FROM seller_products sp4 WHERE sp4.seller_id = s.id AND sp4.price_min <= (SELECT COALESCE(AVG(price_min), sp4.price_min) FROM seller_products WHERE product_id = sp4.product_id) ) as price_match,
-      (SELECT MIN(delivery_hours) FROM seller_products WHERE seller_id = s.id AND status = 'active') as best_delivery_hours,
-      EXISTS (SELECT 1 FROM lead_assignments la WHERE la.seller_id = s.id AND la.inquiry_id = ?) as is_assigned
-      FROM sellers s
-      JOIN users u ON s.user_id = u.id
-      LEFT JOIN pincodes_geo pg ON s.pincode = pg.pincode
-      WHERE u.role = 'seller' AND u.is_verified = 1
-        AND EXISTS (
-          SELECT 1 FROM seller_products sp_check 
-          WHERE sp_check.seller_id = s.id AND sp_check.status = 'active'
-        )
-      ORDER BY (CASE WHEN pg.latitude IS NULL THEN 1 ELSE 0 END) ASC, distance_km ASC, match_score DESC, best_delivery_hours ASC, s.company_name ASC
+          JOIN products p_check ON sp.product_id = p_check.id
+          JOIN sub_categories sc_check ON p_check.sub_category_id = sc_check.id
+          WHERE sp.seller_id = s.id AND sp.status = 'active' AND sc_check.category_id = ?
+        ), 0) as product_score,
+
+        (s.pincode = ?) as pincode_match,
+        (LOWER(s.city) = LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(s.city), '%')) as city_match,
+        (LOWER(s.state) = LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(s.state), '%')) as state_match,
+        EXISTS (SELECT 1 FROM seller_products sp2 JOIN products p2 ON sp2.product_id = p2.id JOIN sub_categories sc2 ON p2.sub_category_id = sc2.id WHERE sp2.seller_id = s.id AND sc2.category_id = ? AND sp2.stock_qty >= ? ) as has_stock,
+        EXISTS (SELECT 1 FROM seller_products sp3 JOIN products p3 ON sp3.product_id = p3.id JOIN sub_categories sc3 ON p3.sub_category_id = sc3.id WHERE sp3.seller_id = s.id AND sc3.category_id = ? AND sp3.moq <= ? ) as moq_fit,
+        EXISTS (SELECT 1 FROM seller_products sp4 JOIN products p4 ON sp4.product_id = p4.id JOIN sub_categories sc4 ON p4.sub_category_id = sc4.id WHERE sp4.seller_id = s.id AND sc4.category_id = ? AND sp4.price_min <= (SELECT COALESCE(AVG(price_min), sp4.price_min) FROM seller_products WHERE product_id = sp4.product_id) ) as price_match,
+        (SELECT MIN(delivery_hours) FROM seller_products sp5 JOIN products p5 ON sp5.product_id = p5.id JOIN sub_categories sc5 ON p5.sub_category_id = sc5.id WHERE sp5.seller_id = s.id AND sc5.category_id = ? AND sp5.status = 'active') as best_delivery_hours,
+        (SELECT MIN(price_min) FROM seller_products sp_p JOIN products p_p ON sp_p.product_id = p_p.id JOIN sub_categories sc_p ON p_p.sub_category_id = sc_p.id WHERE sp_p.seller_id = s.id AND sc_p.category_id = ? AND sp_p.status = 'active') as best_price,
+        EXISTS (SELECT 1 FROM lead_assignments la WHERE la.seller_id = s.id AND la.inquiry_id = ?) as is_assigned
+        FROM sellers s
+        JOIN users u ON s.user_id = u.id
+        LEFT JOIN pincodes_geo pg ON s.pincode = pg.pincode
+        WHERE u.role = 'seller' AND u.is_verified = 1
+          AND EXISTS (
+            SELECT 1 FROM seller_products sp_filter 
+            JOIN products p_filter ON sp_filter.product_id = p_filter.id
+            JOIN sub_categories sc_filter ON p_filter.sub_category_id = sc_filter.id
+            WHERE sp_filter.seller_id = s.id 
+              AND sp_filter.status = 'active'
+              AND sc_filter.category_id = ?
+              AND sp_filter.stock_qty >= ? 
+              AND sp_filter.moq <= ? 
+          )
+      ) as t
+      ORDER BY (location_score + product_score) DESC, (CASE WHEN distance_km IS NULL THEN 1 ELSE 0 END) ASC, distance_km ASC, best_price ASC
     `;
 
     const [sellers] = await pool.query(query, [
-      bLat, bLng, bLat, // for distance_km
-      bLat, bLng, bLat, // for distance score <= 10
-      bLat, bLng, bLat, // for distance score <= 50
-      bLat, bLng, bLat, // for distance score <= 100
-      bLat, bLng, bLat, // for distance score <= 300
-      lead.pincode,
-      lead.city, lead.address, 
-      lead.state, lead.address, 
-      // Parameters for NCR Matching
-      lead.state, lead.state,
-      lead.category_id,
-      leadQty, // for stock score
-      leadQty, // for moq score
-      leadWidth,
-      leadThickness,
-      lead.pincode, // pincode_match
-      lead.city, lead.address, // city_match
-      lead.state, lead.address, // state_match
-      lead.category_id, // category_match check
-      leadQty, // for breakdown has_stock
-      leadQty, // for breakdown moq_fit
-      lead.id // is_assigned check
+      bLat, bLng, bLat, // for distance_km (3)
+      
+      // for location_score (19)
+      bLat, bLng, bLat, bLat, bLng, bLat, bLat, bLng, bLat, bLat, bLng, bLat,
+      lead.pincode, lead.city, lead.address, lead.state, lead.address, lead.state, lead.state,
+
+      // for product_score (4)
+      leadQty, leadWidth, leadThickness, lead.category_id,
+
+      // for matches (11)
+      lead.pincode, lead.city, lead.address, lead.state, lead.address,
+      lead.category_id, leadQty, // has_stock
+      lead.category_id, leadQty, // moq_fit
+      lead.category_id, // price_match
+      lead.category_id, // best_delivery_hours
+
+      // for best_price and is_assigned (2)
+      lead.category_id, lead.id,
+
+      // for WHERE clause Hard Filters (3)
+      lead.category_id, leadQty, leadQty
     ]);
 
     res.status(200).json({ 
@@ -1172,6 +1157,143 @@ export const updateSellerDetailsAdmin = async (req, res) => {
     res.status(500).json({ success: false, message: "Server Error", error: error.message });
   } finally {
     if (connection) connection.release();
+  }
+};
+
+export const getInquiryAssignedSellers = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [sellers] = await pool.query(
+      `SELECT s.id, s.company_name, u.mobile as phone 
+       FROM sellers s
+       JOIN users u ON s.user_id = u.id
+       JOIN lead_assignments la ON s.id = la.seller_id
+       WHERE la.inquiry_id = ?`,
+      [id]
+    );
+    res.status(200).json({ success: true, sellers });
+  } catch (error) {
+    console.error("Error in getInquiryAssignedSellers:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+export const updateInquiryStatus = async (req, res) => {
+  const { id } = req.params;
+  const { status, wonSellerId, lostReason, adminNotes } = req.body;
+  try {
+    await pool.query(
+      `UPDATE inquiries SET 
+        status = ?, 
+        won_seller_id = ?, 
+        lost_reason = ?, 
+        admin_notes = COALESCE(?, admin_notes)
+       WHERE id = ?`,
+      [status, wonSellerId || null, lostReason || null, adminNotes || null, id]
+    );
+    res.status(200).json({ success: true, message: `Lead marked as ${status}` });
+  } catch (error) {
+    console.error("Error in updateInquiryStatus:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+// 24. Export Data to CSV
+export const exportDataAdmin = async (req, res) => {
+  const { entity } = req.params;
+  try {
+    let data = [];
+    let filename = `export_${entity}_${new Date().toISOString().split('T')[0]}.csv`;
+
+    if (entity === "leads") {
+      const [rows] = await pool.query(`
+        SELECT i.id as LeadID, i.created_at as Date, i.status as Status,
+               COALESCE(u.name, i.buyer_name) as BuyerName,
+               COALESCE(u.mobile, i.phone) as BuyerPhone,
+               COALESCE(u.email, i.buyer_email) as BuyerEmail,
+               p.name as Product, i.quantity_required as Qty,
+               i.thickness, i.width, i.city, i.state, i.pincode,
+               s.company_name as AssignedSeller,
+               ws.company_name as WinningSeller,
+               i.lost_reason as LostReason,
+               i.admin_notes as AdminNotes
+        FROM inquiries i
+        LEFT JOIN users u ON i.buyer_id = u.id
+        JOIN products p ON i.product_id = p.id
+        LEFT JOIN sellers s ON i.seller_id = s.id
+        LEFT JOIN sellers ws ON i.won_seller_id = ws.id
+        ORDER BY i.id DESC
+      `);
+      data = rows;
+    } else if (entity === "sellers") {
+      const [rows] = await pool.query(`
+        SELECT s.id as SellerID, s.company_name as Company, u.name as Owner,
+               u.email, s.mobile as Phone, s.gst_number as GST,
+               s.city, s.state, s.pincode, s.business_address as Address,
+               s.business_type as Type, s.status as Status,
+               s.is_verified as Verified, s.created_at as JoinedDate
+        FROM sellers s
+        JOIN users u ON s.user_id = u.id
+        ORDER BY s.id DESC
+      `);
+      data = rows;
+    } else if (entity === "products") {
+      const [rows] = await pool.query(`
+        SELECT p.id as ProductID, p.name as ProductName, 
+               c.name as Category, sc.name as SubCategory,
+               p.thickness, p.width, p.color, p.applications as Applications,
+               p.min_price as PriceMin, p.max_price as PriceMax,
+               p.unit,
+               (SELECT COUNT(*) FROM seller_products sp WHERE sp.product_id = p.id) as SellerCount
+        FROM products p
+        JOIN sub_categories sc ON p.sub_category_id = sc.id
+        JOIN categories c ON sc.category_id = c.id
+        ORDER BY p.id DESC
+      `);
+      data = rows;
+    } else if (entity === "inventory") {
+      const [rows] = await pool.query(`
+        SELECT sp.id as InventoryID, s.company_name as Seller, p.name as Product,
+               sp.price_min as SellerPrice, sp.stock_qty as Stock, sp.moq as MOQ,
+               sp.delivery_hours as DeliveryHours, sp.status as ListingStatus,
+               p.thickness, p.width, p.color
+        FROM seller_products sp
+        JOIN sellers s ON sp.seller_id = s.id
+        JOIN products p ON sp.product_id = p.id
+        ORDER BY s.company_name ASC
+      `);
+      data = rows;
+    } else {
+      return res.status(400).json({ success: false, message: "Invalid entity" });
+    }
+
+    if (data.length === 0) {
+      return res.status(404).json({ success: false, message: "No data found to export" });
+    }
+
+    // Convert to CSV
+    const headers = Object.keys(data[0]);
+    const csvRows = [];
+    csvRows.push(headers.join(","));
+
+    for (const row of data) {
+      const values = headers.map(header => {
+        const val = row[header] === null ? "" : row[header];
+        const escaped = ('' + val).replace(/"/g, '""');
+        return `"${escaped}"`;
+      });
+      csvRows.push(values.join(","));
+    }
+
+    const csvString = csvRows.join("\n");
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+    res.status(200).send(csvString);
+
+  } catch (error) {
+    console.error(`Error exporting ${entity}:`, error);
+    res.status(500).json({ success: false, message: "Server Error" });
   }
 };
 

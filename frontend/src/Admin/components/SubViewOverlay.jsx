@@ -8,7 +8,10 @@ import {
   Phone, 
   Zap, 
   CheckCircle2,
-  MessageCircle
+  MessageCircle,
+  ArrowUpDown,
+  IndianRupee,
+  Navigation
 } from "lucide-react";
 import { 
   fetchSellerOrdersAdmin, 
@@ -22,6 +25,7 @@ import { getImageUrl } from "../../services/api";
 export default function SubViewOverlay({ entity, onClose }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sortBy, setSortBy] = useState("match"); // match, price, distance
   const [shareModal, setShareModal] = useState({ open: false, seller: null, note: "" });
 
   const { notifySuccess, notifyError } = useNotification();
@@ -30,7 +34,6 @@ export default function SubViewOverlay({ entity, onClose }) {
     if (!entity.inquiryData) return;
     const inquiry = entity.inquiryData;
 
-    // Build delivery line
     const deliveryLine = inquiry.delivery_hours
       ? (inquiry.delivery_hours <= 48
           ? `${inquiry.delivery_hours} Hours`
@@ -72,11 +75,9 @@ export default function SubViewOverlay({ entity, onClose }) {
       const res = await shareLeadWithSellerAdmin(entity.id, shareModal.seller.id, shareModal.note);
       if (res.success) {
         notifySuccess(`Lead shared with ${shareModal.seller.company_name}!`);
-        
         setItems(prevItems => prevItems.map(item => 
           item.id === shareModal.seller.id ? { ...item, is_assigned: 1 } : item
         ));
-
         setShareModal({ open: false, seller: null, note: "" });
       }
     } catch (err) {
@@ -108,18 +109,54 @@ export default function SubViewOverlay({ entity, onClose }) {
     loadSubData();
   }, [entity]);
 
+  // Handle Sorting
+  const sortedItems = [...items].sort((a, b) => {
+    if (sortBy === "price") return (a.best_price || 999999) - (b.best_price || 999999);
+    if (sortBy === "distance") return (a.distance_km || 999999) - (b.distance_km || 999999);
+    if (sortBy === "dispatch") return (a.best_delivery_hours || 999999) - (b.best_delivery_hours || 999999);
+    // Default: Sort by Match Score (descending)
+    const scoreA = (a.location_score || 0) + (a.product_score || 0);
+    const scoreB = (b.location_score || 0) + (b.product_score || 0);
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    return (a.distance_km || 999999) - (b.distance_km || 999999); // Distance as primary tie-breaker
+  });
+
   return (
     <div className="fixed inset-0 z-[100] bg-gray-900/60 backdrop-blur-md flex items-center justify-center p-4">
       <div onClick={onClose} className="absolute inset-0" />
       <div className="relative bg-white rounded-[3rem] w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
         <div className="p-8 border-b flex items-center justify-between bg-gray-50/50">
-          <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tighter">
-            {entity.name}
-          </h2>
-          <button onClick={onClose} className="p-3 bg-white border rounded-2xl hover:bg-gray-100 transition-all">
-            <XCircle />
-          </button>
+          <div>
+            <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tighter">
+              {entity.name}
+            </h2>
+            {entity.mode === "lead-matching" && (
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Smart Algorithm Ranking</p>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-4">
+             {entity.mode === "lead-matching" && (
+                <div className="flex items-center gap-2 bg-white border border-gray-100 p-1 rounded-xl shadow-sm">
+                  <div className="pl-3 pr-1 text-gray-400"><ArrowUpDown size={14} /></div>
+                  <select 
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="bg-transparent border-none text-[10px] font-black uppercase text-gray-600 outline-none py-1.5 pr-4 cursor-pointer"
+                  >
+                    <option value="match">Best Match</option>
+                    <option value="dispatch">Fastest Dispatch</option>
+                    <option value="price">Lowest Price</option>
+                    <option value="distance">Nearest</option>
+                  </select>
+                </div>
+             )}
+            <button onClick={onClose} className="p-3 bg-white border rounded-2xl hover:bg-gray-100 transition-all">
+              <XCircle />
+            </button>
+          </div>
         </div>
+
         <div className="flex-1 overflow-y-auto p-8 bg-white">
           {loading ? (
             <div className="py-20 text-center">
@@ -127,7 +164,7 @@ export default function SubViewOverlay({ entity, onClose }) {
             </div>
           ) : (
             <div className="space-y-4">
-              {entity.mode === "products" && items.map((prod) => (
+              {entity.mode === "products" && sortedItems.map((prod) => (
                   <div key={prod.id} className="p-6 rounded-[2.5rem] bg-gray-50 border border-gray-100 shadow-sm flex items-center justify-between gap-6">
                     <div className="flex items-center gap-6">
                       <div className="w-16 h-16 bg-white rounded-2xl border flex items-center justify-center overflow-hidden">
@@ -154,102 +191,76 @@ export default function SubViewOverlay({ entity, onClose }) {
                   </div>
                 ))}
 
-              {entity.mode === "orders" && items.map((order) => (
-                  <div key={order.id} className="p-6 rounded-[2.5rem] bg-gray-50 border border-gray-100 shadow-sm flex items-center justify-between gap-6">
-                    <div className="flex items-center gap-6">
-                      <div className="w-12 h-12 bg-white rounded-2xl border flex items-center justify-center text-accent">
-                        <ShoppingBag size={20} />
-                      </div>
-                      <div>
-                        <h4 className="font-syne font-black text-gray-900 uppercase tracking-tight">#{order.id.toString().padStart(5, "0")}</h4>
-                        <p className="text-xs font-bold text-gray-400">{new Date(order.order_date).toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-8 text-right">
-                      <div>
-                        <p className="text-[9px] font-black text-gray-400 uppercase mb-0.5">Value</p>
-                        <p className="text-sm font-black text-accent">₹{order.total_price}</p>
-                      </div>
-                      <div>
-                        <p className="text-[9px] font-black text-gray-400 uppercase mb-0.5">Status</p>
-                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${order.status === "delivered" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}>{order.status}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-              {entity.mode === "lead-matching" && items.map((seller, idx) => (
-                  <div key={seller.id} className={`p-8 rounded-[2.5rem] border transition-all shadow-sm ${idx === 0 ? "bg-orange-50/50 border-accent/30 shadow-orange-100" : "bg-white border-gray-100"}`}>
-                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h4 className="font-syne font-black text-gray-900 text-xl uppercase tracking-tighter">{seller.company_name}</h4>
-                          {idx === 0 && <span className="bg-accent text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">Best Match 🥇</span>}
-                        </div>
-                        <div className="flex items-center gap-2 text-xs font-bold text-gray-400 mb-6 font-syne">
-                          <MapPinIcon size={14} className="text-accent" /> {seller.city}, {seller.state}
-                        </div>
-                        <div className="bg-white/80 rounded-3xl p-6 border border-black/[0.03] space-y-3">
-                           <div className="flex items-center justify-between mb-4">
-                             <p className="text-[10px] font-black text-ink uppercase tracking-widest flex items-center gap-2">
-                               Match Breakdown 
-                               <span className="text-accent">
-                                 {Math.round((seller.match_score / 510) * 100)}% Match
-                               </span>
-                             </p>
-                             {seller.distance_km !== undefined && seller.distance_km !== null ? (
-                               <div className="bg-accent/10 text-accent px-3 py-1 rounded-xl text-[10px] font-black flex items-center gap-1.5 shadow-sm shadow-accent/5">
-                                 <MapPinIcon size={12} />
-                                 {seller.distance_km < 1 ? 'Under 1 km' : `${parseFloat(seller.distance_km).toFixed(1)} km away`}
-                               </div>
-                             ) : (
-                               <div className="bg-gray-100 text-gray-400 px-3 py-1 rounded-xl text-[10px] font-bold flex items-center gap-1.5 border border-dashed">
-                                 <MapPinIcon size={12} />
-                                 Distance N/A
-                               </div>
-                             )}
-                           </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
-                               <MatchItem 
-                                 label={seller.distance_km <= 50 ? "Proximity Match" : "Location Match"} 
-                                 score={seller.distance_km <= 10 ? 200 : seller.distance_km <= 50 ? 160 : seller.distance_km <= 100 ? 120 : seller.distance_km <= 300 ? 80 : 0} 
-                                 max={200} 
-                                 status={seller.distance_km <= 300} 
-                               />
-                               <MatchItem label="Price Efficiency" score={seller.price_match ? 40 : 0} max={40} status={seller.price_match} />
-                               <MatchItem label="Stock Sufficient" score={seller.has_stock ? 70 : 0} max={70} status={seller.has_stock} />
-                               <MatchItem label="MOQ Awareness" score={seller.moq_fit ? 50 : 0} max={50} status={seller.moq_fit} />
-                               <MatchItem label={`Delivery (${seller.best_delivery_hours ? seller.best_delivery_hours + 'h' : 'N/A'})`} score={seller.best_delivery_hours <= 24 ? 40 : seller.best_delivery_hours <= 48 ? 30 : seller.best_delivery_hours <= 72 ? 20 : seller.best_delivery_hours <= 120 ? 10 : 0} max={40} status={seller.best_delivery_hours > 0 && seller.best_delivery_hours <= 120} />
-                               <MatchItem label="Category Fit" score={seller.category_match ? 30 : 0} max={30} status={seller.category_match} />
-                            </div>
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-2 shrink-0 w-full md:w-48">
-                        <a href={`tel:${seller.phone}`} className="w-full px-8 py-3 bg-gray-100 text-gray-700 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-gray-200 transition-all">
-                          <Phone size={14} /> Call
-                        </a>
-                        <button 
-                          onClick={() => handleWhatsAppForward(seller)}
-                          className="w-full px-8 py-3 bg-[#25D366] text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-[#128C7E] transition-all shadow-xl shadow-[#25D366]/20"
-                        >
-                          <MessageCircle size={14} /> WhatsApp Lead
-                        </button>
-                        {seller.is_assigned ? (
-                          <div className="w-full px-8 py-3 bg-orange-50 border-2 border-orange-100 text-orange-600 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 cursor-not-allowed">
-                            <CheckCircle2 size={14} /> Already Sent
+              {entity.mode === "lead-matching" && sortedItems.map((seller, idx) => {
+                  const totalScore = (seller.location_score || 0) + (seller.product_score || 0);
+                  const isBest = sortBy === "match" && idx === 0;
+                  
+                  return (
+                    <div key={seller.id} className={`p-8 rounded-[2.5rem] border transition-all shadow-sm ${isBest ? "bg-orange-50/50 border-accent/30 shadow-orange-100" : "bg-white border-gray-100"}`}>
+                      <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h4 className="font-syne font-black text-gray-900 text-xl uppercase tracking-tighter">{seller.company_name}</h4>
+                            {isBest && <span className="bg-accent text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">Recommended Match 🥇</span>}
                           </div>
-                        ) : (
+                          <div className="flex flex-wrap items-center gap-4 text-[10px] font-bold text-gray-400 mb-6 font-syne uppercase">
+                            <span className="flex items-center gap-1"><MapPinIcon size={12} className="text-accent" /> {seller.city}, {seller.state}</span>
+                            <span className="flex items-center gap-1"><IndianRupee size={12} className="text-green-600" /> Best Price: ₹{seller.best_price}</span>
+                            {seller.best_delivery_hours && (
+                              <span className="flex items-center gap-1"><Zap size={12} className="text-amber-500" /> Dispatch: {seller.best_delivery_hours} Hrs</span>
+                            )}
+                          </div>
+
+                          <div className="bg-white/80 rounded-3xl p-6 border border-black/[0.03] space-y-4">
+                             <div className="flex items-center justify-between mb-2">
+                               <p className="text-[10px] font-black text-ink uppercase tracking-widest flex items-center gap-2">
+                                 Smart Match Strength 
+                                 <span className="text-accent">
+                                   {Math.round((totalScore / 1000) * 100)}%
+                                 </span>
+                               </p>
+                               {seller.distance_km !== undefined && (
+                                 <div className="bg-accent/10 text-accent px-3 py-1 rounded-xl text-[10px] font-black flex items-center gap-1.5 shadow-sm shadow-accent/5">
+                                   <Navigation size={12} />
+                                   {parseFloat(seller.distance_km).toFixed(1)} km away
+                                 </div>
+                               )}
+                             </div>
+
+                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+                                <MatchItem label="Proximity Score" score={seller.location_score} max={400} />
+                                <MatchItem label="Inventory & Price" score={seller.product_score} max={600} />
+                                <MatchItem label="Strict Constraints" status={seller.has_stock && seller.moq_fit} score={null} />
+                                <MatchItem label="Category Relevance" status={true} score={null} />
+                             </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-2 shrink-0 w-full md:w-48">
                           <button 
-                            onClick={() => setShareModal({ open: true, seller, note: "" })}
-                            className="w-full px-8 py-3 bg-white border-2 border-accent text-accent rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-accent hover:text-white transition-all shadow-lg shadow-orange-100"
+                            onClick={() => handleWhatsAppForward(seller)}
+                            className="w-full px-8 py-3 bg-[#25D366] text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-[#128C7E] transition-all shadow-xl shadow-[#25D366]/20"
                           >
-                            <Zap size={14} /> Send to Dash
+                            <MessageCircle size={14} /> WhatsApp Lead
                           </button>
-                        )}
+                          
+                          {seller.is_assigned ? (
+                            <div className="w-full px-8 py-3 bg-orange-50 border-2 border-orange-100 text-orange-600 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 cursor-not-allowed">
+                              <CheckCircle2 size={14} /> Already Assigned
+                            </div>
+                          ) : (
+                            <button 
+                              onClick={() => setShareModal({ open: true, seller, note: "" })}
+                              className="w-full px-8 py-3 bg-white border-2 border-accent text-accent rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-accent hover:text-white transition-all shadow-lg shadow-orange-100"
+                            >
+                              <Zap size={14} /> Assign to Dash
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
             </div>
           )}
         </div>
@@ -259,13 +270,13 @@ export default function SubViewOverlay({ entity, onClose }) {
       {shareModal.open && (
         <div className="fixed inset-0 z-[200] bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl relative">
-            <h3 className="font-syne font-black text-xl text-gray-900 uppercase mb-2">Share with {shareModal.seller?.company_name}</h3>
-            <p className="text-xs text-gray-500 font-medium mb-6">Add an optional message or instruction for the seller. They will see this on their dashboard.</p>
+            <h3 className="font-syne font-black text-xl text-gray-900 uppercase mb-2">Assign to {shareModal.seller?.company_name}</h3>
+            <p className="text-xs text-gray-500 font-medium mb-6">Add an optional message for the seller dashboard.</p>
             
             <textarea
               value={shareModal.note}
               onChange={(e) => setShareModal({ ...shareModal, note: e.target.value })}
-              placeholder="e.g. Urgent requirement, please call today..."
+              placeholder="e.g. Bulk requirement, please call immediately..."
               className="w-full text-sm text-gray-700 p-4 rounded-2xl border border-gray-200 bg-gray-50 outline-none focus:border-accent resize-none h-32 mb-6"
             />
             
@@ -280,7 +291,7 @@ export default function SubViewOverlay({ entity, onClose }) {
                 onClick={handleSendToDashboard}
                 className="px-6 py-3 rounded-xl text-xs font-black uppercase bg-accent text-white hover:bg-accent/90 transition-colors flex items-center gap-2"
               >
-                <Zap size={14} /> Send Now
+                <Zap size={14} /> Confirm Assignment
               </button>
             </div>
           </div>
@@ -290,14 +301,16 @@ export default function SubViewOverlay({ entity, onClose }) {
   );
 }
 
-function MatchItem({ label, score, max, status }) {
+function MatchItem({ label, score, status }) {
   const isZero = score === 0;
   return (
     <div className="flex items-center justify-between">
       <span className={`text-[11px] font-bold ${isZero ? "text-gray-300" : "text-gray-600"}`}>{label}</span>
       <div className="flex items-center gap-2">
         {status !== undefined && (status ? <CheckCircle2 size={12} className="text-green-500" /> : <XCircle size={12} className="text-red-400" />)}
-        <span className={`text-[10px] font-black ${isZero ? "text-gray-300 line-through" : "text-accent"}`}>+{score}</span>
+        {score !== null && (
+          <span className={`text-[10px] font-black ${isZero ? "text-gray-300 line-through" : "text-accent"}`}>+{score}</span>
+        )}
       </div>
     </div>
   );

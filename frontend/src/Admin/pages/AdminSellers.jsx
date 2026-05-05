@@ -15,7 +15,8 @@ import {
   fetchAllSellers, 
   updateSellerStatus, 
   rejectSellerAccount,
-  updateSellerAdmin
+  updateSellerAdmin,
+  downloadExport
 } from "../../services/adminServices";
 import { useNotification } from "../../context/NotificationContext";
 import { API_BASE_URL } from "../../services/api";
@@ -42,6 +43,7 @@ export default function AdminSellers() {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
   const { notifySuccess, notifyError } = useNotification();
+  const [exporting, setExporting] = useState(false);
   const navigate = useNavigate();
 
   const [statusModal, setStatusModal] = useState({
@@ -123,7 +125,30 @@ export default function AdminSellers() {
           <p className="text-gray-500 text-sm font-medium">View and manage all verified manufacturers and traders on the platform.</p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <button 
+            onClick={async () => {
+              setExporting(true);
+              try {
+                await downloadExport("sellers");
+                notifySuccess("Sellers report downloaded!");
+              } catch (err) {
+                notifyError("Failed to download report");
+              } finally {
+                setExporting(false);
+              }
+            }}
+            disabled={exporting}
+            className="flex items-center gap-2 px-6 py-3.5 bg-white border border-gray-100 text-gray-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 hover:translate-y-[-2px] hover:shadow-xl active:translate-y-0 transition-all duration-300 disabled:opacity-50 group shadow-sm"
+          >
+            {exporting ? (
+              <RefreshCcw size={14} className="animate-spin" />
+            ) : (
+              <FileText size={14} className="text-accent group-hover:scale-110 transition-transform" />
+            )}
+            <span>Export CSV</span>
+          </button>
+
           <div className="relative group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input
@@ -131,12 +156,12 @@ export default function AdminSellers() {
               placeholder="Search sellers..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-12 pr-6 py-3.5 bg-white border border-gray-100 rounded-2xl text-sm w-full md:w-80 outline-none focus:border-accent"
+              className="pl-12 pr-6 py-3.5 bg-white border border-gray-100 rounded-2xl text-sm w-full md:w-80 outline-none focus:border-accent shadow-sm"
             />
           </div>
           <button
             onClick={() => navigate("/admin/add-seller")}
-            className="px-6 py-3 bg-accent text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2"
+            className="px-8 py-3.5 bg-gradient-to-r from-accent to-accent-dark text-white rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-accent/20 hover:translate-y-[-2px] hover:shadow-2xl transition-all duration-300"
           >
             <UserPlus size={16} /> New Seller
           </button>

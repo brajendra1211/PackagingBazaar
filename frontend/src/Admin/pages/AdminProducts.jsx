@@ -12,7 +12,7 @@ import {
   Filter
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { fetchAllProductsAdmin, deleteProductAdmin, toggleHotDealAdmin, toggleTrendingAdmin } from "../../services/adminServices";
+import { fetchAllProductsAdmin, deleteProductAdmin, toggleHotDealAdmin, toggleTrendingAdmin, downloadExport } from "../../services/adminServices";
 import { useNotification } from "../../context/NotificationContext";
 import Pagination from "../../components/ui/Pagination";
 
@@ -28,6 +28,7 @@ export default function AdminProducts() {
     status: "" // 'hot', 'trending'
   });
   const { notifyError, notifySuccess } = useNotification();
+  const [exporting, setExporting] = useState(false);
   const navigate = useNavigate();
 
   // Get unique categories and sellers for filters
@@ -138,6 +139,54 @@ export default function AdminProducts() {
             </h1>
           </div>
           <p className="text-gray-500 text-sm font-medium">Inspect and manage all packaging film variants listed by sellers.</p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={async () => {
+              setExporting(true);
+              try {
+                await downloadExport("inventory");
+                notifySuccess("Inventory report downloaded!");
+              } catch (err) {
+                notifyError("Failed to download inventory report");
+              } finally {
+                setExporting(false);
+              }
+            }}
+            disabled={exporting}
+            className="flex items-center gap-2 px-6 py-3.5 bg-white border border-gray-100 text-gray-900 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-50 hover:translate-y-[-2px] hover:shadow-xl transition-all duration-300 disabled:opacity-50 group shadow-sm"
+          >
+            {exporting ? (
+              <RefreshCcw size={14} className="animate-spin" />
+            ) : (
+              <Tag size={14} className="text-accent group-hover:scale-110 transition-transform" />
+            )}
+            <span>Export Inventory</span>
+          </button>
+
+          <button 
+            onClick={async () => {
+              setExporting(true);
+              try {
+                await downloadExport("products");
+                notifySuccess("Products report downloaded!");
+              } catch (err) {
+                notifyError("Failed to download report");
+              } finally {
+                setExporting(false);
+              }
+            }}
+            disabled={exporting}
+            className="flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-gray-900 to-black text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:translate-y-[-2px] hover:shadow-xl active:translate-y-0 transition-all duration-300 disabled:opacity-50 group shadow-lg shadow-black/10"
+          >
+            {exporting ? (
+              <RefreshCcw size={14} className="animate-spin" />
+            ) : (
+              <TrendingUp size={14} className="group-hover:scale-110 transition-transform" />
+            )}
+            <span>Export Products</span>
+          </button>
         </div>
       </div>
 

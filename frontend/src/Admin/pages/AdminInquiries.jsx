@@ -8,9 +8,18 @@ import {
   Save,
   Filter,
   Share2,
-  Send
+  Send,
+  XCircle,
+  CheckCircle2,
+  AlertCircle
 } from "lucide-react";
-import { fetchInquiriesAdmin, updateInquiryAdmin, shareLeadWithSellerAdmin } from "../../services/adminServices";
+import { 
+  fetchInquiriesAdmin, 
+  updateInquiryAdmin, 
+  shareLeadWithSellerAdmin,
+  fetchInquiryAssignedSellers,
+  downloadExport
+} from "../../services/adminServices";
 import { useNotification } from "../../context/NotificationContext";
 import Pagination from "../../components/ui/Pagination";
 import SubViewOverlay from "../components/SubViewOverlay";
@@ -22,12 +31,14 @@ export default function AdminInquiries() {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
   const [selectedLead, setSelectedLead] = useState(null);
+  const [statusModal, setStatusModal] = useState({ open: false, inquiry: null, status: "", sellers: [] });
   const [filters, setFilters] = useState({
     status: "",
     product: "",
     seller: ""
   });
   const { notifyError, notifySuccess } = useNotification();
+  const [exporting, setExporting] = useState(false);
 
   // Get unique lists for filters
   const productNames = [...new Set(inquiries.map(i => i.product_name))].filter(Boolean);
@@ -68,12 +79,28 @@ export default function AdminInquiries() {
     return matchesSearch && matchesStatus && matchesProduct && matchesSeller;
   });
 
-  const handleStatusChange = async (id, newStatus) => {
+  const handleStatusClick = async (inquiry, newStatus) => {
+    if (newStatus === 'Closed') {
+      try {
+        const res = await fetchInquiryAssignedSellers(inquiry.id);
+        setStatusModal({ open: true, inquiry, status: newStatus, sellers: res.sellers || [] });
+      } catch (err) {
+        notifyError("Failed to fetch assigned sellers");
+      }
+    } else if (newStatus === 'Lost') {
+      setStatusModal({ open: true, inquiry, status: newStatus, sellers: [] });
+    } else {
+      handleStatusChange(inquiry.id, newStatus);
+    }
+  };
+
+  const handleStatusChange = async (id, newStatus, extraData = {}) => {
     try {
-      const res = await updateInquiryAdmin(id, { status: newStatus });
+      const res = await updateInquiryAdmin(id, { status: newStatus, ...extraData });
       if (res.success) {
         notifySuccess("Status updated!");
-        setInquiries(prev => prev.map(i => i.id === id ? { ...i, status: newStatus } : i));
+        setInquiries(prev => prev.map(i => i.id === id ? { ...i, status: newStatus, ...extraData } : i));
+        setStatusModal({ open: false, inquiry: null, status: "", sellers: [] });
       }
     } catch (err) {
       notifyError("Failed to update status");
@@ -115,9 +142,6 @@ export default function AdminInquiries() {
       inquiry.thickness         ? `📏 *Thickness (Micron):* ${inquiry.thickness}` : null,
       inquiry.width             ? `📐 *Width:* ${inquiry.width}` : null,
       ``,
-      // `👤 *Buyer:* ${inquiry.buyer_display_name}`,
-      // `📞 *Mobile:* ${inquiry.buyer_display_mobile}`,
-      ``,
       `📍 *Buyer Location:*`,
       inquiry.city    ? `   • City: ${inquiry.city}` : null,
       inquiry.state   ? `   • State: ${inquiry.state}` : null,
@@ -153,6 +177,31 @@ export default function AdminInquiries() {
             </h1>
           </div>
           <p className="text-gray-500 text-sm font-medium">Tracking all buyer inquiries and procurement requests.</p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={async () => {
+              setExporting(true);
+              try {
+                await downloadExport("leads");
+                notifySuccess("Leads report downloaded!");
+              } catch (err) {
+                notifyError("Failed to download leads report");
+              } finally {
+                setExporting(false);
+              }
+            }}
+            disabled={exporting}
+            className="flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-gray-900 to-black text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:translate-y-[-2px] hover:shadow-xl active:translate-y-0 transition-all duration-300 disabled:opacity-50 group shadow-lg shadow-black/10"
+          >
+            {exporting ? (
+              <RefreshCcw size={14} className="animate-spin" />
+            ) : (
+              <Save size={14} className="group-hover:scale-110 transition-transform" />
+            )}
+            <span>Download Reports</span>
+          </button>
         </div>
       </div>
 
@@ -251,7 +300,7 @@ export default function AdminInquiries() {
                       <div className="flex items-center gap-2 mb-1">
                         <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
                         <h3 className="font-syne font-black text-xl text-gray-900 leading-tight uppercase tracking-tight">
-                          {inquiry.buyer_display_name}
+                          {inquiry.buyer_name || inquiry.buyer_display_name}
                         </h3>
                       </div>
                       <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest pl-4">
@@ -263,7 +312,7 @@ export default function AdminInquiries() {
                       <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Process Status</label>
                       <select 
                         value={inquiry.status || 'pending'}
-                        onChange={(e) => handleStatusChange(inquiry.id, e.target.value)}
+                        onChange={(e) => handleStatusClick(inquiry, e.target.value)}
                         className={`w-full text-[11px] font-black uppercase tracking-widest px-4 py-3 rounded-2xl border outline-none transition-all cursor-pointer ${
                           inquiry.status === 'Closed' ? 'bg-green-50 border-green-100 text-green-600' :
                           inquiry.status === 'Lost' ? 'bg-red-50 border-red-100 text-red-600' :
@@ -323,8 +372,8 @@ export default function AdminInquiries() {
                     <div>
                       <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Contact Info</span>
                       <div className="space-y-1">
-                        <p className="text-sm font-bold text-gray-700">{inquiry.buyer_display_mobile}</p>
-                        <p className="text-[11px] font-medium text-gray-400 lowercase">{inquiry.buyer_display_email}</p>
+                        <p className="text-sm font-bold text-gray-700">{inquiry.phone || inquiry.buyer_display_mobile}</p>
+                        <p className="text-[11px] font-medium text-gray-400 lowercase">{inquiry.buyer_email || inquiry.buyer_display_email}</p>
                       </div>
                     </div>
 
@@ -364,7 +413,7 @@ export default function AdminInquiries() {
                   </div>
                 </div>
 
-                {/* Footer Section: Admin Notes (Condensed) */}
+                {/* Footer Section: Admin Notes & Won Info */}
                 <div className="mt-5 pt-4 border-t border-gray-50 flex flex-col md:flex-row items-center gap-4">
                   <div className="flex-1 w-full flex items-center gap-3">
                     <div className="bg-slate-50 px-3 py-1 rounded-lg border border-gray-100 shrink-0">
@@ -378,20 +427,45 @@ export default function AdminInquiries() {
                     />
                   </div>
                   
-                  <div className="w-full md:w-auto flex items-center gap-3 px-4 py-1.5 bg-slate-50/30 rounded-xl border border-gray-50">
-                    <div className="flex flex-col">
-                      <span className="text-[7px] font-black text-gray-400 uppercase tracking-widest leading-none">Seller</span>
-                      <p className="text-[10px] font-black text-gray-800 line-clamp-1">{inquiry.seller_name}</p>
+                  {inquiry.status === 'Closed' ? (
+                    <div className="w-full md:w-auto flex items-center gap-3 px-4 py-1.5 bg-green-50 rounded-xl border border-green-100">
+                      <div className="flex flex-col">
+                        <span className="text-[7px] font-black text-green-600 uppercase tracking-widest leading-none">Deal Winner</span>
+                        <p className="text-[10px] font-black text-green-700 line-clamp-1">{inquiry.won_seller_name || 'Seller Selected'}</p>
+                      </div>
                     </div>
-                    <div className="w-px h-4 bg-gray-200" />
-                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-tight">{inquiry.seller_city}</p>
-                  </div>
+                  ) : inquiry.status === 'Lost' ? (
+                    <div className="w-full md:w-auto flex items-center gap-3 px-4 py-1.5 bg-red-50 rounded-xl border border-red-100">
+                      <div className="flex flex-col">
+                        <span className="text-[7px] font-black text-red-600 uppercase tracking-widest leading-none">Lost Reason</span>
+                        <p className="text-[10px] font-black text-red-700 line-clamp-1">{inquiry.lost_reason}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-full md:w-auto flex items-center gap-3 px-4 py-1.5 bg-slate-50/30 rounded-xl border border-gray-50">
+                      <div className="flex flex-col">
+                        <span className="text-[7px] font-black text-gray-400 uppercase tracking-widest leading-none">Primary Seller</span>
+                        <p className="text-[10px] font-black text-gray-800 line-clamp-1">{inquiry.seller_name}</p>
+                      </div>
+                      <div className="w-px h-4 bg-gray-200" />
+                      <p className="text-[9px] font-bold text-gray-400 uppercase tracking-tight">{inquiry.seller_city}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           ))
         )}
       </div>
+
+      {/* Status Update Modal */}
+      {statusModal.open && (
+        <StatusModal 
+          modal={statusModal} 
+          onClose={() => setStatusModal({ open: false, inquiry: null, status: "", sellers: [] })} 
+          onConfirm={handleStatusChange}
+        />
+      )}
 
       {/* Pagination */}
       {totalPages > 1 && (
@@ -411,6 +485,115 @@ export default function AdminInquiries() {
           notifyError={notifyError}
         />
       )}
+    </div>
+  );
+}
+
+function StatusModal({ modal, onClose, onConfirm }) {
+  const [winnerId, setWinnerId] = useState("");
+  const [lostReason, setLostReason] = useState("");
+  const [customReason, setCustomReason] = useState("");
+
+  const handleConfirm = () => {
+    const extra = {};
+    if (modal.status === 'Closed') {
+      if (!winnerId) return alert("Please select a winner!");
+      extra.wonSellerId = winnerId;
+    } else if (modal.status === 'Lost') {
+      const finalReason = lostReason === 'Other' ? customReason : lostReason;
+      if (!finalReason) return alert("Please provide a reason!");
+      extra.lostReason = finalReason;
+    }
+    onConfirm(modal.inquiry.id, modal.status, extra);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[200] bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white rounded-[3rem] p-10 max-w-lg w-full shadow-2xl relative animate-scaleIn">
+        <div className="flex items-center gap-4 mb-8">
+           <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${modal.status === 'Closed' ? 'bg-green-50 text-green-500' : 'bg-red-50 text-red-500'}`}>
+              {modal.status === 'Closed' ? <CheckCircle2 size={32} /> : <AlertCircle size={32} />}
+           </div>
+           <div>
+             <h3 className="font-syne font-black text-2xl text-gray-900 uppercase tracking-tight">Mark as {modal.status === 'Closed' ? 'Deal Closed' : 'Lead Lost'}</h3>
+             <p className="text-sm text-gray-400 font-medium">LID-{modal.inquiry.id} • {modal.inquiry.product_name}</p>
+           </div>
+        </div>
+
+        {modal.status === 'Closed' && (
+          <div className="space-y-6 mb-8">
+            <div>
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-3">Which seller won this deal?</label>
+              {modal.sellers.length > 0 ? (
+                <div className="grid grid-cols-1 gap-2">
+                  {modal.sellers.map(s => (
+                    <button 
+                      key={s.id}
+                      onClick={() => setWinnerId(s.id)}
+                      className={`text-left p-4 rounded-2xl border-2 transition-all flex items-center justify-between ${winnerId === s.id ? 'border-green-500 bg-green-50' : 'border-gray-50 bg-gray-50/50 hover:border-gray-200'}`}
+                    >
+                      <div>
+                        <p className="text-sm font-black text-gray-900 uppercase">{s.company_name}</p>
+                        <p className="text-[10px] text-gray-400 font-bold">{s.phone}</p>
+                      </div>
+                      {winnerId === s.id && <CheckCircle2 size={18} className="text-green-500" />}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-4 bg-orange-50 border border-orange-100 rounded-2xl text-[11px] font-bold text-orange-600">
+                  No sellers have been assigned to this lead yet via Dashboard. Please assign sellers first or skip winner selection.
+                  <button onClick={() => setWinnerId("0")} className="block mt-2 underline">Skip Winner Selection</button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {modal.status === 'Lost' && (
+          <div className="space-y-6 mb-8">
+            <div>
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-3">Why was this lead lost?</label>
+              <select 
+                value={lostReason}
+                onChange={(e) => setLostReason(e.target.value)}
+                className="w-full p-4 rounded-2xl border border-gray-100 bg-gray-50 outline-none focus:border-accent text-sm font-bold text-gray-700"
+              >
+                <option value="">Select a reason...</option>
+                <option value="Price Too High">Price Too High</option>
+                <option value="Product Not Available">Product Not Available</option>
+                <option value="Delayed Response">Delayed Response</option>
+                <option value="Buyer Cancelled">Buyer Cancelled</option>
+                <option value="MOQ Not Matching">MOQ Not Matching</option>
+                <option value="Other">Other (Type below)</option>
+              </select>
+            </div>
+            {lostReason === 'Other' && (
+              <textarea 
+                value={customReason}
+                onChange={(e) => setCustomReason(e.target.value)}
+                placeholder="Type the specific reason..."
+                className="w-full p-4 rounded-2xl border border-gray-100 bg-gray-50 outline-none focus:border-accent text-sm font-medium h-24 resize-none"
+              />
+            )}
+          </div>
+        )}
+
+        <div className="flex gap-3 pt-4">
+          <button 
+            onClick={onClose}
+            className="flex-1 py-4 rounded-2xl text-xs font-black uppercase text-gray-400 hover:bg-gray-100 transition-colors"
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={handleConfirm}
+            className={`flex-1 py-4 rounded-2xl text-xs font-black uppercase text-white shadow-lg transition-all ${modal.status === 'Closed' ? 'bg-green-500 hover:bg-green-600 shadow-green-100' : 'bg-red-500 hover:bg-red-600 shadow-red-100'}`}
+          >
+            Confirm {modal.status === 'Closed' ? 'Success' : 'Lost'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

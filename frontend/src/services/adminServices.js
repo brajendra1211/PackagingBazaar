@@ -108,6 +108,11 @@ export const fetchLeadRecommendations = async (id) => {
   return response.data;
 };
 
+export const fetchInquiryAssignedSellers = async (id) => {
+  const response = await API.get(`/admin/inquiries/${id}/assigned-sellers`);
+  return response.data;
+};
+
 export const shareLeadWithSellerAdmin = async (id, sellerId = null, assignmentNote = "") => {
   const response = await API.patch(`/admin/inquiries/${id}/share`, { seller_id: sellerId, assignment_note: assignmentNote });
   return response.data;
@@ -220,4 +225,23 @@ export const createSubCategoryAdmin = async (name, categoryId) => {
 export const deleteSubCategoryAdmin = async (id) => {
   const response = await API.delete(`/admin/subcategories/${id}`);
   return response.data;
+};
+
+// --- Export Data ---
+export const getExportUrl = (entity) => {
+  const token = localStorage.getItem("token");
+  return `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/admin/export/${entity}?token=${token}`;
+};
+
+export const downloadExport = async (entity) => {
+  const response = await API.get(`/admin/export/${entity}`, {
+    responseType: 'blob'
+  });
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `export_${entity}_${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
 };

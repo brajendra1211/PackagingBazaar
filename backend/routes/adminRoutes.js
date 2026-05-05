@@ -7,7 +7,8 @@ import {
   getSellersWithOrdersAdmin, getAllInquiriesAdmin, updateInquiryStatus, toggleHotDeal, toggleTrending,
   getRecommendedSellers, addProductForSeller, uploadImage, updateSellerStatus,
   addSellerAdmin, updateSellerDetailsAdmin,
-  createCategory, deleteCategory, createSubCategory, deleteSubCategory
+  createCategory, deleteCategory, createSubCategory, deleteSubCategory,
+  getInquiryAssignedSellers, exportDataAdmin
 } from "../controllers/adminController.js";
 import { getAllContactMessages, updateContactStatus } from "../controllers/contactController.js";
 import { shareLeadToSeller } from "../controllers/inquiryController.js";
@@ -52,6 +53,7 @@ router.get("/orders/seller/:sellerId", verifyToken, isAdmin, getSellerOrdersAdmi
 router.get("/inquiries", verifyToken, isAdmin, getAllInquiriesAdmin);
 router.patch("/inquiries/:id", verifyToken, isAdmin, updateInquiryStatus);
 router.get("/inquiries/:id/recommendations", verifyToken, isAdmin, getRecommendedSellers);
+router.get("/inquiries/:id/assigned-sellers", verifyToken, isAdmin, getInquiryAssignedSellers);
 router.patch("/inquiries/:id/share", verifyToken, isAdmin, shareLeadToSeller);
 
 // --- Category & SubCategory Management ---
@@ -63,5 +65,8 @@ router.delete("/subcategories/:id", verifyToken, isAdmin, deleteSubCategory);
 // --- Contact Inquiries Management ---
 router.get("/contacts", verifyToken, isAdmin, getAllContactMessages);
 router.put("/contacts/:id", verifyToken, isAdmin, updateContactStatus);
+
+// --- Export Data ---
+router.get("/export/:entity", verifyToken, isAdmin, exportDataAdmin);
 
 export default router;
