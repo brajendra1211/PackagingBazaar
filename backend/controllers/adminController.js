@@ -543,7 +543,7 @@ export const getAllInquiriesAdmin = async (req, res) => {
       LEFT JOIN users u ON i.buyer_id = u.id
       JOIN products p ON i.product_id = p.id
       JOIN sellers s ON i.seller_id = s.id
-      ORDER BY i.created_at DESC
+      ORDER BY i.id DESC
       LIMIT ? OFFSET ?
     `;
     const [rows] = await pool.query(query, [limit, offset]);
@@ -799,7 +799,7 @@ export const getRecommendedSellers = async (req, res) => {
           SELECT 1 FROM seller_products sp_check 
           WHERE sp_check.seller_id = s.id AND sp_check.status = 'active'
         )
-      ORDER BY match_score DESC, distance_km ASC, best_delivery_hours ASC, s.company_name ASC
+      ORDER BY (CASE WHEN pg.latitude IS NULL THEN 1 ELSE 0 END) ASC, distance_km ASC, match_score DESC, best_delivery_hours ASC, s.company_name ASC
     `;
 
     const [sellers] = await pool.query(query, [
