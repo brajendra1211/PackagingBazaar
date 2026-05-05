@@ -2,7 +2,7 @@ import express from "express";
 import { 
   getPendingSellers, rejectSeller, 
   getAllSellers, getAllUsers, updateUser, deleteUser,
-  getAllProductsAdmin, getDashboardStats, getAllOrdersAdmin,
+  getAllProductsAdmin, getDashboardStats, getAnalyticsStats, getAllOrdersAdmin,
   getUserOrdersAdmin, getSellerOrdersAdmin, getSellerProductsAdmin,
   getSellersWithOrdersAdmin, getAllInquiriesAdmin, updateInquiryStatus, toggleHotDeal, toggleTrending,
   getRecommendedSellers, addProductForSeller, uploadImage, updateSellerStatus,
@@ -45,6 +45,8 @@ router.post('/upload-image', verifyToken, isAdmin, upload.single('product_image'
 router.delete("/products/:id", verifyToken, isAdmin, deleteProduct);
 
 // --- Sales Management ---
+router.get("/dashboard/stats", verifyToken, isAdmin, getDashboardStats);
+router.get("/analytics", verifyToken, isAdmin, getAnalyticsStats);
 router.get("/orders", verifyToken, isAdmin, getAllOrdersAdmin);
 router.get("/orders/user/:userId", verifyToken, isAdmin, getUserOrdersAdmin);
 router.get("/orders/seller/:sellerId", verifyToken, isAdmin, getSellerOrdersAdmin);

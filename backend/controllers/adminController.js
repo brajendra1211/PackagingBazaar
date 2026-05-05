@@ -332,6 +332,72 @@ export const getDashboardStats = async (req, res) => {
   }
 };
 
+// 9b. Get Advanced Analytics Stats
+export const getAnalyticsStats = async (req, res) => {
+  try {
+    // 1. Lead Status Distribution
+    const [statusRows] = await pool.query(`
+      SELECT status as name, COUNT(*) as value 
+      FROM inquiries 
+      GROUP BY status
+    `);
+
+    // 2. Lost Reasons Breakdown
+    const [lostRows] = await pool.query(`
+      SELECT lost_reason as name, COUNT(*) as value 
+      FROM inquiries 
+      WHERE status = 'Lead Lost' AND lost_reason IS NOT NULL
+      GROUP BY lost_reason
+    `);
+
+    // 3. Category Popularity (Top 5)
+    const [catRows] = await pool.query(`
+      SELECT c.name, COUNT(i.id) as value
+      FROM inquiries i
+      JOIN products p ON i.product_id = p.id
+      JOIN sub_categories sc ON p.sub_category_id = sc.id
+      JOIN categories c ON sc.category_id = c.id
+      GROUP BY c.id
+      ORDER BY value DESC
+      LIMIT 5
+    `);
+
+    // 4. Monthly Inquiry Volume (Last 6 Months)
+    const [volumeRows] = await pool.query(`
+      SELECT DATE_FORMAT(created_at, '%b %Y') as month, COUNT(*) as count
+      FROM inquiries
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+      GROUP BY month
+      ORDER BY MIN(created_at) ASC
+    `);
+
+    // 5. Seller Performance (Top 5 by Won Deals)
+    const [sellerRows] = await pool.query(`
+      SELECT s.company_name as name, COUNT(i.id) as value
+      FROM inquiries i
+      JOIN sellers s ON i.won_seller_id = s.id
+      WHERE i.status = 'Deal Closed'
+      GROUP BY s.id
+      ORDER BY value DESC
+      LIMIT 5
+    `);
+
+    res.status(200).json({
+      success: true,
+      analytics: {
+        leadStatus: statusRows,
+        lostReasons: lostRows,
+        categories: catRows,
+        monthlyVolume: volumeRows,
+        topSellers: sellerRows
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching analytics stats:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
 // --- SALES MANAGEMENT ---
 
 // 10. Get All Orders for Admin

@@ -10,8 +10,19 @@ import {
   ArrowRight
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { fetchDashboardStats, fetchAllProductsAdmin } from "../../services/adminServices";
+import { 
+  fetchDashboardStats, 
+  fetchAllProductsAdmin, 
+  fetchAnalyticsStats 
+} from "../../services/adminServices";
 import { useNotification } from "../../context/NotificationContext";
+import { 
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend,
+  AreaChart, Area
+} from 'recharts';
+
+const COLORS = ['#F97316', '#EF4444', '#10B981', '#3B82F6', '#8B5CF6'];
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -22,6 +33,13 @@ export default function AdminDashboard() {
     uniqueProducts: 0,
     totalOrders: 0,
     totalInquiries: 0,
+  });
+  const [analytics, setAnalytics] = useState({
+    leadStatus: [],
+    lostReasons: [],
+    categories: [],
+    monthlyVolume: [],
+    topSellers: []
   });
   const [recentProducts, setRecentProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,13 +53,15 @@ export default function AdminDashboard() {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      const [statsRes, productsRes] = await Promise.all([
+      const [statsRes, productsRes, analyticsRes] = await Promise.all([
         fetchDashboardStats(),
-        fetchAllProductsAdmin(1, 5) // Fetch first 5 products
+        fetchAllProductsAdmin(1, 5),
+        fetchAnalyticsStats()
       ]);
       
       if (statsRes.success) setStats(statsRes.stats);
       if (productsRes.success) setRecentProducts(productsRes.products);
+      if (analyticsRes.success) setAnalytics(analyticsRes.analytics);
     } catch (err) {
       notifyError("Failed to load dashboard data");
     } finally {
@@ -147,6 +167,93 @@ export default function AdminDashboard() {
         ))}
       </div>
 
+      {/* Analytics Charts Row 1 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+        {/* Lead Performance Pie Chart */}
+        <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm">
+           <h3 className="font-syne font-black text-lg uppercase tracking-tight mb-6">Lead Performance</h3>
+           <div className="h-[300px]">
+             <ResponsiveContainer width="100%" height="100%">
+               <PieChart>
+                 <Pie
+                   data={analytics.leadStatus}
+                   innerRadius={60}
+                   outerRadius={100}
+                   paddingAngle={5}
+                   dataKey="value"
+                   nameKey="name"
+                 >
+                   {analytics.leadStatus.map((entry, index) => (
+                     <Cell key={`lead-status-${entry.name}-${index}`} fill={COLORS[index % COLORS.length]} />
+                   ))}
+                 </Pie>
+                 <Tooltip 
+                   contentStyle={{ borderRadius: '1.5rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} 
+                 />
+                 <Legend verticalAlign="bottom" height={36}/>
+               </PieChart>
+             </ResponsiveContainer>
+           </div>
+        </div>
+
+        {/* Monthly Volume Area Chart */}
+        <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm min-h-[400px]">
+           <h3 className="font-syne font-black text-lg uppercase tracking-tight mb-6">Inquiry Trends (6M)</h3>
+           <div className="h-[300px] w-full">
+             <ResponsiveContainer width="99%" height="100%">
+               <AreaChart data={analytics.monthlyVolume}>
+                 <defs>
+                   <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                     <stop offset="5%" stopColor="#F97316" stopOpacity={0.3}/>
+                     <stop offset="95%" stopColor="#F97316" stopOpacity={0}/>
+                   </linearGradient>
+                 </defs>
+                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700}} dy={10} />
+                 <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700}} />
+                 <Tooltip />
+                 <Area type="monotone" dataKey="count" stroke="#F97316" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" />
+               </AreaChart>
+             </ResponsiveContainer>
+           </div>
+        </div>
+      </div>
+
+      {/* Analytics Charts Row 2 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+        {/* Lost Reasons Bar Chart */}
+        <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm min-h-[400px]">
+           <h3 className="font-syne font-black text-lg uppercase tracking-tight mb-6">Top Barriers (Lost Reasons)</h3>
+           <div className="h-[300px] w-full">
+             <ResponsiveContainer width="99%" height="100%">
+               <BarChart data={analytics.lostReasons} layout="vertical">
+                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f0f0f0" />
+                 <XAxis type="number" hide />
+                 <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 800, textTransform: 'uppercase'}} width={100} />
+                 <Tooltip cursor={{fill: 'transparent'}} />
+                 <Bar dataKey="value" fill="#EF4444" radius={[0, 10, 10, 0]} barSize={20} />
+               </BarChart>
+             </ResponsiveContainer>
+           </div>
+        </div>
+
+        {/* Category Demand Bar Chart */}
+        <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm min-h-[400px]">
+           <h3 className="font-syne font-black text-lg uppercase tracking-tight mb-6">Demand by Category</h3>
+           <div className="h-[300px] w-full">
+             <ResponsiveContainer width="99%" height="100%">
+               <BarChart data={analytics.categories}>
+                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 800, textTransform: 'uppercase'}} dy={10} />
+                 <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700}} />
+                 <Tooltip cursor={{fill: 'transparent'}} />
+                 <Bar dataKey="value" fill="#8B5CF6" radius={[10, 10, 0, 0]} barSize={30} />
+               </BarChart>
+             </ResponsiveContainer>
+           </div>
+        </div>
+      </div>
+
       {/* Recent Products Section */}
       <section className="space-y-6">
          <div className="flex items-center justify-between px-2">
@@ -174,8 +281,8 @@ export default function AdminDashboard() {
                   </tr>
                </thead>
                <tbody className="divide-y divide-gray-50">
-                  {recentProducts.map((p) => (
-                     <tr key={p.id} className="hover:bg-gray-50/30 transition-all">
+                  {recentProducts.map((p, idx) => (
+                     <tr key={`recent-prod-${p.id}-${idx}`} className="hover:bg-gray-50/30 transition-all">
                         <td className="px-8 py-5">
                            <div className="font-bold text-gray-900">{p.name || "Untitled Product"}</div>
                            <div className="text-[10px] text-gray-400 font-black uppercase tracking-tighter mt-0.5">

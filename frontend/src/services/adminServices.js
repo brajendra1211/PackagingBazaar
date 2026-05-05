@@ -6,6 +6,11 @@ export const fetchDashboardStats = async () => {
   return response.data;
 };
 
+export const fetchAnalyticsStats = async () => {
+  const response = await API.get("/admin/analytics");
+  return response.data;
+};
+
 // --- User Management ---
 export const fetchAllUsers = async (page = 1, limit = 10, role = '') => {
   let url = `/admin/users?page=${page}&limit=${limit}`;
